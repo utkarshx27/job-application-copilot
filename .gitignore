@@ -4,6 +4,7 @@ dist-e2e/
 coverage/
 test-results/
 playwright-report/
+.tmp/
 *.tsbuildinfo
 *.log
 .env

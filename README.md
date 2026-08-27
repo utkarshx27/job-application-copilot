@@ -6,11 +6,11 @@
 A local-first, user-controlled Chrome extension for safely assisting with job application forms. The project is designed around verified candidate facts, deterministic ATS adapters, explicit review, and a strict separation between autofill and submission.
 
 > [!IMPORTANT]
-> This project is an early-stage engineering foundation. It scans forms in Observe Mode but does not yet fill or submit job applications.
+> This project is an early-stage copilot. It can manage a local candidate profile and scan forms in Observe Mode, but it does not yet fill or submit job applications.
 
 ## Project status
 
-Phase 0 is complete:
+Phases 0 and 1 are complete:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -20,8 +20,14 @@ Phase 0 is complete:
 - Controlled Test ATS and sanitized regression fixture.
 - Unit, schema, and real Chromium extension tests.
 - GitHub Actions release gate.
+- Versioned local candidate Truth Vault backed by `chrome.storage.local`.
+- Manual profile editor with explicit sensitivity handling.
+- Validated JSON backup, restore, and stored-profile migration.
+- Local PDF and DOCX résumé extraction with SHA-256 source records.
+- Reviewable document-derived facts, conflict resolution, and user verification.
+- Sanitized résumé fixtures and Chromium coverage for both file formats.
 
-Phase 1 is next and will add the local candidate Truth Vault, profile editor, versioning, import/export, and verification workflow. See the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md) and [Phase 0 completion notes](./docs/architecture/phase-0-foundation.md).
+Phase 2 is next and will expand the generic form engine with semantic mapping, confidence, highlighting, safe fill drivers, and user-edit detection. See the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md), [Phase 0 completion notes](./docs/architecture/phase-0-foundation.md), and [Phase 1 completion notes](./docs/architecture/phase-1-truth-vault.md).
 
 ## Design principles
 
@@ -43,6 +49,8 @@ packages/
   browser-command-schema/    Runtime and browser command allowlists
   candidate-schema/          Candidate truth model
   form-schema/               Form snapshot and fixture contracts
+  profile-core/              Truth Vault, versioning, migration, and import review
+  resume-parser/             Conservative local résumé text parser
   shared/                    Site policy and shared utilities
 fixtures/ats/                Sanitized ATS regression fixtures
 evals/end-to-end/            Playwright extension tests
@@ -62,7 +70,7 @@ git clone https://github.com/utkarshx27/job-application-copilot.git
 cd job-application-copilot
 npm install
 npx playwright install chromium
-npm run check:phase0
+npm run check:phase1
 ```
 
 Build the production extension:
@@ -92,6 +100,7 @@ npm run dev --workspace @copilot/extension
 npm test                 # Unit and schema tests
 npm run test:e2e         # Unpacked-extension tests in bundled Chromium
 npm run check:phase0     # Complete Phase 0 release gate
+npm run check:phase1     # Complete Phase 1 release gate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -103,11 +112,13 @@ The E2E build receives access only to `http://127.0.0.1/*`. That test-only permi
 - Password and hidden fields are excluded from discovery.
 - Government IDs, banking details, credentials, and arbitrary file access are outside the command protocol.
 - Real candidate information must never be committed in fixtures or test data.
+- Résumé files are parsed locally, limited to 5 MB, and are not retained as raw files.
+- JSON exports are not encrypted and must be stored securely by the user.
 - Tests against real employer sites must stop before submission.
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase0` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase1` before opening a pull request.
 
 Good early contribution areas include:
 

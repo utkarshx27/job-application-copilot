@@ -1,5 +1,5 @@
 {
-  "name": "@copilot/browser-command-schema",
+  "name": "@copilot/profile-core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,8 +8,7 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
-    "@copilot/form-schema": "*",
-    "@copilot/profile-core": "*",
+    "@copilot/candidate-schema": "*",
     "zod": "^4.1.5"
   }
 }

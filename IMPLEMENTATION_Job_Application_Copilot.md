@@ -2839,6 +2839,8 @@ Exit:
 
 ## Phase 1 — Truth vault + profile
 
+**Status:** Complete as of 2026-08-27. See `docs/architecture/phase-1-truth-vault.md`.
+
 Deliver:
 - manual profile editor;
 - resume import;

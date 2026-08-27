@@ -5,6 +5,16 @@ import {
   type RuntimeResponse,
 } from "@copilot/browser-command-schema";
 import { policyForUrl } from "@copilot/shared";
+import {
+  exportProfileBackup,
+  importResumeDraft,
+  importProfileBackup,
+  resolveProfileConflict,
+  saveProfileDraft,
+  verifyImportedFacts,
+} from "@copilot/profile-core";
+
+import { getProfileVault, setProfileVault } from "./profile-storage";
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
@@ -50,6 +60,46 @@ async function scanActiveTab(): Promise<RuntimeResponse> {
   }
 }
 
+async function handlePanelRequest(
+  request: ReturnType<typeof PanelRequestSchema.parse>,
+): Promise<RuntimeResponse> {
+  if (request.type === "PANEL_PROFILE_GET") return { ok: true, data: await getProfileVault() };
+
+  if (request.type === "PANEL_PROFILE_SAVE") {
+    const vault = await getProfileVault();
+    const saved = saveProfileDraft(vault, request.draft);
+    return { ok: true, data: await setProfileVault(saved) };
+  }
+
+  if (request.type === "PANEL_PROFILE_EXPORT") {
+    return { ok: true, data: { backupJson: exportProfileBackup(await getProfileVault()) } };
+  }
+
+  if (request.type === "PANEL_PROFILE_IMPORT_JSON") {
+    return { ok: true, data: await setProfileVault(importProfileBackup(request.json)) };
+  }
+
+  if (request.type === "PANEL_PROFILE_IMPORT_RESUME") {
+    const imported = importResumeDraft(await getProfileVault(), request.draft, request.source);
+    return { ok: true, data: await setProfileVault(imported) };
+  }
+
+  if (request.type === "PANEL_PROFILE_VERIFY_IMPORTED") {
+    return { ok: true, data: await setProfileVault(verifyImportedFacts(await getProfileVault())) };
+  }
+
+  if (request.type === "PANEL_PROFILE_RESOLVE_CONFLICT") {
+    const resolved = resolveProfileConflict(
+      await getProfileVault(),
+      request.conflictId,
+      request.resolution,
+    );
+    return { ok: true, data: await setProfileVault(resolved) };
+  }
+
+  return scanActiveTab();
+}
+
 chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
 
@@ -64,8 +114,10 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
     return false;
   }
 
-  void scanActiveTab().then(sendResponse, () => {
-    sendResponse(failure("SCAN_FAILED", "Unexpected scan failure."));
+  void handlePanelRequest(parsed.data).then(sendResponse, (error: unknown) => {
+    const isProfileRequest = parsed.data.type.startsWith("PANEL_PROFILE_");
+    const message = error instanceof Error ? error.message : "Unexpected extension failure.";
+    sendResponse(failure(isProfileRequest ? "PROFILE_INVALID" : "SCAN_FAILED", message));
   });
   return true;
 });

@@ -27,6 +27,18 @@ await Promise.all([
   writeFile(resolve(outdir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`),
   cp(resolve(root, "src/sidepanel/index.html"), resolve(outdir, "sidepanel.html")),
   cp(resolve(root, "src/sidepanel/styles.css"), resolve(outdir, "sidepanel.css")),
+  cp(
+    resolve(root, "../../node_modules/pdfjs-dist/build/pdf.worker.min.mjs"),
+    resolve(outdir, "pdf.worker.mjs"),
+  ),
+  cp(resolve(root, "../../node_modules/pdfjs-dist/wasm"), resolve(outdir, "pdf-wasm"), {
+    recursive: true,
+  }),
+  cp(
+    resolve(root, "../../node_modules/pdfjs-dist/standard_fonts"),
+    resolve(outdir, "pdf-standard-fonts"),
+    { recursive: true },
+  ),
 ]);
 
 const shared = {

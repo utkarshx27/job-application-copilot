@@ -128,6 +128,7 @@ export const EducationRecordSchema = z.object({
   institution: candidateFactSchema(z.string().min(1)),
   degree: candidateFactSchema(z.string().min(1)),
   fieldOfStudy: candidateFactSchema(z.string().min(1)).optional(),
+  gpa: candidateFactSchema(z.string().min(1)).optional(),
   dates: candidateFactSchema(DateRangeSchema).optional(),
 });
 
@@ -197,6 +198,8 @@ export const CandidateProfileSchema = z.object({
   }),
   workHistory: z.array(WorkExperienceSchema),
   education: z.array(EducationRecordSchema),
+  projects: z.array(candidateFactSchema(z.string().min(1))).default([]),
+  publications: z.array(candidateFactSchema(z.string().min(1))).default([]),
   skills: z.array(candidateFactSchema(z.string().min(1))),
   certifications: z.array(candidateFactSchema(z.string().min(1))),
   languages: z.array(candidateFactSchema(z.string().min(1))),
