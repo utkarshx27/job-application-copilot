@@ -1,0 +1,14 @@
+{
+  "name": "@copilot/browser-command-schema",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@copilot/form-schema": "*",
+    "zod": "^4.1.5"
+  }
+}

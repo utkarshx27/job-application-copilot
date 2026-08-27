@@ -1,0 +1,27 @@
+{
+  "name": "@copilot/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:e2e": "node build.mjs --e2e",
+    "clean": "node build.mjs --clean",
+    "dev": "node build.mjs --watch",
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@copilot/browser-command-schema": "*",
+    "@copilot/form-schema": "*",
+    "@copilot/shared": "*",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.1",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "esbuild": "^0.25.9"
+  }
+}

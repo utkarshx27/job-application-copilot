@@ -1,0 +1,141 @@
+{
+  "fixtureVersion": 1,
+  "id": "test-ats-generic-single-page-v1",
+  "adapter": "generic",
+  "adapterVersion": "0.1.0",
+  "capturedAt": "2026-08-27T00:00:00.000Z",
+  "source": {
+    "host": "127.0.0.1",
+    "pathPattern": "/"
+  },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "http://127.0.0.1:4173/",
+    "title": "ExampleCo — Software Engineer Application",
+    "capturedAt": "2026-08-27T00:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "first-name",
+        "controlKind": "text",
+        "accessibleName": "First name",
+        "labelText": "First name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "first_name",
+        "domId": "first-name",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "given-name",
+        "options": []
+      },
+      {
+        "fieldId": "last-name",
+        "controlKind": "text",
+        "accessibleName": "Last name",
+        "labelText": "Last name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "last_name",
+        "domId": "last-name",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "family-name",
+        "options": []
+      },
+      {
+        "fieldId": "email",
+        "controlKind": "email",
+        "accessibleName": "Email address",
+        "labelText": "Email address",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "email",
+        "domId": "email",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "email",
+        "options": []
+      },
+      {
+        "fieldId": "country",
+        "controlKind": "select-one",
+        "accessibleName": "Country",
+        "labelText": "Country",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "country",
+        "domId": "country",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "country-name",
+        "options": [
+          { "value": "", "text": "Choose a country", "disabled": false },
+          { "value": "IN", "text": "India", "disabled": false },
+          { "value": "US", "text": "United States", "disabled": false },
+          { "value": "GB", "text": "United Kingdom", "disabled": false }
+        ]
+      },
+      {
+        "fieldId": "portfolio",
+        "controlKind": "url",
+        "accessibleName": "Portfolio URL",
+        "labelText": "Portfolio URL",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "portfolio",
+        "domId": "portfolio",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "url",
+        "options": []
+      },
+      {
+        "fieldId": "current_sponsorship",
+        "controlKind": "radio",
+        "accessibleName": "Yes",
+        "labelText": "Yes",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "current_sponsorship",
+        "domId": "",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "current_sponsorship-2",
+        "controlKind": "radio",
+        "accessibleName": "No",
+        "labelText": "No",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "current_sponsorship",
+        "domId": "",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "first-name": "IDENTITY.legal_name.given",
+    "last-name": "IDENTITY.legal_name.family",
+    "email": "CONTACT.email",
+    "country": "ADDRESS.country",
+    "portfolio": "LINKS.portfolio",
+    "current_sponsorship": "WORK_AUTH.current_sponsorship",
+    "current_sponsorship-2": "WORK_AUTH.current_sponsorship",
+    "visa-type": "WORK_AUTH.visa_type"
+  },
+  "dynamicBehavior": ["Selecting current sponsorship Yes reveals visa-type"],
+  "sanitized": true
+}

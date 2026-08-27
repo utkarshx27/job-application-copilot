@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/candidate-schema" },
+    { "path": "./packages/form-schema" },
+    { "path": "./packages/browser-command-schema" },
+    { "path": "./packages/shared" },
+    { "path": "./apps/extension" },
+    { "path": "./evals/end-to-end" }
+  ]
+}

@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible problem using synthetic or sanitized data.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include candidate personal data, credentials, session tokens, or unsanitized employer HTML.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: Commit SHA or branch
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Extension side panel
+        - Service worker or messaging
+        - Form scanner
+        - Candidate schema
+        - Test ATS or fixtures
+        - Build, CI, or developer tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide minimal steps using synthetic data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data safety
+      options:
+        - label: I removed personal data, credentials, and unsanitized employer content.
+          required: true

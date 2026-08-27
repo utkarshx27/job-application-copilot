@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-e2e/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+*.log
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+private/
+Utkarsh_Singh_AI_Engineer_Resume.pdf
+.DS_Store

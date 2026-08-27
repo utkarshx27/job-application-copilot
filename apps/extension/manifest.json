@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Job Application Copilot",
+  "version": "0.1.0",
+  "description": "User-controlled assistance for job application forms.",
+  "homepage_url": "https://github.com/utkarshx27/job-application-copilot",
+  "permissions": ["storage", "activeTab", "scripting", "sidePanel"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open Job Application Copilot"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
+  }
+}
