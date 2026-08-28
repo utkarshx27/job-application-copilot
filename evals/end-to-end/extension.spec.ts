@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
@@ -188,9 +189,11 @@ for (const fileName of ["synthetic-resume.docx", "synthetic-resume.pdf"]) {
   }) => {
     const panel = await context.newPage();
     await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-    const resumePath = new URL(`../../fixtures/resumes/${fileName}`, import.meta.url);
+    const resumePath = fileURLToPath(
+      new URL(`../../fixtures/resumes/${fileName}`, import.meta.url),
+    );
 
-    await panel.getByLabel("Choose PDF or DOCX").setInputFiles(resumePath.pathname.slice(1));
+    await panel.getByLabel("Choose PDF or DOCX").setInputFiles(resumePath);
 
     await expect(panel.getByText(new RegExp(`Imported ${fileName}`))).toBeVisible({
       timeout: 15_000,
