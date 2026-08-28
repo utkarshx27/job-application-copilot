@@ -7,5 +7,15 @@
     "build": "node build.mjs",
     "clean": "node build.mjs --clean",
     "serve": "node serve.mjs"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vue": "^3.5.42"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "esbuild": "^0.28.2"
   }
 }

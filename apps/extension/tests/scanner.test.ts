@@ -58,5 +58,25 @@ describe("scanVisibleForm", () => {
       "authorized",
       "authorized-2",
     ]);
+    expect(scanVisibleForm().fields[0]).toMatchObject({
+      groupLabel: "",
+      optionValue: "yes",
+      checked: false,
+      userEdited: false,
+    });
+  });
+
+  it("captures fieldset context and user-edit protection state", () => {
+    document.body.innerHTML = `
+      <fieldset>
+        <legend>Will you require sponsorship?</legend>
+        <label><input id="sponsor" type="radio" value="yes" data-job-copilot-user-edited="true" checked /> Yes</label>
+      </fieldset>`;
+    expect(scanVisibleForm().fields[0]).toMatchObject({
+      groupLabel: "Will you require sponsorship?",
+      optionValue: "yes",
+      checked: true,
+      userEdited: true,
+    });
   });
 });

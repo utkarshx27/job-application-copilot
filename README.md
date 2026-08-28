@@ -6,11 +6,11 @@
 A local-first, user-controlled Chrome extension for safely assisting with job application forms. The project is designed around verified candidate facts, deterministic ATS adapters, explicit review, and a strict separation between autofill and submission.
 
 > [!IMPORTANT]
-> This project is an early-stage copilot. It can manage a local candidate profile and scan forms in Observe Mode, but it does not yet fill or submit job applications.
+> This project is an early-stage copilot. It can manage a local candidate profile and fill explicitly reviewed, high-confidence fields, but it does not navigate through or submit job applications.
 
 ## Project status
 
-Phases 0 and 1 are complete:
+Phases 0, 1, and 2 are complete:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -26,8 +26,14 @@ Phases 0 and 1 are complete:
 - Local PDF and DOCX résumé extraction with SHA-256 source records.
 - Reviewable document-derived facts, conflict resolution, and user verification.
 - Sanitized résumé fixtures and Chromium coverage for both file formats.
+- Deterministic R0/R1 semantic field mapping with calibrated confidence.
+- Review UI with per-field selection, reasons, confidence, and highlight mode.
+- Service-worker-revalidated fill plans with no page-supplied values.
+- React-safe and Vue-safe text, select, radio, checkbox, and textarea drivers.
+- User-edit detection that prevents later copilot overwrites.
+- Dynamic-form rescanning and controlled React/Vue Test ATS fixtures.
 
-Phase 2 is next and will expand the generic form engine with semantic mapping, confidence, highlighting, safe fill drivers, and user-edit detection. See the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md), [Phase 0 completion notes](./docs/architecture/phase-0-foundation.md), and [Phase 1 completion notes](./docs/architecture/phase-1-truth-vault.md).
+Phase 3 is next and will add dedicated Greenhouse and Lever adapters, job extraction, résumé upload approval, custom-question handling, confirmation detection, and tracker integration. See the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md) and the [Phase 2 completion notes](./docs/architecture/phase-2-generic-form-engine.md).
 
 ## Design principles
 
@@ -49,6 +55,7 @@ packages/
   browser-command-schema/    Runtime and browser command allowlists
   candidate-schema/          Candidate truth model
   form-schema/               Form snapshot and fixture contracts
+  form-engine/               Semantic mapping, confidence, and reviewed fill planning
   profile-core/              Truth Vault, versioning, migration, and import review
   resume-parser/             Conservative local résumé text parser
   shared/                    Site policy and shared utilities
@@ -71,6 +78,7 @@ cd job-application-copilot
 npm install
 npx playwright install chromium
 npm run check:phase1
+npm run check:phase2
 ```
 
 Build the production extension:
@@ -86,7 +94,7 @@ Then:
 3. Choose **Load unpacked**.
 4. Select `apps/extension/dist`.
 5. Open an employer or controlled application form.
-6. Open the extension side panel and choose **Scan visible form**.
+6. Open the extension side panel and choose **Scan and match visible form**.
 
 For automatic rebuilds during extension development:
 
@@ -101,6 +109,7 @@ npm test                 # Unit and schema tests
 npm run test:e2e         # Unpacked-extension tests in bundled Chromium
 npm run check:phase0     # Complete Phase 0 release gate
 npm run check:phase1     # Complete Phase 1 release gate
+npm run check:phase2     # Complete Phase 2 release gate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -108,6 +117,7 @@ The E2E build receives access only to `http://127.0.0.1/*`. That test-only permi
 ## Safety and privacy
 
 - The extension does not submit applications.
+- Fields are filled only after explicit side-panel review; navigation and submission remain manual.
 - LinkedIn is manual-only and is not scanned.
 - Password and hidden fields are excluded from discovery.
 - Government IDs, banking details, credentials, and arbitrary file access are outside the command protocol.
@@ -118,7 +128,7 @@ The E2E build receives access only to `http://127.0.0.1/*`. That test-only permi
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase1` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase2` before opening a pull request.
 
 Good early contribution areas include:
 

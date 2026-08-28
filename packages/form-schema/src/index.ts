@@ -30,6 +30,10 @@ export const RawFieldSchema = z.object({
   disabled: z.boolean(),
   readOnly: z.boolean(),
   autocomplete: z.string(),
+  groupLabel: z.string().default(""),
+  optionValue: z.string().default(""),
+  checked: z.boolean().default(false),
+  userEdited: z.boolean().default(false),
   options: z.array(z.object({ value: z.string(), text: z.string(), disabled: z.boolean() })),
 });
 
@@ -54,6 +58,77 @@ export const SanitizedFixtureSchema = z.object({
   sanitized: z.literal(true),
 });
 
+export const CanonicalQuestionSchema = z.enum([
+  "IDENTITY.legal_name.full",
+  "IDENTITY.legal_name.given",
+  "IDENTITY.legal_name.family",
+  "CONTACT.email",
+  "CONTACT.phone",
+  "ADDRESS.country",
+  "LINKS.portfolio",
+  "LINKS.github",
+  "LINKS.linkedin",
+  "WORK_AUTH.currently_authorized",
+  "WORK_AUTH.current_sponsorship",
+  "WORK_AUTH.future_sponsorship",
+  "WORK_AUTH.visa_type",
+  "APPLICATION.cover_letter",
+  "CONSENT.terms",
+]);
+
+export const MappingTierSchema = z.enum(["R0", "R1", "R2", "UNMAPPED"]);
+
+export const FillOperationSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("text"), value: z.string() }),
+  z.object({ kind: z.literal("select"), value: z.string() }),
+  z.object({ kind: z.literal("check"), checked: z.boolean() }),
+]);
+
+export const FieldMappingSchema = z.object({
+  fieldId: z.string().min(1),
+  canonicalQuestion: CanonicalQuestionSchema.nullable(),
+  confidence: z.number().min(0).max(1),
+  tier: MappingTierSchema,
+  evidence: z.array(z.string()),
+  operation: FillOperationSchema.optional(),
+  fillable: z.boolean(),
+  blockedReason: z.string().optional(),
+});
+
+export const FormAnalysisSchema = z.object({
+  analysisVersion: z.literal(1),
+  analysisId: z.string().min(1),
+  snapshot: PageSnapshotSchema,
+  mappings: z.array(FieldMappingSchema),
+});
+
+export const ReviewedFillItemSchema = z.object({
+  fieldId: z.string().min(1),
+  canonicalQuestion: CanonicalQuestionSchema,
+  operation: FillOperationSchema,
+});
+
+export const FillPlanSchema = z.object({
+  analysisId: z.string().min(1),
+  items: z.array(ReviewedFillItemSchema).min(1),
+});
+
+export const FillResultSchema = z.object({
+  analysisId: z.string().min(1),
+  filledFieldIds: z.array(z.string().min(1)),
+  skipped: z.array(z.object({ fieldId: z.string().min(1), reason: z.string() })),
+});
+
+export const HighlightResultSchema = z.object({
+  highlightedFieldIds: z.array(z.string().min(1)),
+});
+
 export type RawField = z.infer<typeof RawFieldSchema>;
 export type PageSnapshot = z.infer<typeof PageSnapshotSchema>;
 export type SanitizedFixture = z.infer<typeof SanitizedFixtureSchema>;
+export type CanonicalQuestion = z.infer<typeof CanonicalQuestionSchema>;
+export type FieldMapping = z.infer<typeof FieldMappingSchema>;
+export type FormAnalysis = z.infer<typeof FormAnalysisSchema>;
+export type FillOperation = z.infer<typeof FillOperationSchema>;
+export type FillPlan = z.infer<typeof FillPlanSchema>;
+export type FillResult = z.infer<typeof FillResultSchema>;

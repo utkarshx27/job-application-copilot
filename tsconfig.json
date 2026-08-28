@@ -3,11 +3,13 @@
   "references": [
     { "path": "./packages/candidate-schema" },
     { "path": "./packages/form-schema" },
+    { "path": "./packages/form-engine" },
     { "path": "./packages/browser-command-schema" },
     { "path": "./packages/profile-core" },
     { "path": "./packages/resume-parser" },
     { "path": "./packages/shared" },
     { "path": "./apps/extension" },
+    { "path": "./apps/test-ats" },
     { "path": "./evals/end-to-end" }
   ]
 }

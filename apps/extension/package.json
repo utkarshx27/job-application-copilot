@@ -13,6 +13,7 @@
   "dependencies": {
     "@copilot/browser-command-schema": "*",
     "@copilot/form-schema": "*",
+    "@copilot/form-engine": "*",
     "@copilot/profile-core": "*",
     "@copilot/resume-parser": "*",
     "@copilot/shared": "*",

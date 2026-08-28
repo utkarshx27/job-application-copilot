@@ -335,6 +335,15 @@ footer {
 .summary span {
   color: #526057;
 }
+.review-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.review-actions .secondary {
+  margin-top: 0;
+}
 .fields {
   display: grid;
   gap: 8px;
@@ -365,6 +374,43 @@ footer {
 .fields li span {
   color: #69736c;
   font-size: 12px;
+}
+.mapping-fields li {
+  align-items: flex-start;
+}
+.field-select {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: flex-start;
+  gap: 9px;
+}
+.field-select input {
+  width: 17px;
+  min-height: 17px;
+  margin-top: 2px;
+  padding: 0;
+}
+.field-select > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.field-select small {
+  overflow-wrap: anywhere;
+  color: #69736c;
+  font-size: 10px;
+  font-weight: 500;
+}
+.mapping-meta {
+  display: grid;
+  flex: none;
+  justify-items: end;
+  gap: 4px;
+}
+.mapping-meta .protected {
+  color: #8a3b24;
+  font-weight: 700;
 }
 .status {
   flex: none;

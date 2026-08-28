@@ -1,5 +1,10 @@
 import { PanelRequestSchema, RuntimeResponseSchema } from "@copilot/browser-command-schema";
-import type { PageSnapshot } from "@copilot/form-schema";
+import {
+  FillResultSchema,
+  FormAnalysisSchema,
+  HighlightResultSchema,
+  type FormAnalysis,
+} from "@copilot/form-schema";
 import {
   ProfileDraftSchema,
   ProfileVaultSchema,
@@ -18,7 +23,7 @@ type Notice = { kind: "success" | "error"; message: string } | null;
 type ScanState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "success"; snapshot: PageSnapshot }
+  | { status: "success"; analysis: FormAnalysis }
   | { status: "error"; message: string };
 
 async function sendPanelRequest(untrustedRequest: unknown) {
@@ -761,14 +766,37 @@ function ProfileEditor({
 
 function ObservePanel() {
   const [state, setState] = useState<ScanState>({ status: "idle" });
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [actionNotice, setActionNotice] = useState<Notice>(null);
+  const [acting, setActing] = useState(false);
 
   async function scan() {
     setState({ status: "loading" });
+    setActionNotice(null);
     try {
-      const response = await sendPanelRequest({ type: "PANEL_SCAN_ACTIVE_TAB" });
-      if (!response.ok) setState({ status: "error", message: response.error.message });
-      else if ("fields" in response.data) setState({ status: "success", snapshot: response.data });
-      else setState({ status: "error", message: "The scan returned no form data." });
+      const response = await sendPanelRequest({ type: "PANEL_ANALYZE_ACTIVE_TAB" });
+      if (!response.ok) {
+        setState({ status: "error", message: response.error.message });
+        return;
+      }
+      const analysis = FormAnalysisSchema.safeParse(response.data);
+      if (!analysis.success) {
+        setState({ status: "error", message: "The scan returned no form analysis." });
+        return;
+      }
+      setSelected(
+        new Set(
+          analysis.data.mappings
+            .filter(
+              (mapping) =>
+                mapping.fillable &&
+                mapping.confidence >= 0.95 &&
+                (mapping.tier === "R0" || mapping.tier === "R1"),
+            )
+            .map((mapping) => mapping.fieldId),
+        ),
+      );
+      setState({ status: "success", analysis: analysis.data });
     } catch (error) {
       setState({
         status: "error",
@@ -777,11 +805,55 @@ function ObservePanel() {
     }
   }
 
+  async function runReviewedAction(action: "highlight" | "fill") {
+    if (state.status !== "success") return;
+    const fieldIds = [...selected];
+    if (fieldIds.length === 0) {
+      setActionNotice({ kind: "error", message: "Select at least one approved field." });
+      return;
+    }
+    setActing(true);
+    setActionNotice(null);
+    try {
+      const response = await sendPanelRequest({
+        type: action === "highlight" ? "PANEL_HIGHLIGHT_ACTIVE_FIELDS" : "PANEL_FILL_ACTIVE_FIELDS",
+        analysisId: state.analysis.analysisId,
+        fieldIds,
+      });
+      if (!response.ok) throw new Error(response.error.message);
+      if (action === "highlight") {
+        const result = HighlightResultSchema.safeParse(response.data);
+        if (!result.success) throw new Error("The highlight response was invalid.");
+        setActionNotice({
+          kind: "success",
+          message: `Highlighted ${result.data.highlightedFieldIds.length} reviewed field${result.data.highlightedFieldIds.length === 1 ? "" : "s"}.`,
+        });
+      } else {
+        const result = FillResultSchema.safeParse(response.data);
+        if (!result.success) throw new Error("The fill response was invalid.");
+        setActionNotice({
+          kind: result.data.skipped.length > 0 ? "error" : "success",
+          message: `Filled ${result.data.filledFieldIds.length} reviewed field${result.data.filledFieldIds.length === 1 ? "" : "s"}.${result.data.skipped.length > 0 ? ` ${result.data.skipped.length} protected field${result.data.skipped.length === 1 ? " was" : "s were"} skipped.` : ""}`,
+        });
+      }
+    } catch (error) {
+      setActionNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "The reviewed action failed.",
+      });
+    } finally {
+      setActing(false);
+    }
+  }
+
   return (
     <section className="observe-panel">
-      <p className="intro">Inspect the active application page. Nothing is filled or submitted.</p>
+      <p className="intro">
+        Scan and review deterministic matches. Filling only happens after you select fields here;
+        submission is never automated.
+      </p>
       <button className="primary" disabled={state.status === "loading"} onClick={() => void scan()}>
-        {state.status === "loading" ? "Scanning…" : "Scan visible form"}
+        {state.status === "loading" ? "Scanning…" : "Scan and match visible form"}
       </button>
       <div aria-live="polite" aria-busy={state.status === "loading"}>
         {state.status === "idle" && <p className="empty">Ready to scan a job application form.</p>}
@@ -794,19 +866,71 @@ function ObservePanel() {
         {state.status === "success" && (
           <>
             <div className="summary">
-              <strong>{state.snapshot.fields.length}</strong>
-              <span>inspectable fields found</span>
+              <strong>{state.analysis.snapshot.fields.length}</strong>
+              <span>inspectable fields · {selected.size} approved for review</span>
             </div>
-            <ol className="fields">
-              {state.snapshot.fields.map((field) => (
-                <li key={field.fieldId}>
-                  <div>
-                    <strong>{field.accessibleName || "Unnamed field"}</strong>
-                    <span>{field.controlKind}</span>
-                  </div>
-                  <span className="status">{field.required ? "Required" : "Optional"}</span>
-                </li>
-              ))}
+            <div className="review-actions">
+              <button
+                type="button"
+                className="secondary"
+                disabled={acting || selected.size === 0}
+                onClick={() => void runReviewedAction("highlight")}
+              >
+                Highlight selected
+              </button>
+              <button
+                type="button"
+                className="primary"
+                disabled={acting || selected.size === 0}
+                onClick={() => void runReviewedAction("fill")}
+              >
+                {acting ? "Working…" : "Fill selected fields"}
+              </button>
+            </div>
+            {actionNotice && (
+              <div
+                className={`notice ${actionNotice.kind}`}
+                role={actionNotice.kind === "error" ? "alert" : "status"}
+              >
+                {actionNotice.message}
+              </div>
+            )}
+            <ol className="fields mapping-fields">
+              {state.analysis.mappings.map((mapping) => {
+                const field = state.analysis.snapshot.fields.find(
+                  (candidate) => candidate.fieldId === mapping.fieldId,
+                );
+                const label = field?.accessibleName || "Unnamed field";
+                return (
+                  <li key={mapping.fieldId}>
+                    <label className="field-select">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${label}`}
+                        checked={selected.has(mapping.fieldId)}
+                        disabled={!mapping.fillable}
+                        onChange={(event) => {
+                          const next = new Set(selected);
+                          if (event.target.checked) next.add(mapping.fieldId);
+                          else next.delete(mapping.fieldId);
+                          setSelected(next);
+                        }}
+                      />
+                      <span>
+                        <strong>{label}</strong>
+                        <small>{mapping.canonicalQuestion ?? "Unmapped"}</small>
+                        {mapping.blockedReason && <small>{mapping.blockedReason}</small>}
+                      </span>
+                    </label>
+                    <div className="mapping-meta">
+                      <span className="status">{mapping.tier}</span>
+                      <span>{Math.round(mapping.confidence * 100)}%</span>
+                      {field?.required && <span>Required</span>}
+                      {field?.userEdited && <span className="protected">User edited</span>}
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           </>
         )}

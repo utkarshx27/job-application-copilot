@@ -2865,6 +2865,8 @@ Exit:
 
 ## Phase 2 — Generic form engine
 
+**Status:** Complete as of 2026-08-28. See `docs/architecture/phase-2-generic-form-engine.md`.
+
 Deliver:
 - field scanner;
 - label/aria extraction;

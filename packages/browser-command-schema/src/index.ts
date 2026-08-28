@@ -1,4 +1,10 @@
-import { PageSnapshotSchema } from "@copilot/form-schema";
+import {
+  FillPlanSchema,
+  FillResultSchema,
+  FormAnalysisSchema,
+  HighlightResultSchema,
+  PageSnapshotSchema,
+} from "@copilot/form-schema";
 import {
   ProfileDraftSchema,
   ProfileSourceSchema,
@@ -30,6 +36,17 @@ export const BrowserCommandSchema = z.discriminatedUnion("type", [
 export const PanelRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PANEL_PING") }),
   z.object({ type: z.literal("PANEL_SCAN_ACTIVE_TAB") }),
+  z.object({ type: z.literal("PANEL_ANALYZE_ACTIVE_TAB") }),
+  z.object({
+    type: z.literal("PANEL_HIGHLIGHT_ACTIVE_FIELDS"),
+    analysisId: z.string().min(1),
+    fieldIds: z.array(z.string().min(1)).min(1),
+  }),
+  z.object({
+    type: z.literal("PANEL_FILL_ACTIVE_FIELDS"),
+    analysisId: z.string().min(1),
+    fieldIds: z.array(z.string().min(1)).min(1),
+  }),
   z.object({ type: z.literal("PANEL_PROFILE_GET") }),
   z.object({ type: z.literal("PANEL_PROFILE_SAVE"), draft: ProfileDraftSchema }),
   z.object({ type: z.literal("PANEL_PROFILE_EXPORT") }),
@@ -50,6 +67,8 @@ export const PanelRequestSchema = z.discriminatedUnion("type", [
 export const ContentRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("CONTENT_PING") }),
   z.object({ type: z.literal("CONTENT_SCAN_PAGE") }),
+  z.object({ type: z.literal("CONTENT_HIGHLIGHT_FIELDS"), fieldIds: z.array(z.string().min(1)) }),
+  z.object({ type: z.literal("CONTENT_APPLY_FILL"), plan: FillPlanSchema }),
 ]);
 
 const RuntimeErrorSchema = z.object({
@@ -62,6 +81,8 @@ const RuntimeErrorSchema = z.object({
     "SCAN_FAILED",
     "PROFILE_STORAGE_FAILED",
     "PROFILE_INVALID",
+    "STALE_ANALYSIS",
+    "FILL_FAILED",
   ]),
   message: z.string(),
 });
@@ -72,6 +93,9 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
     data: z.union([
       z.object({ pong: z.literal(true) }),
       PageSnapshotSchema,
+      FormAnalysisSchema,
+      FillResultSchema,
+      HighlightResultSchema,
       ProfileVaultSchema,
       z.object({ backupJson: z.string() }),
     ]),

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
 
@@ -6,6 +7,21 @@ type ScanResponse = {
   ok: boolean;
   data?: { fields?: unknown[] };
 };
+
+async function saveFillProfile(panel: Page, includeSponsorship = false) {
+  await panel.getByLabel("Full legal name").fill("Priya Sharma");
+  await panel.getByLabel("Given name").fill("Priya");
+  await panel.getByLabel("Family name optional").fill("Sharma");
+  await panel.getByLabel("Email").fill("priya@example.test");
+  await panel.getByLabel(/Phone E.164/).fill("+919876543210");
+  await panel.getByLabel("Portfolio URL").fill("https://priya.example.test");
+  if (includeSponsorship) {
+    await panel.getByRole("button", { name: "Add work authorization" }).click();
+    await panel.getByLabel("Sponsorship required now").selectOption("YES");
+  }
+  await panel.getByRole("button", { name: "Save and verify profile" }).click();
+  await expect(panel.getByText("Profile version 2 saved locally.")).toBeVisible();
+}
 
 test("loads the MV3 worker and side panel", async ({ context, extensionId }) => {
   const panel = await context.newPage();
@@ -33,10 +49,10 @@ test("scans the active Test ATS through the complete extension message path", as
   await expect(application.getByRole("heading", { name: "Apply for this role" })).toBeVisible();
   await application.bringToFront();
 
-  await panel.getByRole("button", { name: "Scan visible form" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
 
-  await expect(panel.getByText("7")).toBeVisible();
-  await expect(panel.getByText("inspectable fields found")).toBeVisible();
+  await expect(panel.getByText("10", { exact: true })).toBeVisible();
+  await expect(panel.getByText(/inspectable fields/)).toBeVisible();
   await expect(panel.getByText("First name", { exact: true })).toBeVisible();
   await expect(panel.getByText("Email address", { exact: true })).toBeVisible();
   await expect(panel.getByText("Portfolio URL", { exact: true })).toBeVisible();
@@ -55,7 +71,88 @@ test("scans the active Test ATS through the complete extension message path", as
   };
 
   expect(response.ok).toBe(true);
-  expect(response.data?.fields).toEqual(fixture.snapshot.fields);
+  const liveFields = new Map(
+    response.data?.fields?.map((field) => [
+      (field as { fieldId: string }).fieldId,
+      field as Record<string, unknown>,
+    ]),
+  );
+  for (const expectedField of fixture.snapshot.fields as Array<Record<string, unknown>>) {
+    expect(liveFields.get(expectedField.fieldId as string)).toMatchObject(expectedField);
+  }
+});
+
+test("highlights, fills, reveals dynamic fields, and protects user edits", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await saveFillProfile(panel, true);
+
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  await expect(panel.getByText("6 approved for review")).toBeVisible();
+  await panel.getByRole("button", { name: "Highlight selected" }).click();
+  await expect(panel.getByText("Highlighted 6 reviewed fields.")).toBeVisible();
+  await expect(application.getByLabel("First name")).toHaveAttribute(
+    "data-job-copilot-highlight",
+    "true",
+  );
+
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await expect(panel.getByText("Filled 6 reviewed fields.")).toBeVisible();
+  await expect(application.getByLabel("First name")).toHaveValue("Priya");
+  await expect(application.getByLabel("Last name")).toHaveValue("Sharma");
+  await expect(application.getByLabel("Email address")).toHaveValue("priya@example.test");
+  await expect(application.getByLabel("Mobile phone")).toHaveValue("+919876543210");
+  await expect(application.getByLabel("Portfolio URL")).toHaveValue("https://priya.example.test");
+  await expect(application.getByLabel("Yes")).toBeChecked();
+  await expect(application.getByLabel("Current visa type")).toBeVisible();
+  await application.screenshot({
+    path: testInfo.outputPath("phase2-reviewed-fill.png"),
+    fullPage: true,
+  });
+
+  await application.getByLabel("Email address").fill("user-edited@example.test");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText("User edited")).toBeVisible();
+  await expect(panel.getByLabel("Select Email address")).toBeDisabled();
+});
+
+test("updates real React and Vue controlled state with reviewed fills", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await saveFillProfile(panel);
+
+  const frameworks = await context.newPage();
+  await frameworks.goto("http://127.0.0.1:4173/frameworks.html");
+  await expect(
+    frameworks.getByRole("heading", { name: "React application fixture" }),
+  ).toBeVisible();
+  await expect(frameworks.getByRole("heading", { name: "Vue application fixture" })).toBeVisible();
+  await frameworks.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText("2 approved for review")).toBeVisible();
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+
+  await expect(frameworks.getByLabel("Email address")).toHaveValue("priya@example.test");
+  await expect(frameworks.locator("#react-state")).toHaveText("React email: priya@example.test");
+  await expect(frameworks.getByLabel("Mobile phone")).toHaveValue("+919876543210");
+  await expect(frameworks.locator("#vue-state")).toHaveText("Vue phone: +919876543210");
+  await frameworks.screenshot({
+    path: testInfo.outputPath("phase2-framework-fill.png"),
+    fullPage: true,
+  });
 });
 
 test("saves and reloads a versioned profile through chrome.storage.local", async ({

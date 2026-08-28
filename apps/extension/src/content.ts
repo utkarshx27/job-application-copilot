@@ -1,6 +1,7 @@
 import { ContentRequestSchema, type RuntimeResponse } from "@copilot/browser-command-schema";
 
 import { scanVisibleForm } from "./scanner";
+import { applyFillPlan, highlightFields, installUserEditTracking } from "./form-driver";
 
 declare global {
   interface Window {
@@ -10,6 +11,7 @@ declare global {
 
 if (!window.__jobApplicationCopilotLoaded) {
   window.__jobApplicationCopilotLoaded = true;
+  installUserEditTracking();
 
   chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendResponse) => {
     if (sender.id !== chrome.runtime.id) return false;
@@ -23,7 +25,19 @@ if (!window.__jobApplicationCopilotLoaded) {
     }
 
     try {
-      sendResponse({ ok: true, data: scanVisibleForm() } satisfies RuntimeResponse);
+      if (request.data.type === "CONTENT_SCAN_PAGE") {
+        sendResponse({ ok: true, data: scanVisibleForm() } satisfies RuntimeResponse);
+      } else if (request.data.type === "CONTENT_HIGHLIGHT_FIELDS") {
+        sendResponse({
+          ok: true,
+          data: highlightFields(request.data.fieldIds),
+        } satisfies RuntimeResponse);
+      } else {
+        sendResponse({
+          ok: true,
+          data: applyFillPlan(request.data.plan),
+        } satisfies RuntimeResponse);
+      }
     } catch (error) {
       sendResponse({
         ok: false,

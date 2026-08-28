@@ -38,6 +38,11 @@
           </div>
 
           <div class="field">
+            <label for="phone">Mobile phone</label>
+            <input id="phone" name="phone_number" type="tel" autocomplete="tel" />
+          </div>
+
+          <div class="field">
             <label for="country">Country</label>
             <select id="country" name="country" autocomplete="country-name" required>
               <option value="">Choose a country</option>
@@ -46,6 +51,16 @@
               <option value="GB">United Kingdom</option>
             </select>
           </div>
+
+          <div class="field">
+            <label for="cover-letter">Cover letter</label>
+            <textarea id="cover-letter" name="cover_letter" rows="4"></textarea>
+          </div>
+
+          <label class="choice">
+            <input id="privacy-consent" type="checkbox" name="privacy_consent" />
+            I agree to the privacy terms
+          </label>
 
           <div class="field">
             <label for="portfolio">Portfolio URL</label>
