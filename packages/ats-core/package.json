@@ -1,0 +1,11 @@
+{
+  "name": "@copilot/ats-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@copilot/form-schema": "*",
+    "@copilot/job-schema": "*"
+  }
+}

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="copilot-ats" content="lever" />
+    <meta name="copilot-company" content="Example Labs" />
+    <meta name="copilot-requisition-id" content="LEV-FRONTEND-200" />
+    <meta name="description" content="Build accessible interfaces for hiring teams." />
+    <title>Frontend Engineer — Example Labs</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header data-qa="lever-posting">
+      <span class="company" data-company-name>Example Labs · Lever fixture</span>
+      <div class="posting-headline"><h2>Frontend Engineer</h2></div>
+      <div class="posting-categories"><span class="location">Remote · India</span></div>
+    </header>
+    <main class="posting-page">
+      <section>
+        <p class="eyebrow">Controlled Test ATS</p>
+        <h1>Apply for this role</h1>
+        <p class="content" data-job-description>Build accessible interfaces for hiring teams.</p>
+        <form class="application-form" data-ats="lever" novalidate>
+          <div class="field">
+            <label for="lever-name">Full name</label>
+            <input id="lever-name" name="name" required />
+          </div>
+          <div class="field">
+            <label for="lever-email">Email</label>
+            <input id="lever-email" name="email" type="email" required />
+          </div>
+          <div class="field">
+            <label for="lever-phone">Phone</label>
+            <input id="lever-phone" name="phone" type="tel" />
+          </div>
+          <div class="field">
+            <label for="lever-linkedin">LinkedIn URL</label>
+            <input id="lever-linkedin" name="urls[LinkedIn]" type="url" />
+          </div>
+          <div class="field">
+            <label for="lever-org">Current company</label>
+            <input id="lever-org" name="org" />
+          </div>
+          <div class="field">
+            <label for="lever-resume">Résumé/CV</label>
+            <input id="lever-resume" name="resume" type="file" accept=".pdf,.docx" required />
+            <output id="lever-resume-output" aria-live="polite">No résumé selected</output>
+          </div>
+          <div class="field">
+            <label for="lever-interest">What interests you about this role?</label>
+            <textarea id="lever-interest" name="additional" rows="4" required></textarea>
+          </div>
+          <label class="choice">
+            <input id="lever-consent" name="consent" type="checkbox" required />
+            I agree to the privacy terms
+          </label>
+          <button type="button" disabled>Submit disabled in Test ATS</button>
+        </form>
+      </section>
+    </main>
+    <script src="ats-fixtures.js"></script>
+  </body>
+</html>

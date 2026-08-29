@@ -1,10 +1,13 @@
 import { PanelRequestSchema, RuntimeResponseSchema } from "@copilot/browser-command-schema";
+import { FillResultSchema, HighlightResultSchema } from "@copilot/form-schema";
 import {
-  FillResultSchema,
-  FormAnalysisSchema,
-  HighlightResultSchema,
-  type FormAnalysis,
-} from "@copilot/form-schema";
+  ApplicationPageAnalysisSchema,
+  ApplicationTrackerSchema,
+  UploadResultSchema,
+  type ApplicationPageAnalysis,
+  type ApplicationTracker,
+  type ApprovedUploadFile,
+} from "@copilot/job-schema";
 import {
   ProfileDraftSchema,
   ProfileVaultSchema,
@@ -16,14 +19,14 @@ import {
 import { StrictMode, useEffect, useState, type ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 
-import { readResumeFile } from "../resume-file";
+import { readApprovedResumeFile, readResumeFile } from "../resume-file";
 
-type Tab = "profile" | "observe";
+type Tab = "profile" | "observe" | "applications";
 type Notice = { kind: "success" | "error"; message: string } | null;
 type ScanState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "success"; analysis: FormAnalysis }
+  | { status: "success"; analysis: ApplicationPageAnalysis }
   | { status: "error"; message: string };
 
 async function sendPanelRequest(untrustedRequest: unknown) {
@@ -769,6 +772,8 @@ function ObservePanel() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [actionNotice, setActionNotice] = useState<Notice>(null);
   const [acting, setActing] = useState(false);
+  const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
+  const [approvedResume, setApprovedResume] = useState<ApprovedUploadFile | null>(null);
 
   async function scan() {
     setState({ status: "loading" });
@@ -779,7 +784,7 @@ function ObservePanel() {
         setState({ status: "error", message: response.error.message });
         return;
       }
-      const analysis = FormAnalysisSchema.safeParse(response.data);
+      const analysis = ApplicationPageAnalysisSchema.safeParse(response.data);
       if (!analysis.success) {
         setState({ status: "error", message: "The scan returned no form analysis." });
         return;
@@ -797,11 +802,95 @@ function ObservePanel() {
         ),
       );
       setState({ status: "success", analysis: analysis.data });
+      setCustomAnswers({});
+      setApprovedResume(null);
     } catch (error) {
       setState({
         status: "error",
         message: error instanceof Error ? error.message : "Could not reach the extension worker.",
       });
+    }
+  }
+
+  async function fillCustomAnswers() {
+    if (state.status !== "success") return;
+    const answers = state.analysis.customQuestions.flatMap((question) => {
+      const value = customAnswers[question.field.fieldId] ?? "";
+      return question.responseMode !== "MANUAL" && value.trim()
+        ? [{ fieldId: question.field.fieldId, value }]
+        : [];
+    });
+    if (answers.length === 0) {
+      setActionNotice({ kind: "error", message: "Enter at least one reviewed custom answer." });
+      return;
+    }
+    setActing(true);
+    setActionNotice(null);
+    try {
+      const response = await sendPanelRequest({
+        type: "PANEL_FILL_CUSTOM_ANSWERS",
+        analysisId: state.analysis.analysisId,
+        answers,
+      });
+      if (!response.ok) throw new Error(response.error.message);
+      const result = FillResultSchema.safeParse(response.data);
+      if (!result.success) throw new Error("The custom-answer fill response was invalid.");
+      setActionNotice({
+        kind: "success",
+        message: `Filled ${result.data.filledFieldIds.length} explicitly reviewed custom answer${result.data.filledFieldIds.length === 1 ? "" : "s"}.`,
+      });
+    } catch (error) {
+      setActionNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not fill custom answers.",
+      });
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function chooseApprovedResume(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setActionNotice(null);
+    try {
+      setApprovedResume(await readApprovedResumeFile(file));
+    } catch (error) {
+      setApprovedResume(null);
+      setActionNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not approve this résumé file.",
+      });
+    }
+  }
+
+  async function uploadResume(fieldId: string) {
+    if (state.status !== "success" || !approvedResume) return;
+    setActing(true);
+    setActionNotice(null);
+    try {
+      const response = await sendPanelRequest({
+        type: "PANEL_UPLOAD_APPROVED_RESUME",
+        analysisId: state.analysis.analysisId,
+        fieldId,
+        file: approvedResume,
+      });
+      if (!response.ok) throw new Error(response.error.message);
+      const result = UploadResultSchema.safeParse(response.data);
+      if (!result.success || !result.data.uploaded)
+        throw new Error("The résumé upload was not verified.");
+      setActionNotice({
+        kind: "success",
+        message: `Uploaded only the approved file ${result.data.fileName}.`,
+      });
+    } catch (error) {
+      setActionNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not upload the approved résumé.",
+      });
+    } finally {
+      setActing(false);
     }
   }
 
@@ -865,6 +954,37 @@ function ObservePanel() {
         )}
         {state.status === "success" && (
           <>
+            <section className="job-card" aria-label="Detected job">
+              <div className="job-heading">
+                <span className="status">{state.analysis.ats.adapter}</span>
+                <span>{Math.round(state.analysis.ats.confidence * 100)}% detected</span>
+              </div>
+              {state.analysis.job ? (
+                <>
+                  <h2>{state.analysis.job.title}</h2>
+                  <p>
+                    {state.analysis.job.company}
+                    {state.analysis.job.location ? ` · ${state.analysis.job.location}` : ""}
+                  </p>
+                  <small>
+                    Tracker status: {state.analysis.confirmation.confirmed ? "APPLIED" : "APPLYING"}
+                  </small>
+                </>
+              ) : (
+                <p>Job metadata was not available on this page.</p>
+              )}
+            </section>
+            {state.analysis.confirmation.confirmed && (
+              <div className="notice success" role="status">
+                <strong>{state.analysis.confirmation.heading ?? "Application confirmed"}</strong>
+                <span>
+                  The local tracker was updated to APPLIED
+                  {state.analysis.confirmation.referenceId
+                    ? ` with reference ${state.analysis.confirmation.referenceId}.`
+                    : "."}
+                </span>
+              </div>
+            )}
             <div className="summary">
               <strong>{state.analysis.snapshot.fields.length}</strong>
               <span>inspectable fields · {selected.size} approved for review</span>
@@ -932,9 +1052,157 @@ function ObservePanel() {
                 );
               })}
             </ol>
+            {state.analysis.mappings.some(
+              (mapping) => mapping.canonicalQuestion === "APPLICATION.resume",
+            ) && (
+              <section className="phase3-card" aria-labelledby="resume-upload-heading">
+                <h2 id="resume-upload-heading">Approved résumé upload</h2>
+                <p className="help">
+                  Select the exact PDF or DOCX for this application. The file is verified, sent only
+                  to the detected résumé control, and is not retained by the extension.
+                </p>
+                <label className="file-button">
+                  Choose résumé for this application
+                  <input
+                    type="file"
+                    accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
+                    disabled={acting}
+                    onChange={(event) => void chooseApprovedResume(event)}
+                  />
+                </label>
+                {approvedResume && (
+                  <div className="approved-file">
+                    <strong>{approvedResume.fileName}</strong>
+                    <small>SHA-256 {approvedResume.sha256.slice(0, 12)}…</small>
+                    <button
+                      type="button"
+                      className="primary"
+                      disabled={acting}
+                      onClick={() => {
+                        const field = state.analysis.mappings.find(
+                          (mapping) => mapping.canonicalQuestion === "APPLICATION.resume",
+                        );
+                        if (field) void uploadResume(field.fieldId);
+                      }}
+                    >
+                      Upload this approved résumé
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
+            {state.analysis.customQuestions.length > 0 && (
+              <section className="phase3-card" aria-labelledby="custom-questions-heading">
+                <h2 id="custom-questions-heading">Custom question review</h2>
+                <p className="help">
+                  These questions did not match verified profile facts. Answers are filled only from
+                  what you enter here.
+                </p>
+                {state.analysis.customQuestions.map((question) => (
+                  <label key={question.field.fieldId}>
+                    {question.label}{" "}
+                    {question.required && <span className="sensitive">Required</span>}
+                    {question.responseMode === "TEXT" && (
+                      <textarea
+                        rows={3}
+                        value={customAnswers[question.field.fieldId] ?? ""}
+                        onChange={(event) =>
+                          setCustomAnswers({
+                            ...customAnswers,
+                            [question.field.fieldId]: event.target.value,
+                          })
+                        }
+                      />
+                    )}
+                    {question.responseMode === "SELECT" && (
+                      <select
+                        value={customAnswers[question.field.fieldId] ?? ""}
+                        onChange={(event) =>
+                          setCustomAnswers({
+                            ...customAnswers,
+                            [question.field.fieldId]: event.target.value,
+                          })
+                        }
+                      >
+                        <option value="">Choose an answer</option>
+                        {question.field.options
+                          .filter((option) => !option.disabled && option.value)
+                          .map((option) => (
+                            <option value={option.value} key={option.value}>
+                              {option.text}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+                    {question.responseMode === "MANUAL" && (
+                      <small>Complete this control manually on the application page.</small>
+                    )}
+                  </label>
+                ))}
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={acting}
+                  onClick={() => void fillCustomAnswers()}
+                >
+                  Fill reviewed custom answers
+                </button>
+              </section>
+            )}
           </>
         )}
       </div>
+    </section>
+  );
+}
+
+function ApplicationsPanel() {
+  const [tracker, setTracker] = useState<ApplicationTracker | null>(null);
+  const [error, setError] = useState("");
+
+  async function loadTracker() {
+    setError("");
+    try {
+      const response = await sendPanelRequest({ type: "PANEL_TRACKER_GET" });
+      if (!response.ok) throw new Error(response.error.message);
+      const parsed = ApplicationTrackerSchema.safeParse(response.data);
+      if (!parsed.success) throw new Error("The local tracker response was invalid.");
+      setTracker(parsed.data);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not load the local tracker.");
+    }
+  }
+
+  useEffect(() => void loadTracker(), []);
+
+  return (
+    <section className="applications-panel">
+      <div className="section-heading">
+        <div>
+          <h2>Application tracker</h2>
+          <p className="help">Prepared and confirmed applications are stored locally.</p>
+        </div>
+        <button type="button" className="text-button" onClick={() => void loadTracker()}>
+          Refresh
+        </button>
+      </div>
+      {error && <div className="notice error">{error}</div>}
+      {tracker?.applications.length === 0 && <p className="empty">No applications tracked yet.</p>}
+      <ol className="tracker-list">
+        {tracker?.applications.map((application) => (
+          <li key={application.id}>
+            <div>
+              <strong>{application.job.title}</strong>
+              <span>{application.job.company}</span>
+              <small>
+                {application.ats} · Profile v{application.profileVersion}
+              </small>
+              {application.resumeFileName && <small>Résumé: {application.resumeFileName}</small>}
+            </div>
+            <span className="status">{application.status}</span>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
@@ -978,6 +1246,13 @@ function App() {
         >
           Observe
         </button>
+        <button
+          type="button"
+          aria-current={tab === "applications" ? "page" : undefined}
+          onClick={() => setTab("applications")}
+        >
+          Applications
+        </button>
       </nav>
       {tab === "profile" &&
         (loadError ? (
@@ -990,6 +1265,7 @@ function App() {
           <p className="empty">Loading your local profile…</p>
         ))}
       {tab === "observe" && <ObservePanel />}
+      {tab === "applications" && <ApplicationsPanel />}
       <footer>Profile data stays in this browser unless you export it.</footer>
     </main>
   );

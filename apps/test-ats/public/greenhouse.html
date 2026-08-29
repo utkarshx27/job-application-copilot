@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="copilot-ats" content="greenhouse" />
+    <meta name="copilot-company" content="ExampleCo" />
+    <meta name="copilot-requisition-id" content="GH-PLATFORM-100" />
+    <meta name="description" content="Build reliable systems for a global product." />
+    <title>Platform Engineer — ExampleCo</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+      {
+        "@type": "JobPosting",
+        "title": "Platform Engineer",
+        "description": "Build reliable systems for a global product.",
+        "identifier": { "value": "GH-PLATFORM-100" },
+        "hiringOrganization": { "name": "ExampleCo" },
+        "jobLocation": {
+          "address": { "addressLocality": "Bengaluru", "addressRegion": "Karnataka" }
+        },
+        "employmentType": "FULL_TIME"
+      }
+    </script>
+  </head>
+  <body data-ats="greenhouse">
+    <header>
+      <span class="company">ExampleCo · Greenhouse fixture</span>
+      <h1 class="app-title">Platform Engineer</h1>
+      <p class="location">Bengaluru, Karnataka</p>
+    </header>
+    <main>
+      <section>
+        <p class="eyebrow">Controlled Test ATS</p>
+        <h2>Apply for this role</h2>
+        <p id="content">Build reliable systems for a global product.</p>
+        <form id="application_form" novalidate>
+          <div class="grid two-columns">
+            <div class="field">
+              <label for="gh-first">First name</label>
+              <input id="gh-first" name="job_application[first_name]" required />
+            </div>
+            <div class="field">
+              <label for="gh-last">Last name</label>
+              <input id="gh-last" name="job_application[last_name]" required />
+            </div>
+          </div>
+          <div class="field">
+            <label for="gh-email">Email</label>
+            <input id="gh-email" name="job_application[email]" type="email" required />
+          </div>
+          <div class="field">
+            <label for="gh-phone">Phone</label>
+            <input id="gh-phone" name="job_application[phone]" type="tel" />
+          </div>
+          <div class="field">
+            <label for="gh-linkedin">LinkedIn profile</label>
+            <input id="gh-linkedin" name="job_application[linkedin_url]" type="url" />
+          </div>
+          <div class="field">
+            <label for="gh-employer">Current employer</label>
+            <input id="gh-employer" name="job_application[employment][company_name]" />
+          </div>
+          <div class="field">
+            <label for="gh-title">Current job title</label>
+            <input id="gh-title" name="job_application[employment][job_title]" />
+          </div>
+          <div class="field">
+            <label for="gh-resume">Résumé</label>
+            <input
+              id="gh-resume"
+              name="job_application[resume]"
+              type="file"
+              accept=".pdf,.docx"
+              required
+            />
+            <output id="gh-resume-output" aria-live="polite">No résumé selected</output>
+          </div>
+          <div class="field">
+            <label for="gh-referral">How did you hear about us?</label>
+            <select id="gh-referral" name="job_application[custom][referral_source]" required>
+              <option value="">Choose one</option>
+              <option value="career-page">Company career page</option>
+              <option value="referral">Employee referral</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="gh-interest">Why are you interested in ExampleCo?</label>
+            <textarea
+              id="gh-interest"
+              name="job_application[custom][why_exampleco]"
+              rows="4"
+              required
+            ></textarea>
+          </div>
+          <button type="button" disabled>Submit disabled in Test ATS</button>
+        </form>
+      </section>
+    </main>
+    <script src="ats-fixtures.js"></script>
+  </body>
+</html>

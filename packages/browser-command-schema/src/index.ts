@@ -6,6 +6,15 @@ import {
   PageSnapshotSchema,
 } from "@copilot/form-schema";
 import {
+  ApplicationPageAnalysisSchema,
+  ApplicationTrackerSchema,
+  ApprovedUploadFileSchema,
+  ApprovedUploadPlanSchema,
+  InspectedApplicationPageSchema,
+  ReviewedCustomAnswerSchema,
+  UploadResultSchema,
+} from "@copilot/job-schema";
+import {
   ProfileDraftSchema,
   ProfileSourceSchema,
   ProfileVaultSchema,
@@ -37,6 +46,7 @@ export const PanelRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PANEL_PING") }),
   z.object({ type: z.literal("PANEL_SCAN_ACTIVE_TAB") }),
   z.object({ type: z.literal("PANEL_ANALYZE_ACTIVE_TAB") }),
+  z.object({ type: z.literal("PANEL_TRACKER_GET") }),
   z.object({
     type: z.literal("PANEL_HIGHLIGHT_ACTIVE_FIELDS"),
     analysisId: z.string().min(1),
@@ -46,6 +56,17 @@ export const PanelRequestSchema = z.discriminatedUnion("type", [
     type: z.literal("PANEL_FILL_ACTIVE_FIELDS"),
     analysisId: z.string().min(1),
     fieldIds: z.array(z.string().min(1)).min(1),
+  }),
+  z.object({
+    type: z.literal("PANEL_FILL_CUSTOM_ANSWERS"),
+    analysisId: z.string().min(1),
+    answers: z.array(ReviewedCustomAnswerSchema).min(1),
+  }),
+  z.object({
+    type: z.literal("PANEL_UPLOAD_APPROVED_RESUME"),
+    analysisId: z.string().min(1),
+    fieldId: z.string().min(1),
+    file: ApprovedUploadFileSchema,
   }),
   z.object({ type: z.literal("PANEL_PROFILE_GET") }),
   z.object({ type: z.literal("PANEL_PROFILE_SAVE"), draft: ProfileDraftSchema }),
@@ -67,8 +88,10 @@ export const PanelRequestSchema = z.discriminatedUnion("type", [
 export const ContentRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("CONTENT_PING") }),
   z.object({ type: z.literal("CONTENT_SCAN_PAGE") }),
+  z.object({ type: z.literal("CONTENT_INSPECT_APPLICATION") }),
   z.object({ type: z.literal("CONTENT_HIGHLIGHT_FIELDS"), fieldIds: z.array(z.string().min(1)) }),
   z.object({ type: z.literal("CONTENT_APPLY_FILL"), plan: FillPlanSchema }),
+  z.object({ type: z.literal("CONTENT_UPLOAD_APPROVED_FILE"), plan: ApprovedUploadPlanSchema }),
 ]);
 
 const RuntimeErrorSchema = z.object({
@@ -83,6 +106,7 @@ const RuntimeErrorSchema = z.object({
     "PROFILE_INVALID",
     "STALE_ANALYSIS",
     "FILL_FAILED",
+    "UPLOAD_FAILED",
   ]),
   message: z.string(),
 });
@@ -93,9 +117,13 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
     data: z.union([
       z.object({ pong: z.literal(true) }),
       PageSnapshotSchema,
+      ApplicationPageAnalysisSchema,
       FormAnalysisSchema,
+      InspectedApplicationPageSchema,
       FillResultSchema,
       HighlightResultSchema,
+      UploadResultSchema,
+      ApplicationTrackerSchema,
       ProfileVaultSchema,
       z.object({ backupJson: z.string() }),
     ]),

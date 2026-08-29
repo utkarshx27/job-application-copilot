@@ -16,6 +16,12 @@ async function saveFillProfile(panel: Page, includeSponsorship = false) {
   await panel.getByLabel("Email").fill("priya@example.test");
   await panel.getByLabel(/Phone E.164/).fill("+919876543210");
   await panel.getByLabel("Portfolio URL").fill("https://priya.example.test");
+  await panel.getByLabel("LinkedIn URL").fill("https://linkedin.com/in/priya-example");
+  await panel.getByRole("button", { name: "Add work experience" }).click();
+  await panel.getByLabel("Employer").fill("Example Labs");
+  await panel.getByLabel("Job title").fill("Software Engineer");
+  await panel.getByLabel("Start date").fill("2022-01-01");
+  await panel.getByLabel("I currently work here").check();
   if (includeSponsorship) {
     await panel.getByRole("button", { name: "Add work authorization" }).click();
     await panel.getByLabel("Sponsorship required now").selectOption("YES");
@@ -152,6 +158,131 @@ test("updates real React and Vue controlled state with reviewed fills", async ({
   await expect(frameworks.locator("#vue-state")).toHaveText("Vue phone: +919876543210");
   await frameworks.screenshot({
     path: testInfo.outputPath("phase2-framework-fill.png"),
+    fullPage: true,
+  });
+});
+
+test("detects Greenhouse, fills reviewed answers, uploads one approved résumé, and tracks confirmation", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await saveFillProfile(panel);
+
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/greenhouse.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  await expect(panel.getByText("GREENHOUSE", { exact: true })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Platform Engineer" })).toBeVisible();
+  await expect(panel.getByText(/ExampleCo · Bengaluru/)).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Custom question review" })).toBeVisible();
+
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await expect(application.getByLabel("First name")).toHaveValue("Priya");
+  await expect(application.getByLabel("Last name")).toHaveValue("Sharma");
+  await expect(application.getByLabel("Email")).toHaveValue("priya@example.test");
+  await expect(application.getByLabel("Phone")).toHaveValue("+919876543210");
+  await expect(application.getByLabel("LinkedIn profile")).toHaveValue(
+    "https://linkedin.com/in/priya-example",
+  );
+  await expect(application.getByLabel("Current employer")).toHaveValue("Example Labs");
+  await expect(application.getByLabel("Current job title")).toHaveValue("Software Engineer");
+
+  await panel
+    .getByRole("combobox", { name: /How did you hear about us/ })
+    .selectOption("career-page");
+  await panel
+    .getByRole("textbox", { name: /Why are you interested in ExampleCo/ })
+    .fill("The reliability mission fits my verified experience.");
+  await panel.getByRole("button", { name: "Fill reviewed custom answers" }).click();
+  await expect(application.getByLabel("How did you hear about us?")).toHaveValue("career-page");
+  await expect(application.getByLabel("Why are you interested in ExampleCo?")).toHaveValue(
+    "The reliability mission fits my verified experience.",
+  );
+
+  const resumePath = fileURLToPath(
+    new URL("../../fixtures/resumes/synthetic-resume.pdf", import.meta.url),
+  );
+  await panel.getByLabel("Choose résumé for this application").setInputFiles(resumePath);
+  await expect(panel.getByText("synthetic-resume.pdf", { exact: true })).toBeVisible();
+  await expect(application.locator("#gh-resume-output")).toHaveText("No résumé selected");
+  await panel.getByRole("button", { name: "Upload this approved résumé" }).click();
+  await expect(
+    panel.getByText(/Uploaded only the approved file synthetic-resume.pdf/),
+  ).toBeVisible();
+  await expect(application.locator("#gh-resume-output")).toHaveText("synthetic-resume.pdf");
+  await panel.screenshot({
+    path: testInfo.outputPath("phase3-greenhouse-panel.png"),
+    fullPage: true,
+  });
+  await application.screenshot({
+    path: testInfo.outputPath("phase3-greenhouse-reviewed.png"),
+    fullPage: true,
+  });
+
+  await application.goto("http://127.0.0.1:4173/greenhouse-confirmation.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText(/local tracker was updated to APPLIED/)).toBeVisible();
+  await expect(panel.getByText(/GH-CONF-100/)).toBeVisible();
+  await panel.getByRole("button", { name: "Applications" }).click();
+  await expect(panel.getByText("APPLIED", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Résumé: synthetic-resume.pdf")).toBeVisible();
+  await panel.screenshot({
+    path: testInfo.outputPath("phase3-tracker-confirmed.png"),
+    fullPage: true,
+  });
+});
+
+test("detects and fills a sanitized Lever application", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await saveFillProfile(panel);
+
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/lever.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  await expect(panel.getByText("LEVER", { exact: true })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Frontend Engineer" })).toBeVisible();
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await expect(application.getByLabel("Full name")).toHaveValue("Priya Sharma");
+  await expect(application.getByLabel("Email")).toHaveValue("priya@example.test");
+  await expect(application.getByLabel("Phone")).toHaveValue("+919876543210");
+  await expect(application.getByLabel("LinkedIn URL")).toHaveValue(
+    "https://linkedin.com/in/priya-example",
+  );
+  await expect(application.getByLabel("Current company")).toHaveValue("Example Labs");
+
+  await panel
+    .getByRole("textbox", { name: /What interests you about this role/ })
+    .fill("The accessibility focus matches my goals.");
+  await panel.getByRole("button", { name: "Fill reviewed custom answers" }).click();
+  await expect(application.getByLabel("What interests you about this role?")).toHaveValue(
+    "The accessibility focus matches my goals.",
+  );
+  const resumePath = fileURLToPath(
+    new URL("../../fixtures/resumes/synthetic-resume.docx", import.meta.url),
+  );
+  await panel.getByLabel("Choose résumé for this application").setInputFiles(resumePath);
+  await expect(application.locator("#lever-resume-output")).toHaveText("No résumé selected");
+  await panel.getByRole("button", { name: "Upload this approved résumé" }).click();
+  await expect(application.locator("#lever-resume-output")).toHaveText("synthetic-resume.docx");
+  await panel.screenshot({
+    path: testInfo.outputPath("phase3-lever-panel.png"),
+    fullPage: true,
+  });
+  await application.screenshot({
+    path: testInfo.outputPath("phase3-lever-reviewed.png"),
     fullPage: true,
   });
 });

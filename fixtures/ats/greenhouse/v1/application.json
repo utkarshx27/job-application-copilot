@@ -1,0 +1,68 @@
+{
+  "fixtureVersion": 1,
+  "id": "greenhouse-application-v1",
+  "adapter": "GREENHOUSE",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-29T08:00:00.000Z",
+  "source": { "host": "boards.greenhouse.io", "pathPattern": "/example/jobs/:id" },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://boards.greenhouse.io/example/jobs/100",
+    "title": "Platform Engineer — ExampleCo",
+    "capturedAt": "2026-08-29T08:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "gh-first",
+        "controlKind": "text",
+        "accessibleName": "First name",
+        "labelText": "First name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "job_application[first_name]",
+        "domId": "gh-first",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "gh-resume",
+        "controlKind": "file",
+        "accessibleName": "Résumé",
+        "labelText": "Résumé",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "job_application[resume]",
+        "domId": "gh-resume",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "gh-interest",
+        "controlKind": "textarea",
+        "accessibleName": "Why are you interested in ExampleCo?",
+        "labelText": "Why are you interested in ExampleCo?",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "job_application[custom][why_exampleco]",
+        "domId": "gh-interest",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "gh-first": "IDENTITY.legal_name.given",
+    "gh-resume": "APPLICATION.resume",
+    "gh-interest": null
+  },
+  "dynamicBehavior": ["Custom questions remain in explicit review."],
+  "sanitized": true
+}

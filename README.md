@@ -10,7 +10,7 @@ A local-first, user-controlled Chrome extension for safely assisting with job ap
 
 ## Project status
 
-Phases 0, 1, and 2 are complete:
+Phases 0, 1, and 2 are complete. Phase 3's controlled Greenhouse/Lever implementation is available, with the required live pre-submit validation gate still open:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -32,8 +32,14 @@ Phases 0, 1, and 2 are complete:
 - React-safe and Vue-safe text, select, radio, checkbox, and textarea drivers.
 - User-edit detection that prevents later copilot overwrites.
 - Dynamic-form rescanning and controlled React/Vue Test ATS fixtures.
+- Greenhouse and Lever detection with adapter-specific field rules.
+- Normalized job extraction, requisition identity, and local job snapshots.
+- Explicit custom-question review for unmatched text and native select controls.
+- Hash-verified, short-lived approval for one selected PDF/DOCX résumé upload.
+- Confirmation-page detection and local APPLYING/APPLIED tracker transitions.
+- Sanitized Greenhouse/Lever fixtures and controlled Chromium flows.
 
-Phase 3 is next and will add dedicated Greenhouse and Lever adapters, job extraction, résumé upload approval, custom-question handling, confirmation detection, and tracker integration. See the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md) and the [Phase 2 completion notes](./docs/architecture/phase-2-generic-form-engine.md).
+Next is Phase 3 live pre-submit validation and adapter hardening. The blueprint requires at least 100 distinct public forms per ATS, at least 98% supported-field fill success, and zero severe wrong-field incidents before Phase 3 is marked fully complete. See the [Phase 3 architecture and remaining gate](./docs/architecture/phase-3-greenhouse-lever.md), the [Phase 2 completion notes](./docs/architecture/phase-2-generic-form-engine.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
 
 ## Design principles
 
@@ -56,6 +62,11 @@ packages/
   candidate-schema/          Candidate truth model
   form-schema/               Form snapshot and fixture contracts
   form-engine/               Semantic mapping, confidence, and reviewed fill planning
+  job-schema/                Job, ATS, upload, confirmation, and tracker contracts
+  ats-core/                  Shared adapter interfaces and bounded page parsing
+  ats-greenhouse/            Greenhouse detector, extraction, and field rules
+  ats-lever/                 Lever detector, extraction, and field rules
+  application-state/         Local application tracker transitions
   profile-core/              Truth Vault, versioning, migration, and import review
   resume-parser/             Conservative local résumé text parser
   shared/                    Site policy and shared utilities
@@ -79,6 +90,7 @@ npm install
 npx playwright install chromium
 npm run check:phase1
 npm run check:phase2
+npm run check:phase3
 ```
 
 Build the production extension:
@@ -110,6 +122,7 @@ npm run test:e2e         # Unpacked-extension tests in bundled Chromium
 npm run check:phase0     # Complete Phase 0 release gate
 npm run check:phase1     # Complete Phase 1 release gate
 npm run check:phase2     # Complete Phase 2 release gate
+npm run check:phase3     # Controlled Phase 3 gate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -118,6 +131,7 @@ The E2E build receives access only to `http://127.0.0.1/*`. That test-only permi
 
 - The extension does not submit applications.
 - Fields are filled only after explicit side-panel review; navigation and submission remain manual.
+- Résumé upload requires selecting the exact file and pressing a separate approval button; raw files are not retained.
 - LinkedIn is manual-only and is not scanned.
 - Password and hidden fields are excluded from discovery.
 - Government IDs, banking details, credentials, and arbitrary file access are outside the command protocol.
@@ -128,7 +142,7 @@ The E2E build receives access only to `http://127.0.0.1/*`. That test-only permi
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase2` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase3` before opening a pull request.
 
 Good early contribution areas include:
 

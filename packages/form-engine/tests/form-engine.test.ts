@@ -39,6 +39,30 @@ function verifiedProfile() {
   draft.portfolio = "https://priya.example.test";
   draft.github = "https://github.com/priya-example";
   draft.linkedin = "https://linkedin.com/in/priya-example";
+  draft.workHistory = [
+    {
+      id: "work-1",
+      employer: "Example Labs",
+      title: "Software Engineer",
+      location: "Bengaluru",
+      start: "2022-01-01",
+      end: "",
+      current: true,
+      description: "Built accessible products.",
+    },
+  ];
+  draft.education = [
+    {
+      id: "education-1",
+      institution: "Example University",
+      degree: "B.Tech",
+      fieldOfStudy: "Computer Science",
+      start: "2018-08-01",
+      end: "2022-05-01",
+      current: false,
+    },
+  ];
+  draft.skills = ["TypeScript", "Accessibility"];
   draft.workAuthorization = [
     {
       id: "auth-us",
@@ -121,5 +145,40 @@ describe("generic semantic form engine", () => {
     });
     expect(analysis.mappings[2]?.fillable).toBe(false);
     expect(analysis.mappings[3]?.operation).toEqual({ kind: "check", checked: true });
+  });
+
+  it("maps verified work, education, and skill facts without inventing values", () => {
+    const fields = [
+      field("employer", { labelText: "Current employer" }),
+      field("title", { labelText: "Current job title" }),
+      field("school", { labelText: "University" }),
+      field("degree", { labelText: "Degree" }),
+      field("skills", { controlKind: "textarea", labelText: "Skills" }),
+      field("resume", { controlKind: "file", labelText: "Résumé" }),
+    ];
+    const analysis = analyzeForm(
+      {
+        schemaVersion: 1,
+        url: "https://boards.greenhouse.io/example/jobs/100",
+        title: "Application",
+        capturedAt: now,
+        fields,
+      },
+      verifiedProfile(),
+      "analysis-profile",
+    );
+    expect(analysis.mappings.map((mapping) => mapping.operation)).toEqual([
+      { kind: "text", value: "Example Labs" },
+      { kind: "text", value: "Software Engineer" },
+      { kind: "text", value: "Example University" },
+      { kind: "text", value: "B.Tech" },
+      { kind: "text", value: "TypeScript, Accessibility" },
+      undefined,
+    ]);
+    expect(analysis.mappings[5]).toMatchObject({
+      canonicalQuestion: "APPLICATION.resume",
+      fillable: false,
+      blockedReason: "No verified profile value is available.",
+    });
   });
 });

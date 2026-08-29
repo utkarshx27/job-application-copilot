@@ -11,9 +11,14 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
+    "@copilot/application-state": "*",
+    "@copilot/ats-core": "*",
+    "@copilot/ats-greenhouse": "*",
+    "@copilot/ats-lever": "*",
     "@copilot/browser-command-schema": "*",
     "@copilot/form-schema": "*",
     "@copilot/form-engine": "*",
+    "@copilot/job-schema": "*",
     "@copilot/profile-core": "*",
     "@copilot/resume-parser": "*",
     "@copilot/shared": "*",

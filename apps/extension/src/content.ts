@@ -1,6 +1,8 @@
 import { ContentRequestSchema, type RuntimeResponse } from "@copilot/browser-command-schema";
 
+import { inspectApplicationPage } from "./ats-page";
 import { scanVisibleForm } from "./scanner";
+import { uploadApprovedFile } from "./upload-driver";
 import { applyFillPlan, highlightFields, installUserEditTracking } from "./form-driver";
 
 declare global {
@@ -24,29 +26,38 @@ if (!window.__jobApplicationCopilotLoaded) {
       return false;
     }
 
-    try {
-      if (request.data.type === "CONTENT_SCAN_PAGE") {
-        sendResponse({ ok: true, data: scanVisibleForm() } satisfies RuntimeResponse);
-      } else if (request.data.type === "CONTENT_HIGHLIGHT_FIELDS") {
+    void (async () => {
+      try {
+        if (request.data.type === "CONTENT_SCAN_PAGE") {
+          sendResponse({ ok: true, data: scanVisibleForm() } satisfies RuntimeResponse);
+        } else if (request.data.type === "CONTENT_INSPECT_APPLICATION") {
+          sendResponse({ ok: true, data: inspectApplicationPage() } satisfies RuntimeResponse);
+        } else if (request.data.type === "CONTENT_HIGHLIGHT_FIELDS") {
+          sendResponse({
+            ok: true,
+            data: highlightFields(request.data.fieldIds),
+          } satisfies RuntimeResponse);
+        } else if (request.data.type === "CONTENT_APPLY_FILL") {
+          sendResponse({
+            ok: true,
+            data: applyFillPlan(request.data.plan),
+          } satisfies RuntimeResponse);
+        } else if (request.data.type === "CONTENT_UPLOAD_APPROVED_FILE") {
+          sendResponse({
+            ok: true,
+            data: await uploadApprovedFile(request.data.plan),
+          } satisfies RuntimeResponse);
+        }
+      } catch (error) {
         sendResponse({
-          ok: true,
-          data: highlightFields(request.data.fieldIds),
-        } satisfies RuntimeResponse);
-      } else {
-        sendResponse({
-          ok: true,
-          data: applyFillPlan(request.data.plan),
+          ok: false,
+          error: {
+            code: "SCAN_FAILED",
+            message: error instanceof Error ? error.message : "Unable to inspect this application.",
+          },
         } satisfies RuntimeResponse);
       }
-    } catch (error) {
-      sendResponse({
-        ok: false,
-        error: {
-          code: "SCAN_FAILED",
-          message: error instanceof Error ? error.message : "Unable to scan this form.",
-        },
-      } satisfies RuntimeResponse);
-    }
-    return false;
+    })();
+    return true;
   });
 }

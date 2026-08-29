@@ -5,14 +5,19 @@ import {
   type RuntimeResponse,
 } from "@copilot/browser-command-schema";
 import { policyForUrl } from "@copilot/shared";
-import { analyzeForm } from "@copilot/form-engine";
+import { analyzeForm, classifyField } from "@copilot/form-engine";
+import { recordApplying, recordConfirmation, recordResumeUpload } from "@copilot/application-state";
+import { FillPlanSchema, FillResultSchema, HighlightResultSchema } from "@copilot/form-schema";
 import {
-  FillPlanSchema,
-  FillResultSchema,
-  HighlightResultSchema,
-  PageSnapshotSchema,
-  type FormAnalysis,
-} from "@copilot/form-schema";
+  ApplicationPageAnalysisSchema,
+  ApplicationTrackerSchema,
+  ApprovedUploadPlanSchema,
+  InspectedApplicationPageSchema,
+  UploadResultSchema,
+  type ApplicationPageAnalysis,
+  type CustomQuestion,
+  type ReviewedCustomAnswer,
+} from "@copilot/job-schema";
 import {
   exportProfileBackup,
   importResumeDraft,
@@ -23,9 +28,11 @@ import {
 } from "@copilot/profile-core";
 
 import { getProfileVault, setProfileVault } from "./profile-storage";
+import { getApplicationTracker, setApplicationTracker } from "./application-storage";
+import { adapterForId } from "./ats-page";
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
-const analysesByTab = new Map<number, FormAnalysis>();
+const analysesByTab = new Map<number, ApplicationPageAnalysis>();
 
 type RuntimeErrorCode = Extract<RuntimeResponse, { ok: false }>["error"]["code"];
 
@@ -89,13 +96,158 @@ async function scanActiveTab(): Promise<RuntimeResponse> {
 async function analyzeActiveTab(): Promise<RuntimeResponse> {
   const tab = await inspectableActiveTab();
   if ("ok" in tab) return tab;
-  const response = await sendContentRequest(tab.id, { type: "CONTENT_SCAN_PAGE" });
+  const response = await sendContentRequest(tab.id, { type: "CONTENT_INSPECT_APPLICATION" });
   if (!response.ok) return response;
-  const snapshot = PageSnapshotSchema.safeParse(response.data);
-  if (!snapshot.success) return failure("SCAN_FAILED", "The page scan was not a valid snapshot.");
-  const analysis = analyzeForm(snapshot.data, (await getProfileVault()).currentProfile);
+  const inspected = InspectedApplicationPageSchema.safeParse(response.data);
+  if (!inspected.success)
+    return failure("SCAN_FAILED", "The page scan was not a valid application snapshot.");
+  const vault = await getProfileVault();
+  const adapter = adapterForId(inspected.data.atsReport.detection.adapter);
+  const baseAnalysis = analyzeForm(
+    inspected.data.snapshot,
+    vault.currentProfile,
+    crypto.randomUUID(),
+    (field) => adapter?.classifyField(field) ?? classifyField(field),
+  );
+  const customQuestions: CustomQuestion[] = baseAnalysis.mappings.flatMap((mapping) => {
+    if (mapping.canonicalQuestion || mapping.tier !== "UNMAPPED") return [];
+    const field = baseAnalysis.snapshot.fields.find(
+      (candidate) => candidate.fieldId === mapping.fieldId,
+    );
+    if (!field || field.controlKind === "file" || field.controlKind === "other") return [];
+    const label = field.accessibleName || field.labelText || field.name;
+    if (!label) return [];
+    const responseMode =
+      field.controlKind === "select-one" || field.controlKind === "select-multiple"
+        ? "SELECT"
+        : field.controlKind === "text" ||
+            field.controlKind === "email" ||
+            field.controlKind === "tel" ||
+            field.controlKind === "url" ||
+            field.controlKind === "number" ||
+            field.controlKind === "date" ||
+            field.controlKind === "month" ||
+            field.controlKind === "textarea"
+          ? "TEXT"
+          : "MANUAL";
+    return [
+      {
+        field,
+        label,
+        required: field.required,
+        responseMode,
+        reviewReason: "No deterministic profile or ATS rule matched this question.",
+      },
+    ];
+  });
+  const job = inspected.data.atsReport.job;
+  const applicationId = job ? `application:${job.id}` : undefined;
+  const analysis = ApplicationPageAnalysisSchema.parse({
+    ...baseAnalysis,
+    ...(applicationId ? { applicationId } : {}),
+    ats: inspected.data.atsReport.detection,
+    job,
+    customQuestions,
+    confirmation: inspected.data.atsReport.confirmation,
+  });
   analysesByTab.set(tab.id, analysis);
+  if (analysis.applicationId && analysis.job) {
+    let tracker = recordApplying(
+      await getApplicationTracker(),
+      analysis,
+      vault.currentProfile.profileVersion,
+    );
+    if (analysis.confirmation.confirmed) {
+      tracker = recordConfirmation(tracker, analysis.applicationId, analysis.confirmation);
+    }
+    await setApplicationTracker(tracker);
+  }
   return { ok: true, data: analysis };
+}
+
+function operationForCustomAnswer(analysis: ApplicationPageAnalysis, answer: ReviewedCustomAnswer) {
+  const question = analysis.customQuestions.find((item) => item.field.fieldId === answer.fieldId);
+  if (!question || question.responseMode === "MANUAL") return null;
+  if (question.responseMode === "SELECT") {
+    const option = question.field.options.find(
+      (candidate) =>
+        !candidate.disabled &&
+        (candidate.value === answer.value || candidate.text === answer.value),
+    );
+    return option ? { kind: "select" as const, value: option.value } : null;
+  }
+  return { kind: "text" as const, value: answer.value };
+}
+
+async function fillCustomAnswers(
+  analysisId: string,
+  answers: ReviewedCustomAnswer[],
+): Promise<RuntimeResponse> {
+  const tab = await inspectableActiveTab();
+  if ("ok" in tab) return tab;
+  const analysis = analysesByTab.get(tab.id);
+  if (!analysis || analysis.analysisId !== analysisId)
+    return failure("STALE_ANALYSIS", "Scan the form again before filling custom answers.");
+  const unique = new Map(answers.map((answer) => [answer.fieldId, answer]));
+  const items = [...unique.values()].flatMap((answer) => {
+    const operation = operationForCustomAnswer(analysis, answer);
+    return operation
+      ? [
+          {
+            fieldId: answer.fieldId,
+            canonicalQuestion: "APPLICATION.custom_answer" as const,
+            operation,
+          },
+        ]
+      : [];
+  });
+  if (items.length !== unique.size)
+    return failure("FILL_FAILED", "One or more custom answers are no longer approved for fill.");
+  return sendContentRequest(tab.id, {
+    type: "CONTENT_APPLY_FILL",
+    plan: FillPlanSchema.parse({ analysisId, items }),
+  });
+}
+
+async function uploadApprovedResume(
+  analysisId: string,
+  fieldId: string,
+  file: unknown,
+): Promise<RuntimeResponse> {
+  const tab = await inspectableActiveTab();
+  if ("ok" in tab) return tab;
+  const analysis = analysesByTab.get(tab.id);
+  if (!analysis || analysis.analysisId !== analysisId)
+    return failure("STALE_ANALYSIS", "Scan the form again before approving a résumé upload.");
+  const field = analysis.snapshot.fields.find((candidate) => candidate.fieldId === fieldId);
+  const mapping = analysis.mappings.find((candidate) => candidate.fieldId === fieldId);
+  if (!field || field.controlKind !== "file" || mapping?.canonicalQuestion !== "APPLICATION.resume")
+    return failure("UPLOAD_FAILED", "The selected field is not an approved résumé control.");
+  const plan = ApprovedUploadPlanSchema.parse({
+    approvalId: crypto.randomUUID(),
+    analysisId,
+    fieldId,
+    expiresAt: new Date(Date.now() + 2 * 60_000).toISOString(),
+    file,
+  });
+  const response = await sendContentRequest(tab.id, { type: "CONTENT_UPLOAD_APPROVED_FILE", plan });
+  if (!response.ok) return response;
+  const result = UploadResultSchema.safeParse(response.data);
+  if (!result.success || !result.data.uploaded)
+    return failure(
+      "UPLOAD_FAILED",
+      result.success ? (result.data.reason ?? "Upload failed.") : "Invalid upload result.",
+    );
+  if (analysis.applicationId) {
+    const tracker = recordResumeUpload(
+      await getApplicationTracker(),
+      analysis.applicationId,
+      result.data.fileName,
+      result.data.sha256,
+    );
+    await setApplicationTracker(tracker);
+  }
+  return { ok: true, data: result.data };
 }
 
 async function reviewedAction(
@@ -156,12 +308,24 @@ async function handlePanelRequest(
 
   if (request.type === "PANEL_ANALYZE_ACTIVE_TAB") return analyzeActiveTab();
 
+  if (request.type === "PANEL_TRACKER_GET") {
+    return { ok: true, data: ApplicationTrackerSchema.parse(await getApplicationTracker()) };
+  }
+
   if (request.type === "PANEL_HIGHLIGHT_ACTIVE_FIELDS") {
     return reviewedAction(request.analysisId, request.fieldIds, "highlight");
   }
 
   if (request.type === "PANEL_FILL_ACTIVE_FIELDS") {
     return reviewedAction(request.analysisId, request.fieldIds, "fill");
+  }
+
+  if (request.type === "PANEL_FILL_CUSTOM_ANSWERS") {
+    return fillCustomAnswers(request.analysisId, request.answers);
+  }
+
+  if (request.type === "PANEL_UPLOAD_APPROVED_RESUME") {
+    return uploadApprovedResume(request.analysisId, request.fieldId, request.file);
   }
 
   if (request.type === "PANEL_PROFILE_SAVE") {

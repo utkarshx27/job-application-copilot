@@ -1,5 +1,6 @@
 import { parseResumeText } from "@copilot/resume-parser";
 import type { ProfileSource, ResumeDraft } from "@copilot/profile-core";
+import { ApprovedUploadFileSchema, type ApprovedUploadFile } from "@copilot/job-schema";
 import * as mammoth from "mammoth";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 
@@ -12,6 +13,33 @@ function extensionOf(name: string): string {
 async function sha256(buffer: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", buffer);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function base64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 32_768) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 32_768));
+  }
+  return btoa(binary);
+}
+
+export async function readApprovedResumeFile(file: File): Promise<ApprovedUploadFile> {
+  if (file.size > MAX_RESUME_BYTES) throw new Error("Résumé files must be 5 MB or smaller.");
+  const extension = extensionOf(file.name);
+  if (extension !== "pdf" && extension !== "docx") {
+    throw new Error("Choose a PDF or DOCX résumé.");
+  }
+  const buffer = await file.arrayBuffer();
+  return ApprovedUploadFileSchema.parse({
+    fileName: file.name,
+    mimeType:
+      extension === "pdf"
+        ? "application/pdf"
+        : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    sha256: await sha256(buffer),
+    base64: base64(buffer),
+  });
 }
 
 async function extractPdf(buffer: ArrayBuffer): Promise<string> {

@@ -1,0 +1,68 @@
+{
+  "fixtureVersion": 1,
+  "id": "lever-application-v1",
+  "adapter": "LEVER",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-29T08:00:00.000Z",
+  "source": { "host": "jobs.lever.co", "pathPattern": "/example/:id" },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://jobs.lever.co/example/200",
+    "title": "Frontend Engineer — Example Labs",
+    "capturedAt": "2026-08-29T08:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "lever-name",
+        "controlKind": "text",
+        "accessibleName": "Full name",
+        "labelText": "Full name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "name",
+        "domId": "lever-name",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "lever-resume",
+        "controlKind": "file",
+        "accessibleName": "Résumé/CV",
+        "labelText": "Résumé/CV",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "resume",
+        "domId": "lever-resume",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "lever-interest",
+        "controlKind": "textarea",
+        "accessibleName": "What interests you about this role?",
+        "labelText": "What interests you about this role?",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "additional",
+        "domId": "lever-interest",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "lever-name": "IDENTITY.legal_name.full",
+    "lever-resume": "APPLICATION.resume",
+    "lever-interest": null
+  },
+  "dynamicBehavior": ["Consent remains manual unless explicitly verified."],
+  "sanitized": true
+}

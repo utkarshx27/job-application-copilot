@@ -17,6 +17,7 @@ type RuleResult = {
 };
 
 type ExpectedMapping = Record<string, string | null>;
+export type FieldClassifier = (field: RawField) => FieldMapping;
 
 function normalized(value: string): string {
   return value
@@ -85,6 +86,18 @@ function exactMachineRule(field: RawField): RuleResult | null {
       "WORK_AUTH.currently_authorized",
     ],
     [/\b(visa type|visa status)\b/, "WORK_AUTH.visa_type"],
+    [/\b(current employer|company name|employer)\b/, "WORK_HISTORY.0.employer"],
+    [/\b(current title|job title|position title)\b/, "WORK_HISTORY.0.title"],
+    [/\b(work location|employment location)\b/, "WORK_HISTORY.0.location"],
+    [/\b(work start|employment start|start date)\b/, "WORK_HISTORY.0.start_date"],
+    [/\b(work end|employment end|end date)\b/, "WORK_HISTORY.0.end_date"],
+    [/\b(current role|currently employed)\b/, "WORK_HISTORY.0.current"],
+    [/\b(role description|work description)\b/, "WORK_HISTORY.0.description"],
+    [/\b(school|university|institution)\b/, "EDUCATION.0.institution"],
+    [/\b(degree)\b/, "EDUCATION.0.degree"],
+    [/\b(field of study|major)\b/, "EDUCATION.0.field_of_study"],
+    [/\b(skills|skill summary)\b/, "PROFILE.skills"],
+    [/\b(resume|resume upload|cv)\b/, "APPLICATION.resume"],
     [/\b(cover letter|coverletter)\b/, "APPLICATION.cover_letter"],
     [/\b(terms|consent|privacy consent)\b/, "CONSENT.terms"],
   ];
@@ -127,6 +140,18 @@ function semanticLabelRule(field: RawField): RuleResult | null {
       0.975,
     ],
     [/\bvisa (type|status)\b/, "WORK_AUTH.visa_type", 0.98],
+    [/\b(current employer|company name|employer)\b/, "WORK_HISTORY.0.employer", 0.97],
+    [/\b(current title|job title|position title)\b/, "WORK_HISTORY.0.title", 0.97],
+    [/\b(work|employment) location\b/, "WORK_HISTORY.0.location", 0.96],
+    [/\b(work|employment) start( date)?\b/, "WORK_HISTORY.0.start_date", 0.96],
+    [/\b(work|employment) end( date)?\b/, "WORK_HISTORY.0.end_date", 0.96],
+    [/\b(current role|currently employed)\b/, "WORK_HISTORY.0.current", 0.96],
+    [/\b(role|work) description\b/, "WORK_HISTORY.0.description", 0.96],
+    [/\b(school|university|institution)\b/, "EDUCATION.0.institution", 0.97],
+    [/\bdegree\b/, "EDUCATION.0.degree", 0.97],
+    [/\b(field of study|major)\b/, "EDUCATION.0.field_of_study", 0.97],
+    [/\bskills?\b/, "PROFILE.skills", 0.95],
+    [/\b(resume|r[ée]sum[ée]|cv)\b/, "APPLICATION.resume", 0.99],
     [/\bcover letter\b/, "APPLICATION.cover_letter", 0.98],
     [/\b(accept|agree).*\b(terms|privacy)|\bconsent\b/, "CONSENT.terms", 0.95],
   ];
@@ -197,7 +222,37 @@ function profileValue(profile: CandidateProfile, canonical: CanonicalQuestion): 
       return triStateValue(authorization?.futureSponsorshipRequired.value);
     case "WORK_AUTH.visa_type":
       return authorization?.visaType?.value ?? null;
+    case "WORK_HISTORY.0.employer":
+      return profile.workHistory[0]?.employer.value ?? null;
+    case "WORK_HISTORY.0.title":
+      return profile.workHistory[0]?.title.value ?? null;
+    case "WORK_HISTORY.0.location":
+      return profile.workHistory[0]?.location?.value ?? null;
+    case "WORK_HISTORY.0.start_date":
+      return profile.workHistory[0]?.dates.value?.start ?? null;
+    case "WORK_HISTORY.0.end_date":
+      return profile.workHistory[0]?.dates.value?.end ?? null;
+    case "WORK_HISTORY.0.current":
+      return profile.workHistory[0]?.dates.value?.current ? "yes" : "no";
+    case "WORK_HISTORY.0.description":
+      return profile.workHistory[0]?.description?.value ?? null;
+    case "EDUCATION.0.institution":
+      return profile.education[0]?.institution.value ?? null;
+    case "EDUCATION.0.degree":
+      return profile.education[0]?.degree.value ?? null;
+    case "EDUCATION.0.field_of_study":
+      return profile.education[0]?.fieldOfStudy?.value ?? null;
+    case "EDUCATION.0.start_date":
+      return profile.education[0]?.dates?.value?.start ?? null;
+    case "EDUCATION.0.end_date":
+      return profile.education[0]?.dates?.value?.end ?? null;
+    case "PROFILE.skills": {
+      const skills = profile.skills.flatMap((skill) => (skill.value ? [skill.value] : []));
+      return skills.length ? skills.join(", ") : null;
+    }
+    case "APPLICATION.resume":
     case "APPLICATION.cover_letter":
+    case "APPLICATION.custom_answer":
     case "CONSENT.terms":
       return null;
   }
@@ -229,9 +284,10 @@ export function analyzeForm(
   snapshot: PageSnapshot,
   profile: CandidateProfile,
   analysisId: string = crypto.randomUUID(),
+  classifier: FieldClassifier = classifyField,
 ): FormAnalysis {
   const mappings = snapshot.fields.map((field) => {
-    const classified = classifyField(field);
+    const classified = classifier(field);
     if (!classified.canonicalQuestion) return classified;
     const value = profileValue(profile, classified.canonicalQuestion);
     const operation = value === null ? undefined : operationFor(field, value);

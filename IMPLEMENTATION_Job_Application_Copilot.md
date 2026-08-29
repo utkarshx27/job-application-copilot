@@ -2895,6 +2895,8 @@ Exit:
 
 ## Phase 3 — Greenhouse + Lever
 
+**Status:** Core implementation complete on controlled fixtures as of 2026-08-29. The live pre-submit validation gate remains open; Phase 3 is not considered fully complete until the required Greenhouse and Lever sample targets and exit metrics are recorded. See `docs/architecture/phase-3-greenhouse-lever.md`.
+
 Deliver:
 - ATS detectors;
 - job extraction;
