@@ -4,10 +4,17 @@ import {
   RuntimeResponseSchema,
   type RuntimeResponse,
 } from "@copilot/browser-command-schema";
+import {
+  createFixtureProvider,
+  createOpenAiProvider,
+  type AiProvider,
+  type AiTaskRequest,
+} from "@copilot/ai-gateway";
 import { policyForUrl } from "@copilot/shared";
 import { analyzeForm, classifyField } from "@copilot/form-engine";
 import { recordApplying, recordConfirmation, recordResumeUpload } from "@copilot/application-state";
 import { FillPlanSchema, FillResultSchema, HighlightResultSchema } from "@copilot/form-schema";
+import { draftGroundedAnswer } from "@copilot/grounded-generation";
 import {
   ApplicationPageAnalysisSchema,
   ApplicationTrackerSchema,
@@ -37,6 +44,12 @@ import {
 import { getProfileVault, setProfileVault } from "./profile-storage";
 import { getApplicationTracker, setApplicationTracker } from "./application-storage";
 import { adapterForId } from "./ats-page";
+import {
+  aiConfigStatus,
+  clearAiSessionConfig,
+  getAiSessionConfig,
+  setAiSessionConfig,
+} from "./ai-storage";
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 const analysesByTab = new Map<number, ApplicationPageAnalysis>();
@@ -155,7 +168,9 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
     inspected.data.atsReport.detection.adapter,
   );
   const customQuestions: CustomQuestion[] = baseAnalysis.mappings.flatMap((mapping) => {
-    if (mapping.canonicalQuestion || mapping.tier !== "UNMAPPED") return [];
+    const draftableMappedField = mapping.canonicalQuestion === "APPLICATION.cover_letter";
+    if (!draftableMappedField && (mapping.canonicalQuestion || mapping.tier !== "UNMAPPED"))
+      return [];
     const field = baseAnalysis.snapshot.fields.find(
       (candidate) => candidate.fieldId === mapping.fieldId,
     );
@@ -377,6 +392,81 @@ async function reviewedAction(
     : failure("FILL_FAILED", "The page returned an invalid fill result.");
 }
 
+function fixtureAiProvider(): AiProvider {
+  return createFixtureProvider((request: AiTaskRequest) => {
+    if (request.task === "QUESTION_CLASSIFY") {
+      return {
+        task: "QUESTION_CLASSIFY",
+        canonicalQuestion: "ESSAY.why_role",
+        confidence: 0.99,
+        reason: "Deterministic Phase 5 fixture classification.",
+      };
+    }
+    const candidate = request.evidence.find((item) => item.source === "CANDIDATE");
+    if (!candidate) throw new Error("The deterministic provider received no candidate evidence.");
+    const fact = candidate.text.replace(/[.\s]+$/g, "");
+    const answer = `My experience includes ${fact}.`;
+    return {
+      task: "FREE_TEXT_GENERATE",
+      answer,
+      evidenceIds: [candidate.id],
+      claims: [{ text: answer, supportedBy: [candidate.id] }],
+      unsupportedClaims: [],
+    };
+  });
+}
+
+async function configuredAiProvider(): Promise<AiProvider | RuntimeResponse> {
+  const config = await getAiSessionConfig();
+  if (!config)
+    return failure(
+      "AI_NOT_CONFIGURED",
+      "Configure an AI provider for this browser session before requesting a draft.",
+    );
+  return config.provider === "OPENAI"
+    ? createOpenAiProvider({ apiKey: config.apiKey, model: config.model })
+    : fixtureAiProvider();
+}
+
+async function draftCustomAnswer(
+  analysisId: string,
+  fieldId: string,
+  maxChars: number,
+): Promise<RuntimeResponse> {
+  const tab = await inspectableActiveTab();
+  if ("ok" in tab) return tab;
+  const analysis = analysesByTab.get(tab.id);
+  if (!analysis || analysis.analysisId !== analysisId)
+    return failure("STALE_ANALYSIS", "Scan the form again before requesting an AI draft.");
+  const question = analysis.customQuestions.find((item) => item.field.fieldId === fieldId);
+  if (
+    !question ||
+    question.responseMode !== "TEXT" ||
+    (question.field.controlKind !== "text" && question.field.controlKind !== "textarea")
+  )
+    return failure(
+      "AI_POLICY_BLOCKED",
+      "AI drafting is available only for reviewable text questions.",
+    );
+  if (!analysis.job)
+    return failure(
+      "AI_POLICY_BLOCKED",
+      "A detected job description is required for grounded drafting.",
+    );
+  const provider = await configuredAiProvider();
+  if ("ok" in provider) return provider;
+  const vault = await getProfileVault();
+  const result = await draftGroundedAnswer({
+    provider,
+    profile: vault.currentProfile,
+    job: analysis.job,
+    question: question.label,
+    controlKind: question.field.controlKind,
+    maxChars,
+  });
+  return { ok: true, data: result };
+}
+
 async function handlePanelRequest(
   request: ReturnType<typeof PanelRequestSchema.parse>,
 ): Promise<RuntimeResponse> {
@@ -386,6 +476,23 @@ async function handlePanelRequest(
 
   if (request.type === "PANEL_TRACKER_GET") {
     return { ok: true, data: ApplicationTrackerSchema.parse(await getApplicationTracker()) };
+  }
+
+  if (request.type === "PANEL_AI_CONFIG_GET") {
+    return { ok: true, data: aiConfigStatus(await getAiSessionConfig()) };
+  }
+
+  if (request.type === "PANEL_AI_CONFIG_SET") {
+    return { ok: true, data: aiConfigStatus(await setAiSessionConfig(request.config)) };
+  }
+
+  if (request.type === "PANEL_AI_CONFIG_CLEAR") {
+    await clearAiSessionConfig();
+    return { ok: true, data: aiConfigStatus(null) };
+  }
+
+  if (request.type === "PANEL_AI_DRAFT") {
+    return draftCustomAnswer(request.analysisId, request.fieldId, request.maxChars);
   }
 
   if (request.type === "PANEL_HIGHLIGHT_ACTIVE_FIELDS") {
@@ -455,8 +562,14 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
 
   void handlePanelRequest(parsed.data).then(sendResponse, (error: unknown) => {
     const isProfileRequest = parsed.data.type.startsWith("PANEL_PROFILE_");
+    const isAiRequest = parsed.data.type.startsWith("PANEL_AI_");
     const message = error instanceof Error ? error.message : "Unexpected extension failure.";
-    sendResponse(failure(isProfileRequest ? "PROFILE_INVALID" : "SCAN_FAILED", message));
+    sendResponse(
+      failure(
+        isProfileRequest ? "PROFILE_INVALID" : isAiRequest ? "AI_PROVIDER_FAILED" : "SCAN_FAILED",
+        message,
+      ),
+    );
   });
   return true;
 });

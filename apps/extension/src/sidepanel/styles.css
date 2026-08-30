@@ -410,6 +410,28 @@ footer {
 .saved-suggestion span {
   color: #42604b;
 }
+.ai-settings {
+  margin-bottom: 14px;
+}
+.ai-config-grid,
+.ai-draft {
+  display: grid;
+  gap: 9px;
+}
+.ai-draft {
+  padding: 10px;
+  border: 1px solid #a9c5b2;
+  border-radius: 8px;
+  background: #eef7f0;
+}
+.ai-draft p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.ai-draft small {
+  overflow-wrap: anywhere;
+  color: #4f6155;
+}
 .approved-file {
   display: grid;
   gap: 8px;

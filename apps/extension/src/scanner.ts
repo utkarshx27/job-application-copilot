@@ -121,6 +121,9 @@ export function inspectVisibleForm(targetDocument: Document = document): {
       disabled: control.disabled,
       readOnly: "readOnly" in control && control.readOnly,
       autocomplete: text(control.getAttribute("autocomplete")),
+      ...(control instanceof HTMLSelectElement || control.maxLength <= 0
+        ? {}
+        : { maxLength: Math.min(control.maxLength, 20_000) }),
       groupLabel: groupLabel(control),
       optionValue: control instanceof HTMLInputElement ? control.value : "",
       checked: control instanceof HTMLInputElement && control.checked,

@@ -1,8 +1,10 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/ai-gateway" },
     { "path": "./packages/candidate-schema" },
     { "path": "./packages/form-schema" },
+    { "path": "./packages/grounded-generation" },
     { "path": "./packages/form-engine" },
     { "path": "./packages/job-schema" },
     { "path": "./packages/ats-core" },

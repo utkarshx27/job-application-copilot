@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { BrowserCommandSchema, ContentRequestSchema, PanelRequestSchema } from "../src/index";
+import {
+  BrowserCommandSchema,
+  ContentRequestSchema,
+  PanelRequestSchema,
+  RuntimeResponseSchema,
+} from "../src/index";
 
 describe("browser command allowlist", () => {
   it("accepts a typed text fill", () => {
@@ -50,5 +55,40 @@ describe("browser command allowlist", () => {
         },
       }).success,
     ).toBe(false);
+  });
+
+  it("accepts session AI configuration but never exposes a key in status responses", () => {
+    expect(
+      PanelRequestSchema.safeParse({
+        type: "PANEL_AI_CONFIG_SET",
+        config: { provider: "OPENAI", model: "gpt-5-mini", apiKey: "session-key" },
+      }).success,
+    ).toBe(true);
+    const status = RuntimeResponseSchema.parse({
+      ok: true,
+      data: { configured: true, provider: "OPENAI", model: "gpt-5-mini", apiKey: "leak" },
+    });
+    expect(JSON.stringify(status)).not.toContain("leak");
+  });
+
+  it("strips arbitrary browser actions from AI draft requests", () => {
+    expect(
+      PanelRequestSchema.safeParse({
+        type: "PANEL_AI_DRAFT",
+        analysisId: "analysis-1",
+        fieldId: "essay",
+        maxChars: 500,
+        action: "CLICK_SUBMIT",
+      }).success,
+    ).toBe(true);
+    expect(
+      PanelRequestSchema.parse({
+        type: "PANEL_AI_DRAFT",
+        analysisId: "analysis-1",
+        fieldId: "essay",
+        maxChars: 500,
+        action: "CLICK_SUBMIT",
+      }),
+    ).not.toHaveProperty("action");
   });
 });

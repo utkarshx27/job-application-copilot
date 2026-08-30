@@ -2936,6 +2936,8 @@ Exit:
 
 ## Phase 5 — AI layer
 
+**Status:** Complete as of 2026-08-30. The provider-neutral structured-output gateway, deterministic-first question routing, minimized-evidence generator, claim and character-limit verifier, session-only provider configuration, review-first evidence UI, provider-independent fixture, hallucination blocker suite, and prompt-injection tests are implemented. Generated text never fills a page until the user separately selects the draft and invokes reviewed fill. See `docs/architecture/phase-5-grounded-ai.md`.
+
 Deliver:
 - AI gateway;
 - question classifier;

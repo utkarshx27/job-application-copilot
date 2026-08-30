@@ -1,3 +1,4 @@
+import { AiConfigStatusSchema, AiSessionConfigSchema } from "@copilot/ai-gateway";
 import {
   FillPlanSchema,
   FillResultSchema,
@@ -20,6 +21,7 @@ import {
   ProfileVaultSchema,
   ResumeDraftSchema,
 } from "@copilot/profile-core";
+import { GroundedDraftResultSchema } from "@copilot/grounded-generation";
 import { z } from "zod";
 
 const FieldCommandBaseSchema = z.object({
@@ -47,6 +49,15 @@ export const PanelRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PANEL_SCAN_ACTIVE_TAB") }),
   z.object({ type: z.literal("PANEL_ANALYZE_ACTIVE_TAB") }),
   z.object({ type: z.literal("PANEL_TRACKER_GET") }),
+  z.object({ type: z.literal("PANEL_AI_CONFIG_GET") }),
+  z.object({ type: z.literal("PANEL_AI_CONFIG_SET"), config: AiSessionConfigSchema }),
+  z.object({ type: z.literal("PANEL_AI_CONFIG_CLEAR") }),
+  z.object({
+    type: z.literal("PANEL_AI_DRAFT"),
+    analysisId: z.string().min(1),
+    fieldId: z.string().min(1),
+    maxChars: z.number().int().min(50).max(20_000),
+  }),
   z.object({
     type: z.literal("PANEL_HIGHLIGHT_ACTIVE_FIELDS"),
     analysisId: z.string().min(1),
@@ -107,6 +118,10 @@ const RuntimeErrorSchema = z.object({
     "STALE_ANALYSIS",
     "FILL_FAILED",
     "UPLOAD_FAILED",
+    "AI_NOT_CONFIGURED",
+    "AI_POLICY_BLOCKED",
+    "AI_PROVIDER_FAILED",
+    "AI_OUTPUT_REJECTED",
   ]),
   message: z.string(),
 });
@@ -124,6 +139,8 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
       HighlightResultSchema,
       UploadResultSchema,
       ApplicationTrackerSchema,
+      AiConfigStatusSchema,
+      GroundedDraftResultSchema,
       ProfileVaultSchema,
       z.object({ backupJson: z.string() }),
     ]),

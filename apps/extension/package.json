@@ -11,6 +11,7 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
+    "@copilot/ai-gateway": "*",
     "@copilot/application-state": "*",
     "@copilot/ats-core": "*",
     "@copilot/ats-greenhouse": "*",
@@ -18,6 +19,7 @@
     "@copilot/browser-command-schema": "*",
     "@copilot/form-schema": "*",
     "@copilot/form-engine": "*",
+    "@copilot/grounded-generation": "*",
     "@copilot/job-schema": "*",
     "@copilot/profile-core": "*",
     "@copilot/question-ontology": "*",

@@ -323,6 +323,9 @@ function profileValue(profile: CandidateProfile, canonical: CanonicalQuestion): 
     case "SOURCE.referral":
     case "ESSAY.why_company":
     case "ESSAY.why_role":
+    case "ESSAY.project_summary":
+    case "ESSAY.leadership":
+    case "ESSAY.career_narrative":
     case "EEO.gender":
     case "EEO.race_ethnicity":
     case "EEO.disability":

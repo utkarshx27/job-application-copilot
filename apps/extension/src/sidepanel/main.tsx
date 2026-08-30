@@ -1,5 +1,7 @@
 import { PanelRequestSchema, RuntimeResponseSchema } from "@copilot/browser-command-schema";
+import { AiConfigStatusSchema, type AiConfigStatus } from "@copilot/ai-gateway";
 import { FillResultSchema, HighlightResultSchema } from "@copilot/form-schema";
+import { GroundedDraftResultSchema, type GroundedDraftResult } from "@copilot/grounded-generation";
 import {
   ApplicationPageAnalysisSchema,
   ApplicationTrackerSchema,
@@ -799,6 +801,107 @@ function ObservePanel() {
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
   const [customSaveScopes, setCustomSaveScopes] = useState<Record<string, string>>({});
   const [approvedResume, setApprovedResume] = useState<ApprovedUploadFile | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiConfigStatus>({ configured: false });
+  const [aiModel, setAiModel] = useState("gpt-5-mini");
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [aiNotice, setAiNotice] = useState<Notice>(null);
+  const [draftingField, setDraftingField] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, GroundedDraftResult>>({});
+
+  async function loadAiStatus() {
+    try {
+      const response = await sendPanelRequest({ type: "PANEL_AI_CONFIG_GET" });
+      if (!response.ok) throw new Error(response.error.message);
+      const parsed = AiConfigStatusSchema.safeParse(response.data);
+      if (!parsed.success) throw new Error("The AI configuration status was invalid.");
+      setAiStatus(parsed.data);
+      if (parsed.data.model) setAiModel(parsed.data.model);
+    } catch (error) {
+      setAiNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not read AI settings.",
+      });
+    }
+  }
+
+  useEffect(() => void loadAiStatus(), []);
+
+  async function configureAi() {
+    if (!aiApiKey.trim() || !aiModel.trim()) {
+      setAiNotice({ kind: "error", message: "Enter an API key and model." });
+      return;
+    }
+    setActing(true);
+    setAiNotice(null);
+    try {
+      const granted = await chrome.permissions.request({ origins: ["https://api.openai.com/*"] });
+      if (!granted) throw new Error("OpenAI network permission was not granted.");
+      const response = await sendPanelRequest({
+        type: "PANEL_AI_CONFIG_SET",
+        config: { provider: "OPENAI", model: aiModel.trim(), apiKey: aiApiKey.trim() },
+      });
+      if (!response.ok) throw new Error(response.error.message);
+      const parsed = AiConfigStatusSchema.safeParse(response.data);
+      if (!parsed.success) throw new Error("The AI configuration status was invalid.");
+      setAiStatus(parsed.data);
+      setAiApiKey("");
+      setAiNotice({
+        kind: "success",
+        message: "AI drafting is enabled for this browser session only.",
+      });
+    } catch (error) {
+      setAiNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not configure AI drafting.",
+      });
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function clearAi() {
+    setActing(true);
+    setAiNotice(null);
+    try {
+      const response = await sendPanelRequest({ type: "PANEL_AI_CONFIG_CLEAR" });
+      if (!response.ok) throw new Error(response.error.message);
+      setAiStatus({ configured: false });
+      setDrafts({});
+      setAiNotice({ kind: "success", message: "The session-only AI configuration was cleared." });
+    } catch (error) {
+      setAiNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not clear AI settings.",
+      });
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function requestDraft(question: CustomQuestion) {
+    if (state.status !== "success") return;
+    setDraftingField(question.field.fieldId);
+    setActionNotice(null);
+    try {
+      const response = await sendPanelRequest({
+        type: "PANEL_AI_DRAFT",
+        analysisId: state.analysis.analysisId,
+        fieldId: question.field.fieldId,
+        maxChars: question.field.maxLength ?? 1_000,
+      });
+      if (!response.ok) throw new Error(response.error.message);
+      const parsed = GroundedDraftResultSchema.safeParse(response.data);
+      if (!parsed.success) throw new Error("The AI draft response was invalid.");
+      setDrafts((current) => ({ ...current, [question.field.fieldId]: parsed.data }));
+    } catch (error) {
+      setActionNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not create an AI draft.",
+      });
+    } finally {
+      setDraftingField(null);
+    }
+  }
 
   async function scan() {
     setState({ status: "loading" });
@@ -837,6 +940,7 @@ function ObservePanel() {
       );
       setCustomSaveScopes({});
       setApprovedResume(null);
+      setDrafts({});
     } catch (error) {
       setState({
         status: "error",
@@ -975,12 +1079,112 @@ function ObservePanel() {
     }
   }
 
+  function renderAiDraft(question: CustomQuestion) {
+    const draft = drafts[question.field.fieldId];
+    if (!draft) return null;
+    if (draft.status === "REFUSED") {
+      return (
+        <div className="notice error" role="alert">
+          <strong>AI draft withheld</strong>
+          <span>{draft.message}</span>
+        </div>
+      );
+    }
+    return (
+      <div className="ai-draft" role="status">
+        <strong>Grounded AI draft — review required</strong>
+        <p>{draft.answer}</p>
+        <small>
+          {draft.charCount}/{draft.maxChars} characters · Evidence:{" "}
+          {draft.evidence.map((item) => item.id).join(", ")}
+        </small>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() =>
+            setCustomAnswers({
+              ...customAnswers,
+              [question.field.fieldId]: draft.answer,
+            })
+          }
+        >
+          Use this draft in review
+        </button>
+      </div>
+    );
+  }
+
   return (
     <section className="observe-panel">
       <p className="intro">
         Scan and review deterministic matches. Filling only happens after you select fields here;
         submission is never automated.
       </p>
+      <section className="phase3-card ai-settings" aria-labelledby="ai-settings-heading">
+        <div className="section-heading">
+          <div>
+            <h2 id="ai-settings-heading">Optional grounded AI drafts</h2>
+            <p className="help">
+              The key stays in Chrome session storage and is never saved in your profile, backups,
+              page fields, or AI audit records. Drafts never fill automatically.
+            </p>
+          </div>
+          <span className="status">{aiStatus.configured ? "Session on" : "Off"}</span>
+        </div>
+        {aiStatus.configured ? (
+          <div className="approved-file">
+            <strong>{aiStatus.provider === "FIXTURE" ? "Test provider" : "OpenAI"}</strong>
+            <small>{aiStatus.model}</small>
+            <button
+              type="button"
+              className="secondary"
+              disabled={acting}
+              onClick={() => void clearAi()}
+            >
+              Clear session settings
+            </button>
+          </div>
+        ) : (
+          <div className="ai-config-grid">
+            <label>
+              OpenAI model
+              <input
+                value={aiModel}
+                maxLength={200}
+                autoComplete="off"
+                onChange={(event) => setAiModel(event.target.value)}
+              />
+            </label>
+            <label>
+              OpenAI API key
+              <input
+                type="password"
+                value={aiApiKey}
+                maxLength={500}
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => setAiApiKey(event.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="secondary"
+              disabled={acting}
+              onClick={() => void configureAi()}
+            >
+              Enable for this session
+            </button>
+          </div>
+        )}
+        {aiNotice && (
+          <div
+            className={`notice ${aiNotice.kind}`}
+            role={aiNotice.kind === "error" ? "alert" : "status"}
+          >
+            {aiNotice.message}
+          </div>
+        )}
+      </section>
       <button className="primary" disabled={state.status === "loading"} onClick={() => void scan()}>
         {state.status === "loading" ? "Scanning…" : "Scan and match visible form"}
       </button>
@@ -1162,6 +1366,24 @@ function ObservePanel() {
                         A matching saved response is stale. Enter and confirm a current answer.
                       </div>
                     )}
+                    {aiStatus.configured &&
+                      question.savedResponse.status !== "MATCH" &&
+                      question.responseMode === "TEXT" &&
+                      (question.field.controlKind === "text" ||
+                        question.field.controlKind === "textarea") &&
+                      (question.field.maxLength ?? 1_000) >= 50 && (
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={draftingField !== null}
+                          onClick={() => void requestDraft(question)}
+                        >
+                          {draftingField === question.field.fieldId
+                            ? "Drafting…"
+                            : "Draft with grounded AI"}
+                        </button>
+                      )}
+                    {renderAiDraft(question)}
                     {question.responseMode === "TEXT" && (
                       <label htmlFor={`custom-answer-${index}`}>
                         Your reviewed answer

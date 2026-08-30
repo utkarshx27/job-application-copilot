@@ -272,6 +272,52 @@ test("teaches a company-scoped custom answer once and suggests it for review", a
   await expect(application.getByLabel("Why are you interested in ExampleCo?")).toHaveValue("");
 });
 
+test("keeps a grounded AI draft off the page until both review actions", async ({
+  context,
+  extensionId,
+}) => {
+  const panel = await context.newPage();
+  await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
+  await saveFillProfile(panel);
+  const configured: unknown = await panel.evaluate(() =>
+    chrome.runtime.sendMessage({
+      type: "PANEL_AI_CONFIG_SET",
+      config: { provider: "FIXTURE", model: "deterministic-fixture-v1" },
+    }),
+  );
+  expect(configured).toMatchObject({
+    ok: true,
+    data: { configured: true, provider: "FIXTURE" },
+  });
+
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/greenhouse.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await expect(panel.getByText("Test provider")).toBeVisible();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  const question = panel.locator(".custom-question").filter({
+    hasText: "Why are you interested in ExampleCo?",
+  });
+  const applicationAnswer = application.getByLabel("Why are you interested in ExampleCo?");
+  await expect(applicationAnswer).toHaveValue("");
+  await question.getByRole("button", { name: "Draft with grounded AI" }).click();
+  await expect(question.getByText("Grounded AI draft — review required")).toBeVisible();
+  await expect(question.getByText(/Evidence: candidate:/)).toBeVisible();
+  await expect(applicationAnswer).toHaveValue("");
+
+  await question.getByRole("button", { name: "Use this draft in review" }).click();
+  const reviewedAnswer = await question
+    .getByRole("textbox", { name: /Why are you interested/ })
+    .inputValue();
+  expect(reviewedAnswer).toContain("My experience includes");
+  await expect(applicationAnswer).toHaveValue("");
+
+  await panel.getByRole("button", { name: "Fill reviewed custom answers" }).click();
+  await expect(applicationAnswer).toHaveValue(reviewedAnswer);
+});
+
 test("detects and fills a sanitized Lever application", async ({
   context,
   extensionId,

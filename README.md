@@ -10,7 +10,7 @@ A local-first, user-controlled Chrome extension for safely assisting with job ap
 
 ## Project status
 
-Phases 0 through 4 are complete. Phase 4 adds scoped, expiring saved responses on top of the completed Greenhouse/Lever flow:
+Phases 0 through 5 are complete. Phase 5 adds optional, grounded open-text drafting on top of the deterministic Greenhouse/Lever flow:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -45,8 +45,14 @@ Phases 0 through 4 are complete. Phase 4 adds scoped, expiring saved responses o
 - Company, country, role, application, and global saved-response scopes with context enforcement.
 - Teach-once custom-answer controls that default to not saving and always require review before fill.
 - Answer expiry, stale-response prompts, and a hard ban on sensitive-answer inference or reuse.
+- Provider-neutral, schema-validated AI tasks with bounded retries, timeouts, and content-free audits.
+- Optional OpenAI Responses adapter with strict structured output, no tools, and `store: false`.
+- Session-only API configuration that is excluded from profiles, backups, page fields, and audit records.
+- Deterministic-first narrative classification and minimized professional evidence selection.
+- Unsupported-claim, sensitive-data, prompt-injection, and hard character-limit blockers.
+- Evidence-visible draft review with separate use-draft and reviewed-fill actions.
 
-Phase 4's work-authorization distinction suite maps every precise variant correctly and sends every ambiguous, combined, or negative variant to review. Highly sensitive demographic and legal questions never receive inferred or saved suggestions. Next is Phase 5: the grounded AI drafting layer. See the [Phase 4 architecture](./docs/architecture/phase-4-saved-responses-ontology.md), the [completed Phase 3 gate](./docs/architecture/phase-3-greenhouse-lever.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
+Phase 5 AI is optional and review-only. It drafts only allowed narrative questions from a minimized set of verified professional facts and detected job evidence; factual, consequential, sensitive, ambiguous, or unsupported outputs are withheld for manual completion. Next is Phase 6: Ashby and SmartRecruiters adapters. See the [Phase 5 architecture](./docs/architecture/phase-5-grounded-ai.md), the [completed Phase 3 public-form gate](./docs/architecture/phase-3-greenhouse-lever.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
 
 ## Design principles
 
@@ -69,6 +75,8 @@ packages/
   candidate-schema/          Candidate truth model
   form-schema/               Form snapshot and fixture contracts
   form-engine/               Semantic mapping, confidence, and reviewed fill planning
+  ai-gateway/                Provider-neutral structured AI tasks and adapters
+  grounded-generation/       Evidence selection, policy, claims, and draft validation
   question-ontology/         Versioned questions, risk, aliases, and deterministic classification
   saved-response-engine/     Scoped matching, freshness, and teach-once response policy
   job-schema/                Job, ATS, upload, confirmation, and tracker contracts
@@ -103,6 +111,7 @@ npm run check:phase1
 npm run check:phase2
 npm run check:phase3
 npm run check:phase4
+npm run check:phase5
 ```
 
 Build the production extension:
@@ -120,6 +129,8 @@ Then:
 5. Open an employer or controlled application form.
 6. Open the extension side panel and choose **Scan and match visible form**.
 
+AI drafting is optional. In the Observe tab, enter an OpenAI model and API key and enable it for the current browser session. The extension asks for access only to the OpenAI API origin. For an eligible narrative question, choose **Draft with grounded AI**, inspect the draft and evidence IDs, choose **Use this draft in review**, edit it if needed, and finally choose **Fill reviewed custom answers**. No AI action navigates or submits the application.
+
 For automatic rebuilds during extension development:
 
 ```bash
@@ -136,6 +147,7 @@ npm run check:phase1     # Complete Phase 1 release gate
 npm run check:phase2     # Complete Phase 2 release gate
 npm run check:phase3     # Controlled Phase 3 gate
 npm run check:phase4     # Complete Phase 4 release gate
+npm run check:phase5     # Complete Phase 5 release gate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -162,10 +174,13 @@ npm run ats:qa:replay
 - Tests against real employer sites must stop before submission.
 - Public QA capture never types, clicks, uploads, submits, or retains browser session data.
 - Saved answers remain local, default to not being stored, expire by question policy, and are never reused for R4 sensitive questions.
+- AI provider keys are stored only in `chrome.storage.session`; they are never added to profile data, backups, page fields, or audit records.
+- Question classification receives no candidate profile. Draft generation receives only selected verified professional facts and bounded job context.
+- AI output cannot issue browser commands and never fills automatically. Invalid, unsupported, sensitive, or over-limit drafts are withheld.
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase4` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase5` before opening a pull request.
 
 Good early contribution areas include:
 

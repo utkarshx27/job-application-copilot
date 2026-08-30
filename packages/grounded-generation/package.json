@@ -1,5 +1,5 @@
 {
-  "name": "@copilot/browser-command-schema",
+  "name": "@copilot/grounded-generation",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,10 +9,9 @@
   },
   "dependencies": {
     "@copilot/ai-gateway": "*",
-    "@copilot/form-schema": "*",
-    "@copilot/grounded-generation": "*",
+    "@copilot/candidate-schema": "*",
     "@copilot/job-schema": "*",
-    "@copilot/profile-core": "*",
+    "@copilot/question-ontology": "*",
     "zod": "^4.1.5"
   }
 }
