@@ -13,5 +13,6 @@ playwright-report/
 .idea/
 .vscode/
 private/
+qa/ats/urls.local.json
 Utkarsh_Singh_AI_Engineer_Resume.pdf
 .DS_Store

@@ -1,6 +1,6 @@
 # Phase 3 — Greenhouse and Lever
 
-Phase 3 adds adapter-specific Greenhouse and Lever behavior on top of the Phase 2 reviewed-fill engine. The controlled implementation is complete; the blueprint's live pre-submit sampling gate remains pending.
+Phase 3 adds adapter-specific Greenhouse and Lever behavior on top of the Phase 2 reviewed-fill engine. The controlled implementation and live 100+100 capture, mapping review, and page-level signoff are complete as of 2026-08-30.
 
 ## Adapter boundary
 
@@ -61,6 +61,10 @@ Run:
 npm run check:phase3
 ```
 
-## Remaining release gate
+## Completed release gate
 
-The controlled implementation does not satisfy the blueprint's real-world gate by itself. Before marking Phase 3 fully complete, record at least 100 distinct public Greenhouse forms and 100 Lever forms in pre-submit-only QA, demonstrate at least 98% supported-field fill success, and record zero severe wrong-field incidents. Never submit applications during live QA.
+The read-only run captured 100 distinct public Greenhouse forms and 100 Lever forms. Human ground truth covered all 201 unique mapping batches and all 8,079 field occurrences. On 2026-08-30, the user confirmed all four page-level checks for all 200 fixtures: correct ATS, complete visible-control capture, no personal/session data, and no form interaction. The enforced local replay passed with 200/200 fully reviewed forms, 100% mapping accuracy, 100% supported-field fill success (1,766/1,766 eligible fields), and zero severe wrong-field incidents. Never submit applications during live QA.
+
+The repository now includes a read-only capture and local replay pipeline for this gate. It accepts a local list of public HTTPS URLs, runs each in a fresh non-persistent Chromium context, blocks non-GET/HEAD requests, and extracts only bounded field metadata. Sanitization removes query strings, fragments, page titles, selected state, user-edited state, email addresses, phone-like strings, and URLs embedded in metadata. Cookies, storage, raw HTML, text-field values, files, and screenshots are never read into fixtures.
+
+Predictions and human truth are kept in separate files. Replay uses a comprehensive synthetic candidate profile, reports mapping accuracy and supported-field fill success, counts severe wrong-field incidents, and refuses to pass the gate until every page and field review is complete. The detailed workflow and exact human checks are in [`qa/ats/README.md`](../../qa/ats/README.md).

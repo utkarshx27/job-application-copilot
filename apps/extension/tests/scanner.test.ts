@@ -79,4 +79,21 @@ describe("scanVisibleForm", () => {
       userEdited: true,
     });
   });
+
+  it("captures Lever custom-question context without option text", () => {
+    document.body.innerHTML = `
+      <li class="application-question custom-question">
+        <div>
+          Which university did you attend?
+          <div class="application-field full-width required-field">
+            <select name="cards[example][field0]"><option>Example University</option></select>
+          </div>
+        </div>
+      </li>`;
+
+    expect(scanVisibleForm().fields[0]).toMatchObject({
+      accessibleName: "cards[example][field0]",
+      groupLabel: "Which university did you attend?",
+    });
+  });
 });

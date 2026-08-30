@@ -99,7 +99,7 @@ function exactMachineRule(field: RawField): RuleResult | null {
     [/\b(skills|skill summary)\b/, "PROFILE.skills"],
     [/\b(resume|resume upload|cv)\b/, "APPLICATION.resume"],
     [/\b(cover letter|coverletter)\b/, "APPLICATION.cover_letter"],
-    [/\b(terms|consent|privacy consent)\b/, "CONSENT.terms"],
+    [/\bterms\b/, "CONSENT.terms"],
   ];
   const match = rules.find(([pattern]) => pattern.test(machine));
   return match
@@ -114,16 +114,18 @@ function exactMachineRule(field: RawField): RuleResult | null {
 
 function semanticLabelRule(field: RawField): RuleResult | null {
   const text = tokens(field);
+  if (
+    /\bpreferred (first|given) name\b/.test(text) ||
+    /\bhigh school\b/.test(text) ||
+    /\bpassword\b/.test(text)
+  )
+    return null;
   const rules: Array<[RegExp, CanonicalQuestion, number]> = [
     [/\b(first|given) name\b/, "IDENTITY.legal_name.given", 0.985],
     [/\b(last|family) name\b|\bsurname\b/, "IDENTITY.legal_name.family", 0.985],
     [/\b(full|legal) name\b/, "IDENTITY.legal_name.full", 0.98],
     [/\be ?mail( address)?\b/, "CONTACT.email", 0.99],
     [/\b(phone|mobile|telephone)( number)?\b/, "CONTACT.phone", 0.98],
-    [/\bcountry\b/, "ADDRESS.country", 0.97],
-    [/\bportfolio\b|\bpersonal (site|website)\b/, "LINKS.portfolio", 0.98],
-    [/\bgithub\b/, "LINKS.github", 0.99],
-    [/\blinked ?in\b/, "LINKS.linkedin", 0.99],
     [
       /\b(now|currently).*\bsponsor|\bsponsor.*\b(now|currently)\b/,
       "WORK_AUTH.current_sponsorship",
@@ -135,11 +137,15 @@ function semanticLabelRule(field: RawField): RuleResult | null {
       0.975,
     ],
     [
-      /\b(legally|currently).*\bauthori[sz]ed|\bwork authori[sz]ation\b/,
+      /\b(legally|currently).*\bauthori[sz]ed|\bauthori[sz]ed to work\b|\bwork authori[sz]ation\b/,
       "WORK_AUTH.currently_authorized",
       0.975,
     ],
     [/\bvisa (type|status)\b/, "WORK_AUTH.visa_type", 0.98],
+    [/\bcountry\b/, "ADDRESS.country", 0.97],
+    [/\bportfolio\b|\bpersonal (site|website)\b/, "LINKS.portfolio", 0.98],
+    [/\bgithub\b/, "LINKS.github", 0.99],
+    [/\blinked ?in\b/, "LINKS.linkedin", 0.99],
     [/\b(current employer|company name|employer)\b/, "WORK_HISTORY.0.employer", 0.97],
     [/\b(current title|job title|position title)\b/, "WORK_HISTORY.0.title", 0.97],
     [/\b(work|employment) location\b/, "WORK_HISTORY.0.location", 0.96],
@@ -147,15 +153,32 @@ function semanticLabelRule(field: RawField): RuleResult | null {
     [/\b(work|employment) end( date)?\b/, "WORK_HISTORY.0.end_date", 0.96],
     [/\b(current role|currently employed)\b/, "WORK_HISTORY.0.current", 0.96],
     [/\b(role|work) description\b/, "WORK_HISTORY.0.description", 0.96],
+    [
+      /\bwhen is .*\bgraduation\b|\b(graduation|graduate) (month|year|date)\b|\b(month|year|date) of .*\b(graduation|graduate)\b/,
+      "EDUCATION.0.end_date",
+      0.97,
+    ],
     [/\b(school|university|institution)\b/, "EDUCATION.0.institution", 0.97],
     [/\bdegree\b/, "EDUCATION.0.degree", 0.97],
     [/\b(field of study|major)\b/, "EDUCATION.0.field_of_study", 0.97],
     [/\bskills?\b/, "PROFILE.skills", 0.95],
     [/\b(resume|r[ée]sum[ée]|cv)\b/, "APPLICATION.resume", 0.99],
     [/\bcover letter\b/, "APPLICATION.cover_letter", 0.98],
-    [/\b(accept|agree).*\b(terms|privacy)|\bconsent\b/, "CONSENT.terms", 0.95],
+    [/\b(accept|agree).*\b(terms|privacy policy)\b/, "CONSENT.terms", 0.95],
   ];
   const match = rules.find(([pattern]) => pattern.test(text));
+  if (match?.[1] === "PROFILE.skills" && text.length > 80) return null;
+  if (
+    match?.[1] === "APPLICATION.resume" &&
+    field.controlKind !== "file" &&
+    !/^(resume|resume upload|cv)$/.test(normalized(field.accessibleName || field.labelText))
+  )
+    return null;
+  if (
+    match?.[1] === "APPLICATION.cover_letter" &&
+    !/^cover letter$/.test(normalized(field.accessibleName || field.labelText))
+  )
+    return null;
   return match
     ? {
         canonicalQuestion: match[1],
@@ -258,12 +281,42 @@ function profileValue(profile: CandidateProfile, canonical: CanonicalQuestion): 
   }
 }
 
-function operationFor(field: RawField, value: string) {
+function operationFor(field: RawField, value: string, canonical: CanonicalQuestion) {
   if (field.controlKind === "select-one" || field.controlKind === "select-multiple") {
+    let candidateValue = value;
+    if (
+      canonical === "EDUCATION.0.start_date" ||
+      canonical === "EDUCATION.0.end_date" ||
+      canonical === "WORK_HISTORY.0.start_date" ||
+      canonical === "WORK_HISTORY.0.end_date"
+    ) {
+      const [year, month] = value.split("-");
+      const monthName = month
+        ? [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+          ][Number(month) - 1]
+        : undefined;
+      const label = normalized(`${field.groupLabel} ${field.accessibleName} ${field.labelText}`);
+      if (/\bmonth\b/.test(label) && monthName) candidateValue = monthName;
+      else if (/\byear\b/.test(label) && year) candidateValue = year;
+      else if (/\bgraduation\b/.test(label) && monthName && year)
+        candidateValue = `${monthName} ${year}`;
+    }
     const option = field.options.find(
       (candidate) =>
-        normalized(candidate.value) === normalized(value) ||
-        normalized(candidate.text) === normalized(value),
+        normalized(candidate.value) === normalized(candidateValue) ||
+        normalized(candidate.text) === normalized(candidateValue),
     );
     return option ? { kind: "select" as const, value: option.value } : undefined;
   }
@@ -290,7 +343,8 @@ export function analyzeForm(
     const classified = classifier(field);
     if (!classified.canonicalQuestion) return classified;
     const value = profileValue(profile, classified.canonicalQuestion);
-    const operation = value === null ? undefined : operationFor(field, value);
+    const operation =
+      value === null ? undefined : operationFor(field, value, classified.canonicalQuestion);
     const blockedReason = field.userEdited
       ? "You edited this field after the last copilot fill."
       : field.disabled || field.readOnly

@@ -1,0 +1,10 @@
+[
+  {
+    "url": "https://boards.greenhouse.io/example/jobs/123456",
+    "adapter": "GREENHOUSE"
+  },
+  {
+    "url": "https://jobs.lever.co/example/00000000-0000-0000-0000-000000000000",
+    "adapter": "LEVER"
+  }
+]

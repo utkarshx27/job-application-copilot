@@ -1,0 +1,16 @@
+{
+  "name": "@copilot/ats-qa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@copilot/ats-greenhouse": "*",
+    "@copilot/ats-lever": "*",
+    "@copilot/candidate-schema": "*",
+    "@copilot/form-engine": "*",
+    "@copilot/form-schema": "*",
+    "@copilot/profile-core": "*",
+    "zod": "^4.1.5"
+  }
+}

@@ -10,7 +10,7 @@ A local-first, user-controlled Chrome extension for safely assisting with job ap
 
 ## Project status
 
-Phases 0, 1, and 2 are complete. Phase 3's controlled Greenhouse/Lever implementation is available, with the required live pre-submit validation gate still open:
+Phases 0, 1, 2, and 3 are complete. Phase 3 passed its controlled and public Greenhouse/Lever release gates:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -38,8 +38,10 @@ Phases 0, 1, and 2 are complete. Phase 3's controlled Greenhouse/Lever implement
 - Hash-verified, short-lived approval for one selected PDF/DOCX résumé upload.
 - Confirmation-page detection and local APPLYING/APPLIED tracker transitions.
 - Sanitized Greenhouse/Lever fixtures and controlled Chromium flows.
+- Read-only public-form QA capture with isolated browser sessions and blocked mutating requests.
+- Sanitized metadata replay, separate human ground truth, prioritized review queues, and gate metrics.
 
-Next is Phase 3 live pre-submit validation and adapter hardening. The blueprint requires at least 100 distinct public forms per ATS, at least 98% supported-field fill success, and zero severe wrong-field incidents before Phase 3 is marked fully complete. See the [Phase 3 architecture and remaining gate](./docs/architecture/phase-3-greenhouse-lever.md), the [Phase 2 completion notes](./docs/architecture/phase-2-generic-form-engine.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
+The final Phase 3 run was signed off on 2026-08-30 across 100 distinct public forms per ATS. All 200 forms and 8,079 field occurrences were reviewed; replay reached 100% mapping accuracy, 100% supported-field fill success, and zero severe wrong-field incidents. Next is Phase 4: saved responses and the question ontology. See the [Phase 3 architecture and completed gate](./docs/architecture/phase-3-greenhouse-lever.md), the [Phase 2 completion notes](./docs/architecture/phase-2-generic-form-engine.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
 
 ## Design principles
 
@@ -66,11 +68,13 @@ packages/
   ats-core/                  Shared adapter interfaces and bounded page parsing
   ats-greenhouse/            Greenhouse detector, extraction, and field rules
   ats-lever/                 Lever detector, extraction, and field rules
+  ats-qa/                    Sanitization, replay metrics, and human-review contracts
   application-state/         Local application tracker transitions
   profile-core/              Truth Vault, versioning, migration, and import review
   resume-parser/             Conservative local résumé text parser
   shared/                    Site policy and shared utilities
 fixtures/ats/                Sanitized ATS regression fixtures
+qa/ats/                      Public-form QA URL template and manual-review workflow
 evals/end-to-end/            Playwright extension tests
 docs/                        Architecture and engineering notes
 ```
@@ -127,6 +131,14 @@ npm run check:phase3     # Controlled Phase 3 gate
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
 
+The Phase 3 public-form gate is driven by the read-only commands below. See [the QA workflow](./qa/ats/README.md) for the exact manual checks and privacy rules.
+
+```bash
+npm run ats:qa:capture -- --input qa/ats/urls.local.json
+npm run ats:qa:init-review
+npm run ats:qa:replay
+```
+
 ## Safety and privacy
 
 - The extension does not submit applications.
@@ -139,6 +151,7 @@ The E2E build receives access only to `http://127.0.0.1/*`. That test-only permi
 - Résumé files are parsed locally, limited to 5 MB, and are not retained as raw files.
 - JSON exports are not encrypted and must be stored securely by the user.
 - Tests against real employer sites must stop before submission.
+- Public QA capture never types, clicks, uploads, submits, or retains browser session data.
 
 ## Contributing
 

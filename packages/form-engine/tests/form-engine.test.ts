@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { RawField } from "@copilot/form-schema";
+import type { CanonicalQuestion, RawField } from "@copilot/form-schema";
 import { createEmptyVault, profileToDraft, saveProfileDraft } from "@copilot/profile-core";
 
 import { analyzeForm, classifyField, precisionForExpected } from "../src/index";
@@ -145,6 +145,103 @@ describe("generic semantic form engine", () => {
     });
     expect(analysis.mappings[2]?.fillable).toBe(false);
     expect(analysis.mappings[3]?.operation).toEqual({ kind: "check", checked: true });
+  });
+
+  it("does not let broad words override work authorization or essay meaning", () => {
+    const cases: Array<[RawField, CanonicalQuestion | null]> = [
+      [
+        field("auth", {
+          groupLabel: "Are you legally authorized to work in the country for which you applied?",
+        }),
+        "WORK_AUTH.currently_authorized",
+      ],
+      [
+        field("graduation", {
+          labelText: "Please include your intended graduation year for the degree",
+        }),
+        "EDUCATION.0.end_date",
+      ],
+      [field("preferred", { labelText: "Preferred First Name" }), null],
+      [
+        field("essay", {
+          controlKind: "textarea",
+          labelText: "Tell us one thing that's not on your resume that you're proud of.",
+        }),
+        null,
+      ],
+      [
+        field("skill-essay", {
+          controlKind: "textarea",
+          labelText:
+            "What's a skill or body of knowledge you have that has nothing to do with your resume? (150 words max)",
+        }),
+        null,
+      ],
+      [
+        field("share", {
+          controlKind: "radio",
+          groupLabel: "Please share my resume and contact information with external partners.",
+        }),
+        null,
+      ],
+      [field("high-school", { labelText: "High School Name" }), null],
+      [field("password", { labelText: "Portfolio + Password" }), null],
+      [
+        field("additional", {
+          controlKind: "textarea",
+          labelText: "Additional information",
+          placeholder: "Add a cover letter or anything else you want to share.",
+        }),
+        null,
+      ],
+      [
+        field("ai-consent", {
+          controlKind: "radio",
+          name: "consent[marketing]",
+          groupLabel: "I consent to AI notetakers during interviews.",
+        }),
+        null,
+      ],
+    ];
+
+    expect(cases.map(([candidate]) => classifyField(candidate).canonicalQuestion)).toEqual(
+      cases.map(([, expected]) => expected),
+    );
+  });
+
+  it("selects date components for month, year, and combined graduation controls", () => {
+    const fields = [
+      field("graduation-month", {
+        controlKind: "select-one",
+        labelText: "Graduation month",
+        options: [{ value: "May", text: "May", disabled: false }],
+      }),
+      field("graduation-year", {
+        controlKind: "select-one",
+        labelText: "Graduation year",
+        options: [{ value: "2022", text: "2022", disabled: false }],
+      }),
+      field("graduation", {
+        controlKind: "select-one",
+        labelText: "When is your graduation?",
+        options: [{ value: "May 2022", text: "May 2022", disabled: false }],
+      }),
+    ];
+    const analysis = analyzeForm(
+      {
+        schemaVersion: 1,
+        url: "https://jobs.example.test/apply",
+        title: "Application",
+        capturedAt: now,
+        fields,
+      },
+      verifiedProfile(),
+    );
+    expect(analysis.mappings.map((mapping) => mapping.operation)).toEqual([
+      { kind: "select", value: "May" },
+      { kind: "select", value: "2022" },
+      { kind: "select", value: "May 2022" },
+    ]);
   });
 
   it("maps verified work, education, and skill facts without inventing values", () => {

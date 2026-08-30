@@ -8,6 +8,7 @@
     { "path": "./packages/ats-core" },
     { "path": "./packages/ats-greenhouse" },
     { "path": "./packages/ats-lever" },
+    { "path": "./packages/ats-qa" },
     { "path": "./packages/application-state" },
     { "path": "./packages/browser-command-schema" },
     { "path": "./packages/profile-core" },
@@ -15,6 +16,7 @@
     { "path": "./packages/shared" },
     { "path": "./apps/extension" },
     { "path": "./apps/test-ats" },
-    { "path": "./evals/end-to-end" }
+    { "path": "./evals/end-to-end" },
+    { "path": "./scripts" }
   ]
 }

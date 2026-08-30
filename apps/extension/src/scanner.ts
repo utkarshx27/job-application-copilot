@@ -59,7 +59,16 @@ function accessibleName(control: SupportedControl): string {
 
 function groupLabel(control: SupportedControl): string {
   const fieldset = control.closest("fieldset");
-  return text(fieldset?.querySelector("legend")?.textContent);
+  const legend = text(fieldset?.querySelector("legend")?.textContent);
+  if (legend) return legend;
+
+  const applicationQuestion = control.closest(".application-question");
+  if (!applicationQuestion) return "";
+  const context = applicationQuestion.cloneNode(true) as HTMLElement;
+  context
+    .querySelectorAll(".application-field, .application-dropdown, input, select, textarea")
+    .forEach((element) => element.remove());
+  return text(context.textContent);
 }
 
 function controlKind(control: SupportedControl): RawField["controlKind"] {
