@@ -1,0 +1,91 @@
+{
+  "fixtureVersion": 1,
+  "id": "smartrecruiters-application-v1",
+  "adapter": "SMARTRECRUITERS",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-30T10:00:00.000Z",
+  "source": {
+    "host": "jobs.smartrecruiters.com",
+    "pathPattern": "/oneclick-ui/company/:company/job/:postingId"
+  },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://jobs.smartrecruiters.com/oneclick-ui/company/example/job/714887450",
+    "title": "Frontend Engineer — Example Robotics",
+    "capturedAt": "2026-08-30T10:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "sr-first",
+        "controlKind": "text",
+        "accessibleName": "First name",
+        "labelText": "First name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "firstName",
+        "domId": "sr-first",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "sr-resume",
+        "controlKind": "file",
+        "accessibleName": "Résumé",
+        "labelText": "Résumé",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "resumeFile",
+        "domId": "sr-resume",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "sr-community",
+        "controlKind": "other",
+        "accessibleName": "Join the talent community",
+        "labelText": "",
+        "ariaLabel": "Join the talent community",
+        "placeholder": "",
+        "name": "",
+        "domId": "sr-community",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "checked": false,
+        "options": []
+      },
+      {
+        "fieldId": "sr-experience-summary",
+        "controlKind": "textarea",
+        "accessibleName": "Summarize the relevant experience",
+        "labelText": "Summarize the relevant experience",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "screening_experience_summary",
+        "domId": "sr-experience-summary",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "sr-first": "IDENTITY.legal_name.given",
+    "sr-resume": "APPLICATION.resume",
+    "sr-community": null,
+    "sr-experience-summary": null
+  },
+  "dynamicBehavior": [
+    "Screening answer reveals an additional experience narrative.",
+    "ARIA checkbox is detected but remains manual-only."
+  ],
+  "sanitized": true
+}

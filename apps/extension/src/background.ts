@@ -168,13 +168,18 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
     inspected.data.atsReport.detection.adapter,
   );
   const customQuestions: CustomQuestion[] = baseAnalysis.mappings.flatMap((mapping) => {
-    const draftableMappedField = mapping.canonicalQuestion === "APPLICATION.cover_letter";
-    if (!draftableMappedField && (mapping.canonicalQuestion || mapping.tier !== "UNMAPPED"))
-      return [];
     const field = baseAnalysis.snapshot.fields.find(
       (candidate) => candidate.fieldId === mapping.fieldId,
     );
-    if (!field || field.controlKind === "file" || field.controlKind === "other") return [];
+    const draftableMappedField = mapping.canonicalQuestion === "APPLICATION.cover_letter";
+    const manualCustomControl = field?.controlKind === "other";
+    if (
+      !draftableMappedField &&
+      !manualCustomControl &&
+      (mapping.canonicalQuestion || mapping.tier !== "UNMAPPED")
+    )
+      return [];
+    if (!field || field.controlKind === "file") return [];
     const label = field.accessibleName || field.labelText || field.name;
     if (!label) return [];
     const responseMode =
@@ -202,8 +207,9 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
         label,
         required: field.required,
         responseMode,
-        reviewReason:
-          savedResponse.status === "MATCH"
+        reviewReason: manualCustomControl
+          ? "This custom ATS control is detected but requires manual completion on the page."
+          : savedResponse.status === "MATCH"
             ? "A saved response matched, but you must review it before filling."
             : savedResponse.reason,
         classification,

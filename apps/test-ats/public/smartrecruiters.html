@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="copilot-ats" content="smartrecruiters" />
+    <meta name="copilot-company" content="Example Robotics" />
+    <meta name="copilot-requisition-id" content="714887450" />
+    <meta name="description" content="Build accessible software for robotics teams." />
+    <title>Frontend Engineer — Example Robotics</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-ats="smartrecruiters">
+    <header data-smartrecruiters-job>
+      <span class="company" data-company-name>Example Robotics · SmartRecruiters fixture</span>
+      <h1 data-testid="job-title">Frontend Engineer</h1>
+      <p data-testid="job-location">Hybrid · Bengaluru</p>
+    </header>
+    <main>
+      <section>
+        <p class="eyebrow">Controlled Test ATS</p>
+        <h2>Apply for this role</h2>
+        <p data-testid="job-description">Build accessible software for robotics teams.</p>
+        <form data-testid="smartrecruiters-job" novalidate>
+          <div class="grid two-columns">
+            <div class="field">
+              <label for="sr-first">First name</label>
+              <input id="sr-first" name="firstName" required />
+            </div>
+            <div class="field">
+              <label for="sr-last">Last name</label>
+              <input id="sr-last" name="lastName" required />
+            </div>
+          </div>
+          <div class="field">
+            <label for="sr-email">Email</label>
+            <input id="sr-email" name="email" type="email" required />
+          </div>
+          <div class="field">
+            <label for="sr-phone">Phone</label>
+            <input id="sr-phone" name="phoneNumber" type="tel" />
+          </div>
+          <div class="field">
+            <label for="sr-company">Current company</label>
+            <input id="sr-company" name="currentCompany" />
+          </div>
+          <div class="field">
+            <label for="sr-title">Current job title</label>
+            <input id="sr-title" name="currentTitle" />
+          </div>
+          <div class="field">
+            <label for="sr-linkedin">LinkedIn URL</label>
+            <input id="sr-linkedin" name="linkedInUrl" type="url" />
+          </div>
+          <div class="field">
+            <label for="sr-resume">Résumé</label>
+            <input id="sr-resume" name="resumeFile" type="file" accept=".pdf,.docx" required />
+            <output id="sr-resume-output" aria-live="polite">No résumé selected</output>
+          </div>
+          <div class="field">
+            <label for="sr-experience">Do you have professional frontend experience?</label>
+            <select
+              id="sr-experience"
+              name="screening_frontend_experience"
+              data-reveal-target="sr-experience-detail"
+            >
+              <option value="">Choose one</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+          <div class="field" id="sr-experience-detail" hidden>
+            <label for="sr-experience-summary">Summarize the relevant experience</label>
+            <textarea id="sr-experience-summary" name="screening_experience_summary"></textarea>
+          </div>
+          <div
+            id="sr-community"
+            role="checkbox"
+            aria-label="Join the talent community"
+            aria-checked="false"
+          ></div>
+          <div class="field">
+            <label for="sr-interest">What interests you about this role?</label>
+            <textarea id="sr-interest" name="screening_why_role" rows="4"></textarea>
+          </div>
+          <button type="button" disabled>Submit disabled in Test ATS</button>
+        </form>
+      </section>
+    </main>
+    <script src="ats-fixtures.js"></script>
+  </body>
+</html>

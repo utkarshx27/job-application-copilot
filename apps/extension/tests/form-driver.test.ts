@@ -101,4 +101,23 @@ describe("reviewed form driver", () => {
       false,
     );
   });
+
+  it("refuses to operate a role-based custom component", () => {
+    document.body.innerHTML = `<input id="office" role="combobox" aria-label="Office" />`;
+    const result = applyFillPlan(
+      {
+        analysisId: "analysis-custom",
+        items: [
+          {
+            fieldId: "office",
+            canonicalQuestion: "ADDRESS.country",
+            operation: { kind: "text", value: "IN" },
+          },
+        ],
+      },
+      document,
+    );
+    expect(result.filledFieldIds).toEqual([]);
+    expect(result.skipped[0]?.reason).toContain("manual completion");
+  });
 });

@@ -90,6 +90,25 @@ button {
   font: inherit;
 }
 
+[role="combobox"],
+[role="listbox"],
+[role="checkbox"] {
+  min-height: 44px;
+  border: 1px solid #aab7ae;
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: white;
+}
+
+[role="option"] {
+  padding: 5px;
+}
+
+[role="checkbox"]::before {
+  content: "Manual custom checkbox";
+  color: #5d6861;
+}
+
 input:focus,
 select:focus,
 textarea:focus {

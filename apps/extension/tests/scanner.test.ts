@@ -96,4 +96,33 @@ describe("scanVisibleForm", () => {
       groupLabel: "Which university did you attend?",
     });
   });
+
+  it("captures ARIA custom components as visible manual-only controls", () => {
+    document.body.innerHTML = `
+      <label id="location-label">Preferred office</label>
+      <input
+        id="office-combobox"
+        role="combobox"
+        aria-labelledby="location-label"
+        aria-controls="office-options"
+        aria-required="true"
+      />
+      <div id="office-options" role="listbox">
+        <div role="option" data-value="blr">Bengaluru</div>
+        <div role="option" data-value="remote" aria-disabled="true">Remote</div>
+      </div>`;
+
+    const fields = scanVisibleForm().fields;
+    expect(fields[0]).toMatchObject({
+      fieldId: "office-combobox",
+      controlKind: "other",
+      accessibleName: "Preferred office",
+      required: true,
+      options: [
+        { value: "blr", text: "Bengaluru", disabled: false },
+        { value: "remote", text: "Remote", disabled: true },
+      ],
+    });
+    expect(fields[1]).toMatchObject({ controlKind: "other" });
+  });
 });

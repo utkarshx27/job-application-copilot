@@ -4,7 +4,14 @@ import { QuestionClassificationSchema } from "@copilot/question-ontology";
 import { SavedResponseSuggestionSchema } from "@copilot/saved-response-engine";
 import { z } from "zod";
 
-export const AtsIdSchema = z.enum(["GREENHOUSE", "LEVER", "GENERIC", "UNKNOWN"]);
+export const AtsIdSchema = z.enum([
+  "GREENHOUSE",
+  "LEVER",
+  "ASHBY",
+  "SMARTRECRUITERS",
+  "GENERIC",
+  "UNKNOWN",
+]);
 
 export const AtsDetectionSchema = z.object({
   adapter: AtsIdSchema,

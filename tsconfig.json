@@ -10,6 +10,8 @@
     { "path": "./packages/ats-core" },
     { "path": "./packages/ats-greenhouse" },
     { "path": "./packages/ats-lever" },
+    { "path": "./packages/ats-ashby" },
+    { "path": "./packages/ats-smartrecruiters" },
     { "path": "./packages/ats-qa" },
     { "path": "./packages/application-state" },
     { "path": "./packages/browser-command-schema" },

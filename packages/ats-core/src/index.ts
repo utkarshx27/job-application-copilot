@@ -17,7 +17,7 @@ import {
 } from "@copilot/form-schema";
 
 export interface AtsAdapter {
-  readonly id: Extract<AtsId, "GREENHOUSE" | "LEVER">;
+  readonly id: Extract<AtsId, "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS">;
   readonly version: string;
   detect(targetDocument: Document): AtsDetection;
   extractJob(targetDocument: Document, detection: AtsDetection): NormalizedJob | null;
@@ -27,7 +27,7 @@ export interface AtsAdapter {
 
 export function atsFieldRule(
   field: RawField,
-  adapter: Extract<AtsId, "GREENHOUSE" | "LEVER">,
+  adapter: Extract<AtsId, "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS">,
   canonicalQuestion: CanonicalQuestion,
   evidence: string,
 ): FieldMapping {

@@ -1,0 +1,93 @@
+{
+  "fixtureVersion": 1,
+  "id": "ashby-application-v1",
+  "adapter": "ASHBY",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-30T10:00:00.000Z",
+  "source": {
+    "host": "jobs.ashbyhq.com",
+    "pathPattern": "/example/:postingId/application"
+  },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://jobs.ashbyhq.com/example/26a4281b-4ab2-4829-b664-7c43d7dbd409/application",
+    "title": "Infrastructure Engineer — Example Systems",
+    "capturedAt": "2026-08-30T10:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "ashby-name",
+        "controlKind": "text",
+        "accessibleName": "Full name",
+        "labelText": "Full name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "_systemfield_name",
+        "domId": "ashby-name",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "ashby-resume",
+        "controlKind": "file",
+        "accessibleName": "Résumé",
+        "labelText": "Résumé",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "_systemfield_resume",
+        "domId": "ashby-resume",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "ashby-office",
+        "controlKind": "other",
+        "accessibleName": "Preferred office",
+        "labelText": "",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "",
+        "domId": "ashby-office",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": [
+          { "value": "blr", "text": "Bengaluru", "disabled": false },
+          { "value": "remote", "text": "Remote", "disabled": false }
+        ]
+      },
+      {
+        "fieldId": "ashby-workplace-reason",
+        "controlKind": "textarea",
+        "accessibleName": "Why is this arrangement important to you?",
+        "labelText": "Why is this arrangement important to you?",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "custom_workplace_reason",
+        "domId": "ashby-workplace-reason",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "ashby-name": "IDENTITY.legal_name.full",
+    "ashby-resume": "APPLICATION.resume",
+    "ashby-office": null,
+    "ashby-workplace-reason": null
+  },
+  "dynamicBehavior": [
+    "Preferred workplace selection reveals an additional narrative question.",
+    "ARIA combobox is detected but remains manual-only."
+  ],
+  "sanitized": true
+}

@@ -102,6 +102,16 @@ export function applyFillPlan(untrustedPlan: FillPlan, targetDocument: Document 
       skipped.push({ fieldId: item.fieldId, reason: "The field is no longer visible." });
       continue;
     }
+    if (
+      !isSupportedControl(control) ||
+      ["combobox", "listbox", "checkbox", "radio"].includes(control.getAttribute("role") ?? "")
+    ) {
+      skipped.push({
+        fieldId: item.fieldId,
+        reason: "This custom ATS control requires manual completion.",
+      });
+      continue;
+    }
     if (control.disabled || ("readOnly" in control && control.readOnly)) {
       skipped.push({ fieldId: item.fieldId, reason: "The field is disabled or read-only." });
       continue;

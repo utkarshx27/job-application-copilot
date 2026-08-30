@@ -2954,6 +2954,8 @@ Exit:
 
 ## Phase 6 — Ashby + SmartRecruiters
 
+**Status:** Complete as of 2026-08-30. Ashby and SmartRecruiters now use the shared adapter contract for deterministic detection, normalized job extraction, field rules, explicit résumé upload, custom-question review, confirmation tracking, and safe failure behavior. Sanitized controlled canaries cover both ATS platforms, including dynamic questions and ARIA custom controls that are detected and routed to manual completion rather than operated. See `docs/architecture/phase-6-ashby-smartrecruiters.md`.
+
 Same adapter requirements.
 
 Add:

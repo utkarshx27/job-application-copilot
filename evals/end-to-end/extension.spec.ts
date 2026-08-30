@@ -367,6 +367,133 @@ test("detects and fills a sanitized Lever application", async ({
   });
 });
 
+test("detects Ashby, keeps custom components manual, rescans dynamics, and tracks confirmation", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
+  await saveFillProfile(panel);
+
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/ashby.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  await expect(panel.getByText("ASHBY", { exact: true })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Infrastructure Engineer" })).toBeVisible();
+  const officeReview = panel.locator(".custom-question").filter({ hasText: "Preferred office" });
+  await expect(officeReview.getByText(/requires manual completion/)).toBeVisible();
+  await expect(officeReview.getByText(/Complete this control manually/)).toBeVisible();
+
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await expect(application.getByLabel("Full name")).toHaveValue("Priya Sharma");
+  await expect(application.getByLabel("Email")).toHaveValue("priya@example.test");
+  await expect(application.getByLabel("Phone")).toHaveValue("+919876543210");
+  await expect(application.getByLabel("LinkedIn URL")).toHaveValue(
+    "https://linkedin.com/in/priya-example",
+  );
+  await expect(application.getByLabel("Current company")).toHaveValue("Example Labs");
+  await expect(application.getByLabel("Current job title")).toHaveValue("Software Engineer");
+  await expect(application.locator("#ashby-office")).toHaveValue("");
+
+  const beforeDynamicCount = await panel.locator(".mapping-fields > li").count();
+  await application.getByLabel("Preferred workplace type").selectOption("remote");
+  await expect(application.getByLabel("Why is this arrangement important to you?")).toBeVisible();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(
+    panel.getByRole("textbox", { name: /Why is this arrangement important/ }),
+  ).toBeVisible();
+  expect(await panel.locator(".mapping-fields > li").count()).toBeGreaterThan(beforeDynamicCount);
+
+  const answer = "Remote work supports focused collaboration across distributed teams.";
+  await panel.getByRole("textbox", { name: /Why is this arrangement important/ }).fill(answer);
+  await panel.getByRole("button", { name: "Fill reviewed custom answers" }).click();
+  await expect(application.getByLabel("Why is this arrangement important to you?")).toHaveValue(
+    answer,
+  );
+
+  const resumePath = fileURLToPath(
+    new URL("../../fixtures/resumes/synthetic-resume.pdf", import.meta.url),
+  );
+  await panel.getByLabel("Choose résumé for this application").setInputFiles(resumePath);
+  await panel.getByRole("button", { name: "Upload this approved résumé" }).click();
+  await expect(application.locator("#ashby-resume-output")).toHaveText("synthetic-resume.pdf");
+
+  await application.screenshot({
+    path: testInfo.outputPath("phase6-ashby-reviewed.png"),
+    fullPage: true,
+  });
+  await application.goto("http://127.0.0.1:4173/ashby-confirmation.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText(/local tracker was updated to APPLIED/)).toBeVisible();
+  await expect(panel.getByText(/ASH-CONF-300/)).toBeVisible();
+});
+
+test("detects SmartRecruiters, fills safe fields, rescans screening dynamics, and uploads", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
+  await saveFillProfile(panel);
+
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/smartrecruiters.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  await expect(panel.getByText("SMARTRECRUITERS", { exact: true })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Frontend Engineer" })).toBeVisible();
+  const communityReview = panel
+    .locator(".custom-question")
+    .filter({ hasText: "Join the talent community" });
+  await expect(communityReview.getByText(/requires manual completion/)).toBeVisible();
+
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await expect(application.getByLabel("First name")).toHaveValue("Priya");
+  await expect(application.getByLabel("Last name")).toHaveValue("Sharma");
+  await expect(application.getByLabel("Email")).toHaveValue("priya@example.test");
+  await expect(application.getByLabel("Phone")).toHaveValue("+919876543210");
+  await expect(application.getByLabel("Current company")).toHaveValue("Example Labs");
+  await expect(application.getByLabel("Current job title")).toHaveValue("Software Engineer");
+
+  const beforeDynamicCount = await panel.locator(".mapping-fields > li").count();
+  await application.getByLabel("Do you have professional frontend experience?").selectOption("yes");
+  await expect(application.getByLabel("Summarize the relevant experience")).toBeVisible();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(
+    panel.getByRole("textbox", { name: "Summarize the relevant experience" }),
+  ).toBeVisible();
+  expect(await panel.locator(".mapping-fields > li").count()).toBeGreaterThan(beforeDynamicCount);
+  const summary = "Built accessible interfaces for local-first applications.";
+  await panel.getByRole("textbox", { name: "Summarize the relevant experience" }).fill(summary);
+  await panel.getByRole("button", { name: "Fill reviewed custom answers" }).click();
+  await expect(application.getByLabel("Summarize the relevant experience")).toHaveValue(summary);
+
+  const resumePath = fileURLToPath(
+    new URL("../../fixtures/resumes/synthetic-resume.docx", import.meta.url),
+  );
+  await panel.getByLabel("Choose résumé for this application").setInputFiles(resumePath);
+  await panel.getByRole("button", { name: "Upload this approved résumé" }).click();
+  await expect(application.locator("#sr-resume-output")).toHaveText("synthetic-resume.docx");
+  await application.screenshot({
+    path: testInfo.outputPath("phase6-smartrecruiters-reviewed.png"),
+    fullPage: true,
+  });
+
+  await application.goto("http://127.0.0.1:4173/smartrecruiters-confirmation.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText(/local tracker was updated to APPLIED/)).toBeVisible();
+  await expect(panel.getByText(/SR-CONF-400/)).toBeVisible();
+});
+
 test("saves and reloads a versioned profile through chrome.storage.local", async ({
   context,
   extensionId,

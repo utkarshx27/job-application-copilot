@@ -21,7 +21,7 @@ To provide a hand-curated list instead, copy `urls.example.json` to `urls.local.
 ]
 ```
 
-The `adapter` is the ATS provider, not the employer name. Its only accepted values in Phase 3 are `GREENHOUSE` and `LEVER`; company names such as `ACCENTURE` are invalid. The adapter may be omitted for standard `greenhouse.io` and `lever.co` hosts. Set it explicitly only when a custom employer domain is genuinely backed by Greenhouse or Lever. Ashby and Workday URLs belong to later phases. Use distinct application pages and respect each site's terms and access policies.
+The `adapter` is the ATS provider, not the employer name. This Phase 3 public-form gate accepts `GREENHOUSE` and `LEVER`; company names such as `ACCENTURE` are invalid. The adapter may be omitted for standard `greenhouse.io` and `lever.co` hosts. Set it explicitly only when a custom employer domain is genuinely backed by Greenhouse or Lever. Ashby and SmartRecruiters are covered by the separate Phase 6 controlled canaries; Workday belongs to Phase 7. Use distinct application pages and respect each site's terms and access policies.
 
 ## 2. Capture sanitized metadata
 
