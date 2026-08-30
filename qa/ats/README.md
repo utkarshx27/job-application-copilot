@@ -98,9 +98,18 @@ npm run ats:qa:replay -- --captures path/to/captures --reviews path/to/reviews -
 
 The command exits nonzero when the gate is not satisfied.
 
+When upgrading a Phase 3 review set to the Phase 4 ontology, reconcile only the previously combined current/future sponsorship decisions before replay:
+
+```bash
+npm run ats:qa:reconcile-work-auth -- --confirm-distinction
+npm run ats:qa:replay -- --enforce
+```
+
+This narrowly guarded migration changes a field from mapped to manual only when its reviewed target was current sponsorship but its captured question explicitly combines both current and future timing. It writes an audit summary and does not alter page signoff.
+
 ## Phase 3 completion record
 
-The final 2026-08-30 release run covered 100 Greenhouse and 100 Lever forms. A person confirmed all four page checks for every fixture, and enforced replay passed with 200/200 fully reviewed forms, 8,079/8,079 correct reviewed mappings, 1,766/1,766 successful eligible autofills, and zero severe wrong-field incidents.
+The final 2026-08-30 release run covered 100 Greenhouse and 100 Lever forms. A person confirmed all four page checks for every fixture. After the Phase 4 combined-sponsorship safety correction, enforced replay passes with 200/200 fully reviewed forms, 8,079/8,079 correct reviewed mappings, 1,667/1,667 successful eligible autofills, and zero severe wrong-field incidents.
 
 ## Controlled dry run
 

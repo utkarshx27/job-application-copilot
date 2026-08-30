@@ -24,8 +24,15 @@ import {
   importProfileBackup,
   resolveProfileConflict,
   saveProfileDraft,
+  saveProfileResponses,
   verifyImportedFacts,
 } from "@copilot/profile-core";
+import { classifyQuestion } from "@copilot/question-ontology";
+import {
+  createSavedResponse,
+  matchSavedResponse,
+  type SavedResponseContext,
+} from "@copilot/saved-response-engine";
 
 import { getProfileVault, setProfileVault } from "./profile-storage";
 import { getApplicationTracker, setApplicationTracker } from "./application-storage";
@@ -93,6 +100,37 @@ async function scanActiveTab(): Promise<RuntimeResponse> {
   return sendContentRequest(tab.id, { type: "CONTENT_SCAN_PAGE" });
 }
 
+function countryCodeForLocation(location: string | undefined): string | undefined {
+  if (!location) return undefined;
+  const trimmed = location.trim();
+  if (/^(US|IN|CA|GB|AU|DE)$/i.test(trimmed)) return trimmed.toUpperCase();
+  const normalized = trimmed.toLocaleLowerCase();
+  const countries: Array<[RegExp, string]> = [
+    [/\b(united states|usa|u\.s\.)\b/, "US"],
+    [/\bindia\b/, "IN"],
+    [/\bcanada\b/, "CA"],
+    [/\b(united kingdom|u\.k\.)\b/, "GB"],
+    [/\baustralia\b/, "AU"],
+    [/\bgermany\b/, "DE"],
+  ];
+  return countries.find(([pattern]) => pattern.test(normalized))?.[1];
+}
+
+function savedResponseContext(
+  applicationId: string | undefined,
+  job: ApplicationPageAnalysis["job"],
+  ats: string,
+): SavedResponseContext {
+  const countryCode = countryCodeForLocation(job?.location);
+  return {
+    ...(applicationId ? { applicationId } : {}),
+    ...(job?.company ? { company: job.company } : {}),
+    ...(job?.title ? { role: job.title } : {}),
+    ...(countryCode ? { countryCode } : {}),
+    ats,
+  };
+}
+
 async function analyzeActiveTab(): Promise<RuntimeResponse> {
   const tab = await inspectableActiveTab();
   if ("ok" in tab) return tab;
@@ -108,6 +146,13 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
     vault.currentProfile,
     crypto.randomUUID(),
     (field) => adapter?.classifyField(field) ?? classifyField(field),
+  );
+  const job = inspected.data.atsReport.job;
+  const applicationId = job ? `application:${job.id}` : undefined;
+  const responseContext = savedResponseContext(
+    applicationId,
+    job,
+    inspected.data.atsReport.detection.adapter,
   );
   const customQuestions: CustomQuestion[] = baseAnalysis.mappings.flatMap((mapping) => {
     if (mapping.canonicalQuestion || mapping.tier !== "UNMAPPED") return [];
@@ -130,18 +175,27 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
             field.controlKind === "textarea"
           ? "TEXT"
           : "MANUAL";
+    const classification = classifyQuestion(label);
+    const savedResponse = matchSavedResponse(
+      label,
+      vault.currentProfile.answerLibrary,
+      responseContext,
+    );
     return [
       {
         field,
         label,
         required: field.required,
         responseMode,
-        reviewReason: "No deterministic profile or ATS rule matched this question.",
+        reviewReason:
+          savedResponse.status === "MATCH"
+            ? "A saved response matched, but you must review it before filling."
+            : savedResponse.reason,
+        classification,
+        savedResponse,
       },
     ];
   });
-  const job = inspected.data.atsReport.job;
-  const applicationId = job ? `application:${job.id}` : undefined;
   const analysis = ApplicationPageAnalysisSchema.parse({
     ...baseAnalysis,
     ...(applicationId ? { applicationId } : {}),
@@ -203,10 +257,32 @@ async function fillCustomAnswers(
   });
   if (items.length !== unique.size)
     return failure("FILL_FAILED", "One or more custom answers are no longer approved for fill.");
-  return sendContentRequest(tab.id, {
+  const responsesToSave = [...unique.values()].flatMap((answer) => {
+    if (!answer.saveScope) return [];
+    const question = analysis.customQuestions.find((item) => item.field.fieldId === answer.fieldId);
+    if (!question) return [];
+    const selectedOption =
+      question.responseMode === "SELECT"
+        ? question.field.options.find(
+            (option) => option.value === answer.value || option.text === answer.value,
+          )
+        : undefined;
+    return [
+      createSavedResponse({
+        question: question.label,
+        answer: selectedOption?.text ?? answer.value,
+        reuseScope: answer.saveScope,
+        context: savedResponseContext(analysis.applicationId, analysis.job, analysis.ats.adapter),
+      }),
+    ];
+  });
+  const response = await sendContentRequest(tab.id, {
     type: "CONTENT_APPLY_FILL",
     plan: FillPlanSchema.parse({ analysisId, items }),
   });
+  if (!response.ok || responsesToSave.length === 0) return response;
+  await storeProfile(saveProfileResponses(await getProfileVault(), responsesToSave));
+  return response;
 }
 
 async function uploadApprovedResume(

@@ -1,4 +1,7 @@
+import { ReuseScopeSchema } from "@copilot/candidate-schema";
 import { FormAnalysisSchema, PageSnapshotSchema, RawFieldSchema } from "@copilot/form-schema";
+import { QuestionClassificationSchema } from "@copilot/question-ontology";
+import { SavedResponseSuggestionSchema } from "@copilot/saved-response-engine";
 import { z } from "zod";
 
 export const AtsIdSchema = z.enum(["GREENHOUSE", "LEVER", "GENERIC", "UNKNOWN"]);
@@ -55,6 +58,8 @@ export const CustomQuestionSchema = z.object({
   required: z.boolean(),
   responseMode: z.enum(["TEXT", "SELECT", "MANUAL"]),
   reviewReason: z.string().min(1),
+  classification: QuestionClassificationSchema,
+  savedResponse: SavedResponseSuggestionSchema,
 });
 
 export const ApplicationPageAnalysisSchema = FormAnalysisSchema.extend({
@@ -110,6 +115,7 @@ export const UploadResultSchema = z.object({
 export const ReviewedCustomAnswerSchema = z.object({
   fieldId: z.string().min(1),
   value: z.string().max(20_000),
+  saveScope: ReuseScopeSchema.optional(),
 });
 
 export const ApplicationStatusSchema = z.enum([

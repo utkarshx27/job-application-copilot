@@ -10,7 +10,7 @@ A local-first, user-controlled Chrome extension for safely assisting with job ap
 
 ## Project status
 
-Phases 0, 1, 2, and 3 are complete. Phase 3 passed its controlled and public Greenhouse/Lever release gates:
+Phases 0 through 4 are complete. Phase 4 adds scoped, expiring saved responses on top of the completed Greenhouse/Lever flow:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -40,8 +40,13 @@ Phases 0, 1, 2, and 3 are complete. Phase 3 passed its controlled and public Gre
 - Sanitized Greenhouse/Lever fixtures and controlled Chromium flows.
 - Read-only public-form QA capture with isolated browser sessions and blocked mutating requests.
 - Sanitized metadata replay, separate human ground truth, prioritized review queues, and gate metrics.
+- Versioned canonical question ontology with aliases, keyword rules, and local semantic matching.
+- Explicit risk policies that separate current authorization, current sponsorship, and future sponsorship.
+- Company, country, role, application, and global saved-response scopes with context enforcement.
+- Teach-once custom-answer controls that default to not saving and always require review before fill.
+- Answer expiry, stale-response prompts, and a hard ban on sensitive-answer inference or reuse.
 
-The final Phase 3 run was signed off on 2026-08-30 across 100 distinct public forms per ATS. All 200 forms and 8,079 field occurrences were reviewed; replay reached 100% mapping accuracy, 100% supported-field fill success, and zero severe wrong-field incidents. Next is Phase 4: saved responses and the question ontology. See the [Phase 3 architecture and completed gate](./docs/architecture/phase-3-greenhouse-lever.md), the [Phase 2 completion notes](./docs/architecture/phase-2-generic-form-engine.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
+Phase 4's work-authorization distinction suite maps every precise variant correctly and sends every ambiguous, combined, or negative variant to review. Highly sensitive demographic and legal questions never receive inferred or saved suggestions. Next is Phase 5: the grounded AI drafting layer. See the [Phase 4 architecture](./docs/architecture/phase-4-saved-responses-ontology.md), the [completed Phase 3 gate](./docs/architecture/phase-3-greenhouse-lever.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
 
 ## Design principles
 
@@ -64,6 +69,8 @@ packages/
   candidate-schema/          Candidate truth model
   form-schema/               Form snapshot and fixture contracts
   form-engine/               Semantic mapping, confidence, and reviewed fill planning
+  question-ontology/         Versioned questions, risk, aliases, and deterministic classification
+  saved-response-engine/     Scoped matching, freshness, and teach-once response policy
   job-schema/                Job, ATS, upload, confirmation, and tracker contracts
   ats-core/                  Shared adapter interfaces and bounded page parsing
   ats-greenhouse/            Greenhouse detector, extraction, and field rules
@@ -95,6 +102,7 @@ npx playwright install chromium
 npm run check:phase1
 npm run check:phase2
 npm run check:phase3
+npm run check:phase4
 ```
 
 Build the production extension:
@@ -127,6 +135,7 @@ npm run check:phase0     # Complete Phase 0 release gate
 npm run check:phase1     # Complete Phase 1 release gate
 npm run check:phase2     # Complete Phase 2 release gate
 npm run check:phase3     # Controlled Phase 3 gate
+npm run check:phase4     # Complete Phase 4 release gate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -152,10 +161,11 @@ npm run ats:qa:replay
 - JSON exports are not encrypted and must be stored securely by the user.
 - Tests against real employer sites must stop before submission.
 - Public QA capture never types, clicks, uploads, submits, or retains browser session data.
+- Saved answers remain local, default to not being stored, expire by question policy, and are never reused for R4 sensitive questions.
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase3` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase4` before opening a pull request.
 
 Good early contribution areas include:
 

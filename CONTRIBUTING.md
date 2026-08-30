@@ -15,7 +15,7 @@ Thanks for helping build Job Application Copilot. Accuracy, user control, privac
 ```bash
 npm install
 npx playwright install chromium
-npm run check:phase3
+npm run check:phase4
 ```
 
 Node.js 22+ and npm 11+ are required.
@@ -26,7 +26,7 @@ Node.js 22+ and npm 11+ are required.
 2. Create a branch from `main`.
 3. Add or update tests with the implementation.
 4. Run formatting and the relevant focused tests while developing.
-5. Run `npm run check:phase3` before opening a pull request.
+5. Run `npm run check:phase4` before opening a pull request.
 6. Explain behavior changes, safety impact, and verification in the pull request.
 
 When contributing public ATS QA fixtures, follow [`qa/ats/README.md`](./qa/ats/README.md). Never commit the raw URL list, browser state, personal information, raw employer HTML, or application answers. Public-page capture must remain read-only and pre-submit.
@@ -39,7 +39,7 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:e2e
-npm run check:phase3
+npm run check:phase4
 ```
 
 ## Fixture rules

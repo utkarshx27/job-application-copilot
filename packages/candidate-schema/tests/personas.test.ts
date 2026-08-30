@@ -106,7 +106,7 @@ describe("Phase 1 synthetic personas", () => {
     p05.answerLibrary = [
       {
         id: "gdpr",
-        canonicalQuestion: "GDPR consent",
+        canonicalQuestion: "CONSENT.terms",
         keywords: ["gdpr"],
         answer: true,
         source: "USER_CONFIRMED",

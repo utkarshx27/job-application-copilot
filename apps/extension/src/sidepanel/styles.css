@@ -368,6 +368,48 @@ footer {
 .phase3-card .file-button {
   padding: 0 10px;
 }
+.custom-question {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #dce3dd;
+  border-radius: 9px;
+  background: #f8faf8;
+}
+.question-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  color: #263b2d;
+  font-size: 13px;
+}
+.risk {
+  flex: none;
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: #385241;
+  background: #e8efe9;
+  font-size: 10px;
+}
+.risk-R3,
+.risk-R4 {
+  color: #743d04;
+  background: #fff0ce;
+}
+.saved-suggestion {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid #a7d0b4;
+  border-radius: 8px;
+  color: #174d2b;
+  background: #edf8f0;
+  font-size: 11px;
+}
+.saved-suggestion span {
+  color: #42604b;
+}
 .approved-file {
   display: grid;
   gap: 8px;

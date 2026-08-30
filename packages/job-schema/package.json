@@ -5,7 +5,10 @@
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
+    "@copilot/candidate-schema": "*",
     "@copilot/form-schema": "*",
+    "@copilot/question-ontology": "*",
+    "@copilot/saved-response-engine": "*",
     "zod": "^4.1.5"
   }
 }

@@ -1,4 +1,8 @@
+import { CanonicalQuestionSchema } from "@copilot/question-ontology";
 import { z } from "zod";
+
+export { CanonicalQuestionSchema } from "@copilot/question-ontology";
+export type { CanonicalQuestion } from "@copilot/question-ontology";
 
 export const FormControlKindSchema = z.enum([
   "text",
@@ -58,39 +62,6 @@ export const SanitizedFixtureSchema = z.object({
   sanitized: z.literal(true),
 });
 
-export const CanonicalQuestionSchema = z.enum([
-  "IDENTITY.legal_name.full",
-  "IDENTITY.legal_name.given",
-  "IDENTITY.legal_name.family",
-  "CONTACT.email",
-  "CONTACT.phone",
-  "ADDRESS.country",
-  "LINKS.portfolio",
-  "LINKS.github",
-  "LINKS.linkedin",
-  "WORK_AUTH.currently_authorized",
-  "WORK_AUTH.current_sponsorship",
-  "WORK_AUTH.future_sponsorship",
-  "WORK_AUTH.visa_type",
-  "WORK_HISTORY.0.employer",
-  "WORK_HISTORY.0.title",
-  "WORK_HISTORY.0.location",
-  "WORK_HISTORY.0.start_date",
-  "WORK_HISTORY.0.end_date",
-  "WORK_HISTORY.0.current",
-  "WORK_HISTORY.0.description",
-  "EDUCATION.0.institution",
-  "EDUCATION.0.degree",
-  "EDUCATION.0.field_of_study",
-  "EDUCATION.0.start_date",
-  "EDUCATION.0.end_date",
-  "PROFILE.skills",
-  "APPLICATION.resume",
-  "APPLICATION.cover_letter",
-  "APPLICATION.custom_answer",
-  "CONSENT.terms",
-]);
-
 export const MappingTierSchema = z.enum(["R0", "R1", "R2", "UNMAPPED"]);
 
 export const FillOperationSchema = z.discriminatedUnion("kind", [
@@ -141,7 +112,6 @@ export const HighlightResultSchema = z.object({
 export type RawField = z.infer<typeof RawFieldSchema>;
 export type PageSnapshot = z.infer<typeof PageSnapshotSchema>;
 export type SanitizedFixture = z.infer<typeof SanitizedFixtureSchema>;
-export type CanonicalQuestion = z.infer<typeof CanonicalQuestionSchema>;
 export type FieldMapping = z.infer<typeof FieldMappingSchema>;
 export type FormAnalysis = z.infer<typeof FormAnalysisSchema>;
 export type FillOperation = z.infer<typeof FillOperationSchema>;

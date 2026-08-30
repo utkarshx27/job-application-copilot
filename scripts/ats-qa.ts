@@ -776,6 +776,77 @@ async function signoffPagesCommand(options: CliOptions): Promise<void> {
   console.log(`Signed off all four page checks for ${fixtures.length} fixtures as ${reviewer}.`);
 }
 
+async function reconcileWorkAuthCommand(options: CliOptions): Promise<void> {
+  if (options["confirm-distinction"] !== true)
+    throw new Error(
+      "Work-authorization reconciliation requires --confirm-distinction to acknowledge that combined current/future sponsorship questions must remain manual.",
+    );
+  const capturesPath = resolve(option(options, "captures", ".tmp/ats-qa/captures"));
+  const reviewsPath = resolve(option(options, "reviews", ".tmp/ats-qa/reviews"));
+  const reportPath = resolve(option(options, "report", ".tmp/ats-qa/report"));
+  const fixtures = await readFixtures(capturesPath);
+  const reviews = await readReviews(reviewsPath);
+  let correctedFields = 0;
+  const correctedFixtures = new Set<string>();
+
+  for (const fixture of fixtures) {
+    const current = reviews.get(fixture.id);
+    if (!current) throw new Error(`Missing review for fixture ${fixture.id}.`);
+    const fieldsById = new Map(fixture.snapshot.fields.map((field) => [field.fieldId, field]));
+    const fields = current.fields.map((fieldReview) => {
+      const field = fieldsById.get(fieldReview.fieldId);
+      const question = compact(
+        field?.groupLabel || field?.accessibleName || field?.labelText || field?.name || "",
+      ).toLocaleLowerCase();
+      const combinedTiming =
+        /\b(now|current|currently|today|present)\b/.test(question) &&
+        /\b(future|later|eventually)\b/.test(question);
+      if (
+        fieldReview.decision !== "MAPPED" ||
+        fieldReview.expectedCanonicalQuestion !== "WORK_AUTH.current_sponsorship" ||
+        !/\bsponsor(ship|ed|ing)?\b/.test(question) ||
+        !combinedTiming
+      )
+        return fieldReview;
+      correctedFields += 1;
+      correctedFixtures.add(fixture.id);
+      return {
+        fieldId: fieldReview.fieldId,
+        decision: "UNMAPPED" as const,
+        severityIfWrong: fieldReview.severityIfWrong,
+        ...(fieldReview.reviewContext ? { reviewContext: fieldReview.reviewContext } : {}),
+        notes:
+          "Phase 4 safety correction: combined current/future sponsorship cannot reuse either answer independently.",
+      };
+    });
+    const corrected = AtsQaReviewSchema.parse({ ...current, fields });
+    await writeFile(
+      join(reviewsPath, `${fixture.id}.review.json`),
+      `${JSON.stringify(corrected, null, 2)}\n`,
+    );
+  }
+
+  await mkdir(reportPath, { recursive: true });
+  await writeFile(
+    join(reportPath, "work-auth-correction-summary.json"),
+    `${JSON.stringify(
+      {
+        correctionVersion: 1,
+        correctedAt: new Date().toISOString(),
+        policy:
+          "Combined current/future sponsorship questions remain manual because the stored answers are distinct.",
+        correctedFields,
+        correctedFixtures: correctedFixtures.size,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  console.log(
+    `Corrected ${correctedFields} combined-sponsorship field decisions across ${correctedFixtures.size} fixtures.`,
+  );
+}
+
 async function seedControlledCommand(options: CliOptions): Promise<void> {
   const outputPath = resolve(option(options, "output", ".tmp/ats-qa-controlled/captures"));
   await mkdir(outputPath, { recursive: true });
@@ -801,6 +872,7 @@ function usage(): string {
   replay [--captures ...] [--reviews ...] [--report .tmp/ats-qa/report] [--input qa/ats/urls.local.json] [--enforce]
   import-reviewed --report-reviewed path --page-checklist-reviewed path [--reviewer name]
   signoff-pages --confirm-all --reviewer name [--captures ...] [--reviews ...] [--report ...]
+  reconcile-work-auth --confirm-distinction [--captures ...] [--reviews ...] [--report ...]
   seed-controlled [--output .tmp/ats-qa-controlled/captures]`;
 }
 
@@ -813,6 +885,7 @@ try {
   else if (command === "replay") await replayCommand(options);
   else if (command === "import-reviewed") await importReviewedCommand(options);
   else if (command === "signoff-pages") await signoffPagesCommand(options);
+  else if (command === "reconcile-work-auth") await reconcileWorkAuthCommand(options);
   else if (command === "seed-controlled") await seedControlledCommand(options);
   else throw new Error(usage());
 } catch (error) {

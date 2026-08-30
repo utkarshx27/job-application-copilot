@@ -209,6 +209,24 @@ describe("generic semantic form engine", () => {
     );
   });
 
+  it("maps precise work-authorization timing and routes unsafe variants to review", () => {
+    const cases: Array<[string, CanonicalQuestion | null]> = [
+      ["Are you legally authorized to work?", "WORK_AUTH.currently_authorized"],
+      ["Will you require sponsorship now?", "WORK_AUTH.current_sponsorship"],
+      ["Will you require sponsorship in the future?", "WORK_AUTH.future_sponsorship"],
+      ["Will you require sponsorship?", null],
+      ["Will you require sponsorship now or in the future?", null],
+      ["Do you not require sponsorship now?", null],
+      ["Will you never need sponsorship later?", null],
+      ["Are you not unauthorized to work?", null],
+      ["Can you work without sponsorship?", null],
+    ];
+    for (const [index, [labelText, canonical]] of cases.entries()) {
+      const mapping = classifyField(field(`auth-${index}`, { labelText }));
+      expect(mapping.canonicalQuestion, labelText).toBe(canonical);
+    }
+  });
+
   it("selects date components for month, year, and combined graduation controls", () => {
     const fields = [
       field("graduation-month", {

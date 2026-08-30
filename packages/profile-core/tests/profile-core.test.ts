@@ -9,8 +9,10 @@ import {
   profileToDraft,
   resolveProfileConflict,
   saveProfileDraft,
+  saveProfileResponses,
   verifyImportedFacts,
 } from "../src/index";
+import { createSavedResponse } from "@copilot/saved-response-engine";
 
 const firstTime = "2026-08-27T10:00:00.000Z";
 const secondTime = "2026-08-27T11:00:00.000Z";
@@ -71,6 +73,35 @@ describe("profile vault", () => {
     expect(migrated.vaultSchemaVersion).toBe(1);
     expect(migrated.currentProfile).toEqual(vault.currentProfile);
     expect(migrated.sources[0]?.displayName).toBe("Migrated local profile");
+  });
+
+  it("versions and replaces a saved response in the same scoped question slot", () => {
+    const vault = createEmptyVault(firstTime);
+    const context = { applicationId: "application:1", company: "ExampleCo" };
+    const first = createSavedResponse({
+      id: "response-1",
+      question: "Why are you interested in ExampleCo?",
+      answer: "First answer",
+      reuseScope: "COMPANY",
+      context,
+      now: firstTime,
+    });
+    const saved = saveProfileResponses(vault, [first], secondTime);
+    expect(saved.currentProfile.profileVersion).toBe(2);
+    expect(saved.currentProfile.answerLibrary).toHaveLength(1);
+
+    const replacement = createSavedResponse({
+      id: "response-2",
+      question: "Why are you interested in ExampleCo?",
+      answer: "Updated answer",
+      reuseScope: "COMPANY",
+      context,
+      now: secondTime,
+    });
+    const updated = saveProfileResponses(saved, [replacement], "2026-08-27T12:00:00.000Z");
+    expect(updated.currentProfile.answerLibrary).toHaveLength(1);
+    expect(updated.currentProfile.answerLibrary[0]?.answer).toBe("Updated answer");
+    expect(updated.history).toHaveLength(2);
   });
 
   it("keeps conflicting résumé facts pending and verifies accepted document facts", () => {

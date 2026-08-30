@@ -8,6 +8,7 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
+    "@copilot/question-ontology": "*",
     "zod": "^4.1.5"
   }
 }

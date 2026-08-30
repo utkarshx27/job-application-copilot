@@ -238,6 +238,40 @@ test("detects Greenhouse, fills reviewed answers, uploads one approved résumé,
   });
 });
 
+test("teaches a company-scoped custom answer once and suggests it for review", async ({
+  context,
+  extensionId,
+}) => {
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/greenhouse.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  const question = panel.locator(".custom-question").filter({
+    hasText: "Why are you interested in ExampleCo?",
+  });
+  const answer = "The reliability mission matches my verified experience.";
+  await question.getByRole("textbox", { name: /Why are you interested/ }).fill(answer);
+  await question.getByLabel("Save this answer for future applications?").selectOption("COMPANY");
+  await panel.getByRole("button", { name: "Fill reviewed custom answers" }).click();
+  await expect(application.getByLabel("Why are you interested in ExampleCo?")).toHaveValue(answer);
+
+  await application.reload();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  const rescanned = panel.locator(".custom-question").filter({
+    hasText: "Why are you interested in ExampleCo?",
+  });
+  await expect(rescanned.getByText("Saved response suggested")).toBeVisible();
+  await expect(rescanned.getByRole("textbox", { name: /Why are you interested/ })).toHaveValue(
+    answer,
+  );
+  await expect(application.getByLabel("Why are you interested in ExampleCo?")).toHaveValue("");
+});
+
 test("detects and fills a sanitized Lever application", async ({
   context,
   extensionId,

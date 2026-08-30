@@ -42,6 +42,25 @@ function tokens(field: RawField): string {
   );
 }
 
+function unsafeWorkAuthorizationWording(field: RawField): string | null {
+  const visibleQuestion = field.groupLabel
+    ? field.groupLabel
+    : [field.accessibleName, field.labelText, field.ariaLabel, field.placeholder].join(" ");
+  const text = normalized([field.name, field.domId, visibleQuestion].join(" "));
+  const sponsorship = /\bsponsor(ship|ed|ing)?\b/.test(text);
+  const authorization = /\b(?:un)?authori[sz](ed|ation)\b|\blegal right to work\b/.test(text);
+  if (!sponsorship && !authorization) return null;
+  const current = /\b(now|current|currently|today|present|at this time)\b/.test(text);
+  const future = /\b(future|later|eventually|ever)\b/.test(text);
+  const negative = /\b(no|not|never|without|dont|doesnt|wont|isnt|arent)\b/.test(text);
+  if (negative) return "Negative work-authorization wording requires manual review.";
+  if (sponsorship && current === future)
+    return current
+      ? "Combined current/future sponsorship wording requires manual review."
+      : "Sponsorship timing is ambiguous and requires manual review.";
+  return null;
+}
+
 const AUTOCOMPLETE_RULES: Record<string, CanonicalQuestion> = {
   name: "IDENTITY.legal_name.full",
   "given-name": "IDENTITY.legal_name.given",
@@ -190,6 +209,18 @@ function semanticLabelRule(field: RawField): RuleResult | null {
 }
 
 export function classifyField(field: RawField): FieldMapping {
+  const unsafeWorkAuthorization = unsafeWorkAuthorizationWording(field);
+  if (unsafeWorkAuthorization) {
+    return FieldMappingSchema.parse({
+      fieldId: field.fieldId,
+      canonicalQuestion: null,
+      confidence: 0,
+      tier: "UNMAPPED",
+      evidence: ["safety:work-authorization-review"],
+      fillable: false,
+      blockedReason: unsafeWorkAuthorization,
+    });
+  }
   const rule = exactMachineRule(field) ?? semanticLabelRule(field);
   if (!rule) {
     return FieldMappingSchema.parse({
@@ -245,6 +276,8 @@ function profileValue(profile: CandidateProfile, canonical: CanonicalQuestion): 
       return triStateValue(authorization?.futureSponsorshipRequired.value);
     case "WORK_AUTH.visa_type":
       return authorization?.visaType?.value ?? null;
+    case "WORK_AUTH.visa_expiration":
+      return authorization?.visaExpiration?.value ?? null;
     case "WORK_HISTORY.0.employer":
       return profile.workHistory[0]?.employer.value ?? null;
     case "WORK_HISTORY.0.title":
@@ -277,6 +310,26 @@ function profileValue(profile: CandidateProfile, canonical: CanonicalQuestion): 
     case "APPLICATION.cover_letter":
     case "APPLICATION.custom_answer":
     case "CONSENT.terms":
+    case "COMP.desired_base":
+    case "COMP.desired_total":
+    case "COMP.hourly_rate":
+    case "COMP.current_compensation":
+    case "AVAIL.notice_period":
+    case "AVAIL.start_date":
+    case "LOCATION.relocation":
+    case "LOCATION.commute":
+    case "LOCATION.travel":
+    case "LOCATION.remote_preference":
+    case "SOURCE.referral":
+    case "ESSAY.why_company":
+    case "ESSAY.why_role":
+    case "EEO.gender":
+    case "EEO.race_ethnicity":
+    case "EEO.disability":
+    case "EEO.veteran_status":
+    case "LEGAL.criminal_history":
+    case "SECURITY.clearance":
+    case "CITIZENSHIP.status":
       return null;
   }
 }

@@ -7,6 +7,7 @@ import {
   type ApplicationPageAnalysis,
   type ApplicationTracker,
   type ApprovedUploadFile,
+  type CustomQuestion,
 } from "@copilot/job-schema";
 import {
   ProfileDraftSchema,
@@ -28,6 +29,29 @@ type ScanState =
   | { status: "loading" }
   | { status: "success"; analysis: ApplicationPageAnalysis }
   | { status: "error"; message: string };
+
+function suggestedControlValue(question: CustomQuestion): string {
+  const suggestion = question.savedResponse;
+  if (suggestion.status !== "MATCH" || !suggestion.answer) return "";
+  if (question.responseMode !== "SELECT") return suggestion.answer;
+  const normalized = suggestion.answer.trim().toLocaleLowerCase();
+  return (
+    question.field.options.find(
+      (option) =>
+        !option.disabled &&
+        (option.value.trim().toLocaleLowerCase() === normalized ||
+          option.text.trim().toLocaleLowerCase() === normalized),
+    )?.value ?? ""
+  );
+}
+
+function scopeLabel(scope: string): string {
+  if (scope === "APPLICATION") return "Only this application";
+  if (scope === "COMPANY") return "This company";
+  if (scope === "COUNTRY") return "Jobs in this country";
+  if (scope === "ROLE") return "Similar roles";
+  return "Similar questions everywhere";
+}
 
 async function sendPanelRequest(untrustedRequest: unknown) {
   const request = PanelRequestSchema.parse(untrustedRequest);
@@ -773,6 +797,7 @@ function ObservePanel() {
   const [actionNotice, setActionNotice] = useState<Notice>(null);
   const [acting, setActing] = useState(false);
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
+  const [customSaveScopes, setCustomSaveScopes] = useState<Record<string, string>>({});
   const [approvedResume, setApprovedResume] = useState<ApprovedUploadFile | null>(null);
 
   async function scan() {
@@ -802,7 +827,15 @@ function ObservePanel() {
         ),
       );
       setState({ status: "success", analysis: analysis.data });
-      setCustomAnswers({});
+      setCustomAnswers(
+        Object.fromEntries(
+          analysis.data.customQuestions.flatMap((question) => {
+            const value = suggestedControlValue(question);
+            return value ? [[question.field.fieldId, value]] : [];
+          }),
+        ),
+      );
+      setCustomSaveScopes({});
       setApprovedResume(null);
     } catch (error) {
       setState({
@@ -816,8 +849,15 @@ function ObservePanel() {
     if (state.status !== "success") return;
     const answers = state.analysis.customQuestions.flatMap((question) => {
       const value = customAnswers[question.field.fieldId] ?? "";
+      const saveScope = customSaveScopes[question.field.fieldId];
       return question.responseMode !== "MANUAL" && value.trim()
-        ? [{ fieldId: question.field.fieldId, value }]
+        ? [
+            {
+              fieldId: question.field.fieldId,
+              value,
+              ...(saveScope ? { saveScope } : {}),
+            },
+          ]
         : [];
     });
     if (answers.length === 0) {
@@ -1098,46 +1138,98 @@ function ObservePanel() {
                   These questions did not match verified profile facts. Answers are filled only from
                   what you enter here.
                 </p>
-                {state.analysis.customQuestions.map((question) => (
-                  <label key={question.field.fieldId}>
-                    {question.label}{" "}
+                {state.analysis.customQuestions.map((question, index) => (
+                  <div className="custom-question" key={question.field.fieldId}>
+                    <div className="question-heading">
+                      <strong>{question.label}</strong>
+                      <span className={`risk risk-${question.savedResponse.risk ?? "unknown"}`}>
+                        {question.savedResponse.risk ?? "Unclassified"}
+                      </span>
+                    </div>
                     {question.required && <span className="sensitive">Required</span>}
+                    <p className="help">{question.reviewReason}</p>
+                    {question.savedResponse.status === "MATCH" && (
+                      <div className="saved-suggestion" role="status">
+                        <strong>Saved response suggested</strong>
+                        <span>
+                          {question.savedResponse.method?.replaceAll("_", " ")} · Expires{" "}
+                          {question.savedResponse.expiresAt?.slice(0, 10)} · Review before filling
+                        </span>
+                      </div>
+                    )}
+                    {question.savedResponse.status === "STALE" && (
+                      <div className="notice error">
+                        A matching saved response is stale. Enter and confirm a current answer.
+                      </div>
+                    )}
                     {question.responseMode === "TEXT" && (
-                      <textarea
-                        rows={3}
-                        value={customAnswers[question.field.fieldId] ?? ""}
-                        onChange={(event) =>
-                          setCustomAnswers({
-                            ...customAnswers,
-                            [question.field.fieldId]: event.target.value,
-                          })
-                        }
-                      />
+                      <label htmlFor={`custom-answer-${index}`}>
+                        Your reviewed answer
+                        <textarea
+                          id={`custom-answer-${index}`}
+                          aria-label={question.label}
+                          rows={3}
+                          value={customAnswers[question.field.fieldId] ?? ""}
+                          onChange={(event) =>
+                            setCustomAnswers({
+                              ...customAnswers,
+                              [question.field.fieldId]: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
                     )}
                     {question.responseMode === "SELECT" && (
-                      <select
-                        value={customAnswers[question.field.fieldId] ?? ""}
-                        onChange={(event) =>
-                          setCustomAnswers({
-                            ...customAnswers,
-                            [question.field.fieldId]: event.target.value,
-                          })
-                        }
-                      >
-                        <option value="">Choose an answer</option>
-                        {question.field.options
-                          .filter((option) => !option.disabled && option.value)
-                          .map((option) => (
-                            <option value={option.value} key={option.value}>
-                              {option.text}
-                            </option>
-                          ))}
-                      </select>
+                      <label htmlFor={`custom-answer-${index}`}>
+                        Your reviewed answer
+                        <select
+                          id={`custom-answer-${index}`}
+                          aria-label={question.label}
+                          value={customAnswers[question.field.fieldId] ?? ""}
+                          onChange={(event) =>
+                            setCustomAnswers({
+                              ...customAnswers,
+                              [question.field.fieldId]: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Choose an answer</option>
+                          {question.field.options
+                            .filter((option) => !option.disabled && option.value)
+                            .map((option) => (
+                              <option value={option.value} key={option.value}>
+                                {option.text}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
                     )}
                     {question.responseMode === "MANUAL" && (
                       <small>Complete this control manually on the application page.</small>
                     )}
-                  </label>
+                    {question.responseMode !== "MANUAL" && (
+                      <label htmlFor={`save-scope-${index}`}>
+                        Save this answer for future applications?
+                        <select
+                          id={`save-scope-${index}`}
+                          value={customSaveScopes[question.field.fieldId] ?? ""}
+                          onChange={(event) =>
+                            setCustomSaveScopes({
+                              ...customSaveScopes,
+                              [question.field.fieldId]: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Do not save</option>
+                          {question.savedResponse.allowedScopes.map((scope) => (
+                            <option value={scope} key={scope}>
+                              {scopeLabel(scope)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                  </div>
                 ))}
                 <button
                   type="button"

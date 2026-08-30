@@ -1,5 +1,5 @@
 {
-  "name": "@copilot/profile-core",
+  "name": "@copilot/saved-response-engine",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@copilot/candidate-schema": "*",
-    "@copilot/saved-response-engine": "*",
+    "@copilot/question-ontology": "*",
     "zod": "^4.1.5"
   }
 }

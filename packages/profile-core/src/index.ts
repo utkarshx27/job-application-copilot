@@ -1,7 +1,9 @@
 import {
   CandidateProfileSchema,
+  SavedResponseSchema,
   type CandidateProfile,
   type FactStatus,
+  type SavedResponse,
   type Sensitivity,
 } from "@copilot/candidate-schema";
 import { z } from "zod";
@@ -481,6 +483,46 @@ export function saveProfileDraft(
   };
 
   const currentProfile = CandidateProfileSchema.parse(candidate);
+  return ProfileVaultSchema.parse({
+    ...vault,
+    updatedAt: now,
+    currentProfile,
+    history: [...vault.history, previous],
+  });
+}
+
+function sameResponseSlot(left: SavedResponse, right: SavedResponse): boolean {
+  const leftQuestion = left.canonicalQuestion ?? left.normalizedQuestion;
+  const rightQuestion = right.canonicalQuestion ?? right.normalizedQuestion;
+  return (
+    Boolean(leftQuestion) &&
+    leftQuestion === rightQuestion &&
+    left.reuseScope === right.reuseScope &&
+    JSON.stringify(left.scopeKey ?? {}) === JSON.stringify(right.scopeKey ?? {})
+  );
+}
+
+export function saveProfileResponses(
+  vaultInput: ProfileVault,
+  responseInputs: SavedResponse[],
+  now = new Date().toISOString(),
+): ProfileVault {
+  const vault = ProfileVaultSchema.parse(vaultInput);
+  const responses = responseInputs.map((response) => SavedResponseSchema.parse(response));
+  if (!responses.length) return vault;
+  const answerLibrary = [...vault.currentProfile.answerLibrary];
+  for (const response of responses) {
+    const index = answerLibrary.findIndex((candidate) => sameResponseSlot(candidate, response));
+    if (index >= 0) answerLibrary[index] = response;
+    else answerLibrary.push(response);
+  }
+  const previous = vault.currentProfile;
+  const currentProfile = CandidateProfileSchema.parse({
+    ...previous,
+    profileVersion: previous.profileVersion + 1,
+    updatedAt: now,
+    answerLibrary,
+  });
   return ProfileVaultSchema.parse({
     ...vault,
     updatedAt: now,

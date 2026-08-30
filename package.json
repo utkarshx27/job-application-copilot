@@ -37,6 +37,7 @@
     "ats:qa:replay": "node --experimental-strip-types scripts/ats-qa.ts replay",
     "ats:qa:import-reviewed": "node --experimental-strip-types scripts/ats-qa.ts import-reviewed",
     "ats:qa:signoff-pages": "node --experimental-strip-types scripts/ats-qa.ts signoff-pages",
+    "ats:qa:reconcile-work-auth": "node --experimental-strip-types scripts/ats-qa.ts reconcile-work-auth",
     "ats:qa:seed-controlled": "node --experimental-strip-types scripts/ats-qa.ts seed-controlled",
     "lint": "eslint .",
     "test": "vitest run --pool=threads --maxWorkers=1",
@@ -47,7 +48,8 @@
     "check:phase0": "npm run check && npm run test:e2e",
     "check:phase1": "npm run check && npm run test:e2e",
     "check:phase2": "npm run check && npm run test:e2e",
-    "check:phase3": "npm run check && npm run test:e2e"
+    "check:phase3": "npm run check && npm run test:e2e",
+    "check:phase4": "npm run check && npm run test:e2e"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",

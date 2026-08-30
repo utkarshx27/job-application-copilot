@@ -2895,7 +2895,7 @@ Exit:
 
 ## Phase 3 — Greenhouse + Lever
 
-**Status:** Complete as of 2026-08-30. The release set contains 100 Greenhouse + 100 Lever forms, all 200 page reviews and all 8,079 field decisions are complete, and enforced replay passes with 100% mapping accuracy, 100% supported-field fill success (1,766/1,766), and zero severe wrong-field incidents. See `docs/architecture/phase-3-greenhouse-lever.md` and `qa/ats/README.md`.
+**Status:** Complete as of 2026-08-30. The release set contains 100 Greenhouse + 100 Lever forms, all 200 page reviews and all 8,079 field decisions are complete, and the Phase 4-adjusted enforced replay passes with 100% mapping accuracy, 100% supported-field fill success (1,667/1,667), and zero severe wrong-field incidents. The adjusted denominator excludes 198 controls across 99 fixtures whose combined current/future sponsorship wording is now correctly manual-only. See `docs/architecture/phase-3-greenhouse-lever.md` and `qa/ats/README.md`.
 
 Deliver:
 - ATS detectors;
@@ -2916,6 +2916,8 @@ Exit:
 ---
 
 ## Phase 4 — Saved responses + ontology
+
+**Status:** Complete as of 2026-08-30. The versioned ontology, deterministic alias/keyword/local-semantic classifier, scoped saved-response engine, teach-once review UX, and freshness policy are implemented. The controlled work-authorization distinction suite is 100% correct-or-review, and R4 sensitive questions are classified for manual handling without answer inference, suggestion, or teach-once storage. See `docs/architecture/phase-4-saved-responses-ontology.md`.
 
 Deliver:
 - canonical question schema;

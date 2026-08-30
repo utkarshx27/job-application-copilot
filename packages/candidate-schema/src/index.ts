@@ -1,3 +1,4 @@
+import { CanonicalQuestionSchema, QUESTION_ONTOLOGY_VERSION } from "@copilot/question-ontology";
 import { z } from "zod";
 
 export const ISODateTimeSchema = z.iso.datetime({ offset: true });
@@ -160,13 +161,22 @@ export const TriStateAnswerSchema = z.enum([
 
 export const SavedResponseSchema = z.object({
   id: z.string().min(1),
-  canonicalQuestion: z.string().min(1).optional(),
+  ontologyVersion: z.literal(QUESTION_ONTOLOGY_VERSION).default(QUESTION_ONTOLOGY_VERSION),
+  canonicalQuestion: CanonicalQuestionSchema.optional(),
   normalizedQuestion: z.string().min(1).optional(),
   keywords: z.array(z.string().min(1)).default([]),
   answer: AnswerValueSchema,
   source: z.enum(["USER_CONFIRMED", "PROFILE_FACT", "GENERATED_CONFIRMED"]),
   sensitivity: SensitivitySchema,
   reuseScope: ReuseScopeSchema,
+  scopeKey: z
+    .object({
+      applicationId: z.string().min(1).optional(),
+      company: z.string().min(1).optional(),
+      countryCode: z.string().length(2).toUpperCase().optional(),
+      role: z.string().min(1).optional(),
+    })
+    .optional(),
   conditions: z.record(z.string(), z.unknown()).optional(),
   createdAt: ISODateTimeSchema,
   verifiedAt: ISODateTimeSchema,
@@ -209,7 +219,7 @@ export const CandidateProfileSchema = z.object({
   travelPreferences: candidateFactSchema(z.string()).optional(),
   availability: candidateFactSchema(z.string()).optional(),
   jobPreferences: z.array(candidateFactSchema(z.string().min(1))),
-  answerLibrary: z.array(SavedResponseSchema),
+  answerLibrary: z.array(SavedResponseSchema).max(1_000),
   sensitivePreferences: z.array(candidateFactSchema(z.string())),
   exclusionRules: z.array(z.string().min(1)),
 });
@@ -219,3 +229,5 @@ export type CandidateFact<T> = z.infer<ReturnType<typeof candidateFactSchema<z.Z
 export type FactStatus = z.infer<typeof FactStatusSchema>;
 export type Sensitivity = z.infer<typeof SensitivitySchema>;
 export type TriStateAnswer = z.infer<typeof TriStateAnswerSchema>;
+export type ReuseScope = z.infer<typeof ReuseScopeSchema>;
+export type SavedResponse = z.infer<typeof SavedResponseSchema>;
