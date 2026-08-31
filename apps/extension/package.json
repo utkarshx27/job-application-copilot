@@ -35,6 +35,7 @@
     "@copilot/resume-parser": "*",
     "@copilot/saved-response-engine": "*",
     "@copilot/shared": "*",
+    "@copilot/sync-core": "*",
     "mammoth": "^1.12.1",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.1.1",

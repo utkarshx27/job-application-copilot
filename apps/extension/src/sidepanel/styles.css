@@ -51,7 +51,7 @@ h2 {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   margin-bottom: 18px;
   padding: 4px;
@@ -744,6 +744,76 @@ footer {
   padding: 4px 7px;
   border-radius: 999px;
   background: #edf3ee;
+}
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+.mode-switch .secondary {
+  margin-top: 0;
+}
+.warning-copy {
+  margin: 0;
+  padding: 9px;
+  color: #684514;
+  border: 1px solid #e5c99f;
+  border-radius: 8px;
+  background: #fff8ec;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.sync-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px 12px;
+  margin-bottom: 13px;
+  padding: 12px;
+  border: 1px solid #d7ded8;
+  border-radius: 10px;
+  background: white;
+  font-size: 12px;
+}
+.sync-summary span {
+  color: #657168;
+}
+.sync-summary strong {
+  overflow-wrap: anywhere;
+}
+.section-heading {
+  margin: 20px 0 9px;
+  font-size: 14px;
+}
+.device-list {
+  display: grid;
+  gap: 8px;
+}
+.device-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #d7ded8;
+  border-radius: 9px;
+  background: white;
+}
+.device-card div {
+  display: grid;
+  gap: 3px;
+}
+.device-card small {
+  color: #657168;
+}
+.danger-zone {
+  display: grid;
+  gap: 9px;
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid #e0b9b5;
+  border-radius: 10px;
+  background: #fff7f6;
 }
 footer {
   margin-top: 24px;

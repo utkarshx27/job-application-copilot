@@ -25,6 +25,15 @@ import {
   ResumeDraftSchema,
 } from "@copilot/profile-core";
 import { GroundedDraftResultSchema } from "@copilot/grounded-generation";
+import {
+  SyncAccountStatusSchema,
+  SyncBackupResultSchema,
+  SyncDeletionResultSchema,
+  SyncDevicesResultSchema,
+  SyncLoginSchema,
+  SyncRegistrationSchema,
+  SyncRunResultSchema,
+} from "@copilot/sync-core";
 import { z } from "zod";
 
 const FieldCommandBaseSchema = z.object({
@@ -61,6 +70,16 @@ export const PanelRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PANEL_AI_CONFIG_GET") }),
   z.object({ type: z.literal("PANEL_AI_CONFIG_SET"), config: AiSessionConfigSchema }),
   z.object({ type: z.literal("PANEL_AI_CONFIG_CLEAR") }),
+  z.object({ type: z.literal("PANEL_SYNC_STATUS") }),
+  z.object({ type: z.literal("PANEL_SYNC_REGISTER"), input: SyncRegistrationSchema }),
+  z.object({ type: z.literal("PANEL_SYNC_LOGIN"), input: SyncLoginSchema }),
+  z.object({ type: z.literal("PANEL_SYNC_RUN") }),
+  z.object({ type: z.literal("PANEL_SYNC_DEVICES") }),
+  z.object({ type: z.literal("PANEL_SYNC_REVOKE_DEVICE"), deviceId: z.string().min(1) }),
+  z.object({ type: z.literal("PANEL_SYNC_EXPORT_BACKUP") }),
+  z.object({ type: z.literal("PANEL_SYNC_LOCK") }),
+  z.object({ type: z.literal("PANEL_SYNC_DISABLE") }),
+  z.object({ type: z.literal("PANEL_SYNC_DELETE_ACCOUNT") }),
   z.object({
     type: z.literal("PANEL_AI_DRAFT"),
     analysisId: z.string().min(1),
@@ -132,6 +151,7 @@ const RuntimeErrorSchema = z.object({
     "AI_PROVIDER_FAILED",
     "AI_OUTPUT_REJECTED",
     "TRACKER_INVALID",
+    "SYNC_FAILED",
   ]),
   message: z.string(),
 });
@@ -152,6 +172,11 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
       TrackerCsvExportSchema,
       TrackerCsvImportResultSchema,
       AiConfigStatusSchema,
+      SyncAccountStatusSchema,
+      SyncRunResultSchema,
+      SyncDevicesResultSchema,
+      SyncBackupResultSchema,
+      SyncDeletionResultSchema,
       GroundedDraftResultSchema,
       ProfileVaultSchema,
       z.object({ backupJson: z.string() }),

@@ -3020,6 +3020,8 @@ Use same adapter contract and test gates.
 
 ## Phase 10 — Optional cloud sync
 
+**Controlled implementation completed 2026-08-31.** The extension now provides opt-in, client-side encrypted profile/tracker sync, session-only unlock keys, device listing and revocation, encrypted backup, local disable, and account deletion against the self-hostable sync service. Local mode remains the default. See `docs/architecture/phase-10-optional-cloud-sync.md` for the trust boundary, validation scope, and remaining production-hardening work.
+
 Deliver:
 - auth;
 - device management;

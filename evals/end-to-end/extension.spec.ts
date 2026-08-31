@@ -35,12 +35,51 @@ test("loads the MV3 worker and side panel", async ({ context, extensionId }) => 
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
 
   await expect(panel.getByRole("heading", { name: "Job Application Copilot" })).toBeVisible();
-  await expect(panel.getByText("Local only · User controlled")).toBeVisible();
+  await expect(panel.getByText("Local first · User controlled")).toBeVisible();
 
   const response: unknown = await panel.evaluate(() =>
     chrome.runtime.sendMessage({ type: "PANEL_PING" }),
   );
   expect(response).toEqual({ ok: true, data: { pong: true } });
+});
+
+test("opts into encrypted sync, backs up ciphertext, and locks the session", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await saveFillProfile(panel);
+  await panel.getByRole("button", { name: "Sync", exact: true }).click();
+
+  await expect(panel.getByRole("heading", { name: "Optional encrypted sync" })).toBeVisible();
+  const email = `phase10-${Date.now()}@example.test`;
+  await panel.getByLabel("Email").fill(email);
+  await panel.getByLabel("Sync passphrase").fill("correct horse battery staple");
+  await panel.getByLabel("Device name").fill("Phase 10 Chromium");
+  await panel.getByRole("button", { name: "Enable encrypted sync" }).click();
+
+  await expect(panel.getByRole("heading", { name: "Encrypted sync", exact: true })).toBeVisible();
+  await expect(panel.getByText("Encrypted sync is enabled")).toBeVisible();
+  await expect(panel.getByText("Phase 10 Chromium")).toBeVisible();
+  await expect(panel.getByText("This device")).toBeVisible();
+
+  const response: unknown = await panel.evaluate(() =>
+    chrome.runtime.sendMessage({ type: "PANEL_SYNC_EXPORT_BACKUP" }),
+  );
+  expect(response).toMatchObject({ ok: true, data: { encrypted: true } });
+  const backupJson = (response as { data: { backupJson: string } }).data.backupJson;
+  expect(backupJson).toContain("AES-256-GCM");
+  expect(backupJson).not.toContain("Priya Sharma");
+  expect(backupJson).not.toContain("priya@example.test");
+
+  await panel.screenshot({
+    path: testInfo.outputPath("phase10-encrypted-sync.png"),
+    fullPage: true,
+  });
+  await panel.getByRole("button", { name: "Lock sync session" }).click();
+  await expect(panel.getByText("Sync is locked for this browser session.")).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Sign in & restore" })).toBeVisible();
 });
 
 test("scans the active Test ATS through the complete extension message path", async ({

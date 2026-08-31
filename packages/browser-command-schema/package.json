@@ -13,6 +13,7 @@
     "@copilot/grounded-generation": "*",
     "@copilot/job-schema": "*",
     "@copilot/profile-core": "*",
+    "@copilot/sync-core": "*",
     "zod": "^4.1.5"
   }
 }

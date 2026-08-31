@@ -26,8 +26,10 @@
     { "path": "./packages/question-ontology" },
     { "path": "./packages/resume-parser" },
     { "path": "./packages/saved-response-engine" },
+    { "path": "./packages/sync-core" },
     { "path": "./packages/shared" },
     { "path": "./apps/extension" },
+    { "path": "./apps/sync-server" },
     { "path": "./apps/test-ats" },
     { "path": "./evals/end-to-end" },
     { "path": "./scripts" }

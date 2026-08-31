@@ -59,6 +59,18 @@ import {
   getAiSessionConfig,
   setAiSessionConfig,
 } from "./ai-storage";
+import {
+  deleteOptionalSyncAccount,
+  disableOptionalSync,
+  exportEncryptedSyncBackup,
+  getOptionalSyncStatus,
+  listSyncDevices,
+  lockOptionalSync,
+  loginOptionalSync,
+  registerOptionalSync,
+  revokeSyncDevice,
+  runOptionalSync,
+} from "./sync-client";
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 const analysesByTab = new Map<number, ApplicationPageAnalysis>();
@@ -549,6 +561,46 @@ async function handlePanelRequest(
     return { ok: true, data: aiConfigStatus(null) };
   }
 
+  if (request.type === "PANEL_SYNC_STATUS") {
+    return { ok: true, data: await getOptionalSyncStatus() };
+  }
+
+  if (request.type === "PANEL_SYNC_REGISTER") {
+    return { ok: true, data: await registerOptionalSync(request.input) };
+  }
+
+  if (request.type === "PANEL_SYNC_LOGIN") {
+    return { ok: true, data: await loginOptionalSync(request.input) };
+  }
+
+  if (request.type === "PANEL_SYNC_RUN") {
+    return { ok: true, data: await runOptionalSync() };
+  }
+
+  if (request.type === "PANEL_SYNC_DEVICES") {
+    return { ok: true, data: await listSyncDevices() };
+  }
+
+  if (request.type === "PANEL_SYNC_REVOKE_DEVICE") {
+    return { ok: true, data: await revokeSyncDevice(request.deviceId) };
+  }
+
+  if (request.type === "PANEL_SYNC_EXPORT_BACKUP") {
+    return { ok: true, data: await exportEncryptedSyncBackup() };
+  }
+
+  if (request.type === "PANEL_SYNC_LOCK") {
+    return { ok: true, data: await lockOptionalSync() };
+  }
+
+  if (request.type === "PANEL_SYNC_DISABLE") {
+    return { ok: true, data: await disableOptionalSync() };
+  }
+
+  if (request.type === "PANEL_SYNC_DELETE_ACCOUNT") {
+    return { ok: true, data: await deleteOptionalSyncAccount() };
+  }
+
   if (request.type === "PANEL_AI_DRAFT") {
     return draftCustomAnswer(request.analysisId, request.fieldId, request.maxChars);
   }
@@ -621,10 +673,17 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
   void handlePanelRequest(parsed.data).then(sendResponse, (error: unknown) => {
     const isProfileRequest = parsed.data.type.startsWith("PANEL_PROFILE_");
     const isAiRequest = parsed.data.type.startsWith("PANEL_AI_");
+    const isSyncRequest = parsed.data.type.startsWith("PANEL_SYNC_");
     const message = error instanceof Error ? error.message : "Unexpected extension failure.";
     sendResponse(
       failure(
-        isProfileRequest ? "PROFILE_INVALID" : isAiRequest ? "AI_PROVIDER_FAILED" : "SCAN_FAILED",
+        isProfileRequest
+          ? "PROFILE_INVALID"
+          : isAiRequest
+            ? "AI_PROVIDER_FAILED"
+            : isSyncRequest
+              ? "SYNC_FAILED"
+              : "SCAN_FAILED",
         message,
       ),
     );

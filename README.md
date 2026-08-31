@@ -10,7 +10,7 @@ A local-first, user-controlled Chrome extension for safely assisting with job ap
 
 ## Project status
 
-Phases 0 through 6, Phase 8, and Phase 9 are complete. Phase 7 has a complete controlled Workday implementation; its separate 250-form public validation gate remains open:
+Phases 0 through 6 and Phases 8 through 10 are complete as controlled implementations. Phase 7 has a complete controlled Workday implementation; its separate 250-form public validation gate remains open:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -67,8 +67,13 @@ Phases 0 through 6, Phase 8, and Phase 9 are complete. Phase 7 has a complete co
 - Deterministic iCIMS, Taleo, Workable, BambooHR, Jobvite, and Comeet adapters.
 - JSON-LD-first job extraction with platform-specific host, DOM, and requisition-route evidence.
 - Sanitized metadata fixtures and real Chromium reviewed-fill/résumé-upload coverage for all six Phase 9 ATS platforms.
+- Opt-in encrypted sync for the validated profile vault and application tracker while local-only mode remains the default.
+- Separate passphrase-derived authentication and AES-256-GCM keys; the server stores ciphertext and cannot read synchronized records.
+- Session-only unlock keys, optimistic revision conflicts, device listing/revocation, encrypted backup, and account-wide cloud deletion.
+- Self-hostable Fastify sync service with atomic JSON persistence for controlled/local deployments.
+- Runtime-requested optional host access and a real Chromium create-account, backup, and session-lock test.
 
-Phase 9 is complete as a controlled implementation. The added ATS adapters use the same reviewed-fill boundary and never navigate or submit. Broad public-site validation, especially for branded custom domains, remains a production-readiness task. Phase 10—optional cloud sync—is next. See the [Phase 9 architecture](./docs/architecture/phase-9-additional-ats.md), [Phase 8 architecture](./docs/architecture/phase-8-tracker.md), [Phase 7 architecture](./docs/architecture/phase-7-workday.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
+Phase 10 is complete as a controlled, self-hostable implementation. Local data remains fully usable without an account, and sync runs only after the user grants access and unlocks the session. Internet-scale hosting still requires a transactional database, distributed abuse controls, account recovery, managed infrastructure, and an independent security review. Phase 11—controlled auto-next—is next. See the [Phase 10 architecture](./docs/architecture/phase-10-optional-cloud-sync.md), [Phase 9 architecture](./docs/architecture/phase-9-additional-ats.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
 
 ## Design principles
 
@@ -85,6 +90,7 @@ Phase 9 is complete as a controlled implementation. The added ATS adapters use t
 ```text
 apps/
   extension/                 Manifest V3 extension and side panel
+  sync-server/               Optional encrypted sync API and storage
   test-ats/                  Controlled synthetic application site
 packages/
   browser-command-schema/    Runtime and browser command allowlists
@@ -112,6 +118,7 @@ packages/
   application-state/         Local application tracker transitions
   profile-core/              Truth Vault, versioning, migration, and import review
   resume-parser/             Conservative local résumé text parser
+  sync-core/                 Encryption, sync schemas, revisions, and conflict merging
   shared/                    Site policy and shared utilities
 fixtures/ats/                Sanitized ATS regression fixtures
 qa/ats/                      Public-form QA URL template and manual-review workflow
@@ -142,6 +149,7 @@ npm run check:phase6
 npm run check:phase7
 npm run check:phase8
 npm run check:phase9
+npm run check:phase10
 ```
 
 Build the production extension:
@@ -149,6 +157,14 @@ Build the production extension:
 ```bash
 npm run build
 ```
+
+Run the optional local sync server in a separate terminal:
+
+```bash
+npm run dev --workspace @copilot/sync-server
+```
+
+Then open the extension's **Sync** tab and use `http://127.0.0.1:8787`. The server persists encrypted records under `.tmp/sync-server/state.json` by default. This local JSON repository is for controlled/self-hosted development; review the [Phase 10 production-hardening requirements](./docs/architecture/phase-10-optional-cloud-sync.md) before exposing it to the internet.
 
 Then:
 
@@ -184,6 +200,7 @@ npm run check:phase6     # Complete Phase 6 release gate
 npm run check:phase7     # Controlled Phase 7 gate; public Workday validation is separate
 npm run check:phase8     # Complete Phase 8 tracker and duplicate-engine gate
 npm run check:phase9     # Controlled Phase 9 additional-ATS gate
+npm run check:phase10    # Controlled Phase 10 encrypted-sync gate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -219,10 +236,13 @@ npm run ats:qa:replay
 - Duplicate detection is advisory and local; it never merges applications or blocks user actions.
 - Tracker CSV exports can contain application history and should be stored securely.
 - Phase 9 custom ATS widgets, unknown questions, salary, references, consent, and disclosures remain manual or explicitly reviewed.
+- Cloud sync is optional. The passphrase and readable profile/tracker records are not sent to the server, and unlock material is session-only.
+- Signing into an existing sync account restores its cloud profile/tracker on that browser; export local data first if it must be preserved.
+- The included JSON-backed sync server is a controlled MVP, not an internet-scale identity or disaster-recovery service.
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase9` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase10` before opening a pull request.
 
 Good early contribution areas include:
 
