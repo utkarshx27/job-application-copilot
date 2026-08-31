@@ -230,12 +230,65 @@ test("detects Greenhouse, fills reviewed answers, uploads one approved résumé,
   await expect(panel.getByText(/local tracker was updated to APPLIED/)).toBeVisible();
   await expect(panel.getByText(/GH-CONF-100/)).toBeVisible();
   await panel.getByRole("button", { name: "Applications" }).click();
-  await expect(panel.getByText("APPLIED", { exact: true })).toBeVisible();
+  await expect(
+    panel.getByRole("combobox", { name: "Status for Platform Engineer at ExampleCo" }),
+  ).toHaveValue("APPLIED");
   await expect(panel.getByText("Résumé: synthetic-resume.pdf")).toBeVisible();
   await panel.screenshot({
     path: testInfo.outputPath("phase3-tracker-confirmed.png"),
     fullPage: true,
   });
+});
+
+test("warns about duplicates and manages the local tracker board, table, and CSV", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/greenhouse.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(
+    panel.getByRole("heading", { name: "Possible duplicate application" }),
+  ).toBeVisible();
+  await expect(panel.getByText(/already tracked as applying/)).toBeVisible();
+
+  await panel.getByRole("button", { name: "Applications" }).click();
+  await expect(panel.getByRole("heading", { name: "Application tracker" })).toBeVisible();
+  await expect(panel.getByText("Platform Engineer", { exact: true })).toBeVisible();
+  await expect(panel.getByText("1 snapshot", { exact: false })).toBeVisible();
+  await panel
+    .getByRole("combobox", { name: "Status for Platform Engineer at ExampleCo" })
+    .selectOption("INTERVIEW");
+  await expect(panel.getByText("Application status updated locally.")).toBeVisible();
+
+  await panel.getByRole("button", { name: "Table" }).click();
+  await expect(panel.getByRole("columnheader", { name: "Job" })).toBeVisible();
+  await panel.screenshot({
+    path: testInfo.outputPath("phase8-tracker-table.png"),
+    fullPage: true,
+  });
+
+  const downloadPromise = panel.waitForEvent("download");
+  await panel.getByRole("button", { name: "Export CSV" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^job-application-tracker-.*\.csv$/);
+
+  const importCsv = [
+    "application_id,canonical_job_id,company,title,location,ats,status,source_url,application_url,external_requisition_id,discovered_at,applied_at,updated_at",
+    '"application:imported","job:00000000","Import Co","QA Engineer","Remote","LEVER","SAVED","http://127.0.0.1:4173/lever.html","http://127.0.0.1:4173/lever.html","IMP-1","2026-08-31T08:00:00.000Z","","2026-08-31T08:00:00.000Z"',
+  ].join("\r\n");
+  await panel.getByLabel("Import CSV").setInputFiles({
+    name: "tracker.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(importCsv),
+  });
+  await expect(panel.getByText(/Imported 1, updated 0, skipped 0/)).toBeVisible();
+  await expect(panel.getByText("QA Engineer", { exact: true })).toBeVisible();
 });
 
 test("teaches a company-scoped custom answer once and suggests it for review", async ({

@@ -10,7 +10,7 @@ A local-first, user-controlled Chrome extension for safely assisting with job ap
 
 ## Project status
 
-Phases 0 through 6 are complete. Phase 7 now has a complete controlled Workday implementation; its separate 250-form public validation gate remains open:
+Phases 0 through 6 and Phase 8 are complete. Phase 7 has a complete controlled Workday implementation; its separate 250-form public validation gate remains open:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -59,8 +59,13 @@ Phases 0 through 6 are complete. Phase 7 now has a complete controlled Workday i
 - Privacy-preserving prefilled-state detection: résumé/account-parsed values are never captured and are protected from overwrite.
 - Deterministic first-record work-history and education mappings, manual-only skill widgets, and dynamic questionnaire rescanning.
 - No browser navigation command: Workday Back, Next, authentication, and Submit remain user actions.
+- Version 2 local tracker with automatic preservation and migration of version 1 application history.
+- Canonical ATS requisition/URL job identities and append-only, changed-only job snapshots.
+- Evidence-backed duplicate warnings for existing records, requisitions, URLs, and matching job details.
+- Editable lifecycle statuses, summary counts, filters, and accessible board/table tracker views.
+- Validated CSV import/export with per-row errors and spreadsheet-formula neutralization.
 
-Workday follows the same reviewed-fill boundary as the other supported adapters, with additional protection for multi-page state and parsed values. The controlled implementation is ready; Phase 7 is not production-validated until the documented 250-form, multi-tenant/region pre-submit gate is completed. Next after that gate is Phase 8, the tracker and duplicate engine. See the [Phase 7 architecture](./docs/architecture/phase-7-workday.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
+Phase 8 is complete and remains local-only. Duplicate results warn but never merge, block, navigate, or submit. Phase 9 is next: additional ATS adapters. The Phase 7 public Workday validation remains a separate production-readiness gate. See the [Phase 8 architecture](./docs/architecture/phase-8-tracker.md), [Phase 7 architecture](./docs/architecture/phase-7-workday.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
 
 ## Design principles
 
@@ -126,6 +131,7 @@ npm run check:phase4
 npm run check:phase5
 npm run check:phase6
 npm run check:phase7
+npm run check:phase8
 ```
 
 Build the production extension:
@@ -166,6 +172,7 @@ npm run check:phase4     # Complete Phase 4 release gate
 npm run check:phase5     # Complete Phase 5 release gate
 npm run check:phase6     # Complete Phase 6 release gate
 npm run check:phase7     # Controlled Phase 7 gate; public Workday validation is separate
+npm run check:phase8     # Complete Phase 8 tracker and duplicate-engine gate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -198,10 +205,12 @@ npm run ats:qa:replay
 - Role-based custom ATS widgets are scanned as manual-only controls and cannot be targeted by the native fill driver.
 - Existing values are represented only as an empty/prefilled state; their contents are not captured, and reviewed fill plans cannot overwrite them.
 - Workday authentication, Back, Next, and Submit remain manual. The runtime protocol exposes no navigation or submission command.
+- Duplicate detection is advisory and local; it never merges applications or blocks user actions.
+- Tracker CSV exports can contain application history and should be stored securely.
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase7` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase8` before opening a pull request.
 
 Good early contribution areas include:
 

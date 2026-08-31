@@ -148,6 +148,23 @@ export const ApplicationPageAnalysisSchema = FormAnalysisSchema.extend({
   confirmation: ConfirmationEvidenceSchema,
   workflow: WorkdayWorkflowPageSchema.nullable().default(null),
   workflowProgress: WorkdayWorkflowProgressSchema.optional(),
+  duplicateWarnings: z
+    .array(
+      z.object({
+        kind: z.enum([
+          "ALREADY_TRACKED",
+          "EXACT_REQUISITION",
+          "EXACT_APPLICATION_URL",
+          "MATCHING_JOB_DETAILS",
+        ]),
+        confidence: z.number().min(0).max(1),
+        existingApplicationId: z.string().min(1),
+        message: z.string().min(1).max(1_000),
+        evidence: z.array(z.string().min(1).max(500)).min(1).max(10),
+      }),
+    )
+    .max(20)
+    .default([]),
 });
 
 export const ApprovedUploadFileSchema = z
@@ -213,7 +230,57 @@ export const ApplicationStatusSchema = z.enum([
   "ARCHIVED",
 ]);
 
-export const ApplicationRecordSchema = z.object({
+export const CanonicalJobIdentitySchema = z.object({
+  identityVersion: z.literal(1),
+  key: z.string().regex(/^job:[a-f0-9]{8}$/),
+  strategy: z.enum(["ATS_REQUISITION", "APPLICATION_URL", "JOB_DETAILS"]),
+  normalizedCompany: z.string().min(1).max(500),
+  normalizedTitle: z.string().min(1).max(500),
+  normalizedLocation: z.string().max(1_000),
+  ats: AtsIdSchema,
+  externalRequisitionId: z.string().min(1).max(500).optional(),
+  normalizedApplicationUrl: z.url(),
+});
+
+export const JobSnapshotSchema = z.object({
+  snapshotVersion: z.literal(1),
+  snapshotId: z.string().regex(/^snapshot:[a-f0-9]{8}$/),
+  capturedAt: z.iso.datetime({ offset: true }),
+  fingerprint: z.string().regex(/^job:[a-f0-9]{8}$/),
+  changedFields: z
+    .array(
+      z.enum([
+        "title",
+        "company",
+        "description",
+        "location",
+        "remotePolicy",
+        "employmentType",
+        "salary",
+        "requiredSkills",
+        "preferredSkills",
+        "sourceUrl",
+        "applicationUrl",
+      ]),
+    )
+    .max(20),
+  job: NormalizedJobSchema,
+});
+
+export const DuplicateWarningSchema = z.object({
+  kind: z.enum([
+    "ALREADY_TRACKED",
+    "EXACT_REQUISITION",
+    "EXACT_APPLICATION_URL",
+    "MATCHING_JOB_DETAILS",
+  ]),
+  confidence: z.number().min(0).max(1),
+  existingApplicationId: z.string().min(1),
+  message: z.string().min(1).max(1_000),
+  evidence: z.array(z.string().min(1).max(500)).min(1).max(10),
+});
+
+export const LegacyApplicationRecordSchema = z.object({
   id: z.string().min(1),
   canonicalJobId: z.string().min(1),
   profileVersion: z.number().int().positive(),
@@ -234,10 +301,35 @@ export const ApplicationRecordSchema = z.object({
   workflowProgress: WorkdayWorkflowProgressSchema.optional(),
 });
 
-export const ApplicationTrackerSchema = z.object({
+export const LegacyApplicationTrackerSchema = z.object({
   trackerVersion: z.literal(1),
   updatedAt: z.iso.datetime({ offset: true }),
+  applications: z.array(LegacyApplicationRecordSchema).max(5_000),
+});
+
+export const ApplicationRecordSchema = LegacyApplicationRecordSchema.extend({
+  canonicalIdentity: CanonicalJobIdentitySchema,
+  snapshots: z.array(JobSnapshotSchema).min(1).max(50),
+});
+
+export const ApplicationTrackerSchema = z.object({
+  trackerVersion: z.literal(2),
+  updatedAt: z.iso.datetime({ offset: true }),
   applications: z.array(ApplicationRecordSchema).max(5_000),
+});
+
+export const TrackerCsvExportSchema = z.object({
+  formatVersion: z.literal(1),
+  csv: z.string().min(1),
+  exported: z.number().int().nonnegative(),
+});
+
+export const TrackerCsvImportResultSchema = z.object({
+  tracker: ApplicationTrackerSchema,
+  imported: z.number().int().nonnegative(),
+  updated: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  warnings: z.array(z.string().min(1).max(1_000)).max(500),
 });
 
 export type AtsId = z.infer<typeof AtsIdSchema>;
@@ -256,5 +348,12 @@ export type ApprovedUploadFile = z.infer<typeof ApprovedUploadFileSchema>;
 export type ApprovedUploadPlan = z.infer<typeof ApprovedUploadPlanSchema>;
 export type UploadResult = z.infer<typeof UploadResultSchema>;
 export type ReviewedCustomAnswer = z.infer<typeof ReviewedCustomAnswerSchema>;
+export type ApplicationStatus = z.infer<typeof ApplicationStatusSchema>;
+export type CanonicalJobIdentity = z.infer<typeof CanonicalJobIdentitySchema>;
+export type JobSnapshot = z.infer<typeof JobSnapshotSchema>;
+export type DuplicateWarning = z.infer<typeof DuplicateWarningSchema>;
+export type LegacyApplicationTracker = z.infer<typeof LegacyApplicationTrackerSchema>;
 export type ApplicationRecord = z.infer<typeof ApplicationRecordSchema>;
 export type ApplicationTracker = z.infer<typeof ApplicationTrackerSchema>;
+export type TrackerCsvExport = z.infer<typeof TrackerCsvExportSchema>;
+export type TrackerCsvImportResult = z.infer<typeof TrackerCsvImportResultSchema>;

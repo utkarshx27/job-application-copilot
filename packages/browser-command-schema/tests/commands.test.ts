@@ -100,4 +100,25 @@ describe("browser command allowlist", () => {
       }),
     ).not.toHaveProperty("action");
   });
+
+  it("allows only validated tracker status and CSV operations", () => {
+    expect(
+      PanelRequestSchema.safeParse({
+        type: "PANEL_TRACKER_UPDATE_STATUS",
+        applicationId: "application:1",
+        status: "INTERVIEW",
+      }).success,
+    ).toBe(true);
+    expect(
+      PanelRequestSchema.safeParse({
+        type: "PANEL_TRACKER_UPDATE_STATUS",
+        applicationId: "application:1",
+        status: "AUTO_SUBMIT",
+      }).success,
+    ).toBe(false);
+    expect(PanelRequestSchema.safeParse({ type: "PANEL_TRACKER_EXPORT_CSV" }).success).toBe(true);
+    expect(
+      PanelRequestSchema.safeParse({ type: "PANEL_TRACKER_IMPORT_CSV", csv: "" }).success,
+    ).toBe(false);
+  });
 });

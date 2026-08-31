@@ -13,10 +13,14 @@ import {
 import { policyForUrl } from "@copilot/shared";
 import { analyzeForm, classifyField } from "@copilot/form-engine";
 import {
+  exportTrackerCsv,
+  findDuplicateWarnings,
+  importTrackerCsv,
   recordApplying,
   recordConfirmation,
   recordResumeUpload,
   recordWorkdayWorkflow,
+  updateApplicationStatus,
 } from "@copilot/application-state";
 import { FillPlanSchema, FillResultSchema, HighlightResultSchema } from "@copilot/form-schema";
 import { draftGroundedAnswer } from "@copilot/grounded-generation";
@@ -232,20 +236,20 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
     workflow: inspected.data.atsReport.workflow,
   });
   if (analysis.applicationId && analysis.job) {
-    let tracker = recordApplying(
-      await getApplicationTracker(),
-      analysis,
-      vault.currentProfile.profileVersion,
-    );
+    const applicationId = analysis.applicationId;
+    const previousTracker = await getApplicationTracker();
+    const duplicateWarnings = findDuplicateWarnings(previousTracker, applicationId, analysis.job);
+    analysis = ApplicationPageAnalysisSchema.parse({ ...analysis, duplicateWarnings });
+    let tracker = recordApplying(previousTracker, analysis, vault.currentProfile.profileVersion);
     if (analysis.confirmation.confirmed) {
-      tracker = recordConfirmation(tracker, analysis.applicationId, analysis.confirmation);
+      tracker = recordConfirmation(tracker, applicationId, analysis.confirmation);
     }
     if (analysis.workflow) {
-      tracker = recordWorkdayWorkflow(tracker, analysis.applicationId, analysis.workflow);
+      tracker = recordWorkdayWorkflow(tracker, applicationId, analysis.workflow);
     }
     await setApplicationTracker(tracker);
     const progress = tracker.applications.find(
-      (application) => application.id === analysis.applicationId,
+      (application) => application.id === applicationId,
     )?.workflowProgress;
     if (progress) {
       analysis = ApplicationPageAnalysisSchema.parse({ ...analysis, workflowProgress: progress });
@@ -497,6 +501,39 @@ async function handlePanelRequest(
 
   if (request.type === "PANEL_TRACKER_GET") {
     return { ok: true, data: ApplicationTrackerSchema.parse(await getApplicationTracker()) };
+  }
+
+  if (request.type === "PANEL_TRACKER_UPDATE_STATUS") {
+    try {
+      const tracker = updateApplicationStatus(
+        await getApplicationTracker(),
+        request.applicationId,
+        request.status,
+      );
+      return { ok: true, data: await setApplicationTracker(tracker) };
+    } catch (error) {
+      return failure(
+        "TRACKER_INVALID",
+        error instanceof Error ? error.message : "The tracker status could not be updated.",
+      );
+    }
+  }
+
+  if (request.type === "PANEL_TRACKER_EXPORT_CSV") {
+    return { ok: true, data: exportTrackerCsv(await getApplicationTracker()) };
+  }
+
+  if (request.type === "PANEL_TRACKER_IMPORT_CSV") {
+    try {
+      const result = importTrackerCsv(await getApplicationTracker(), request.csv);
+      const tracker = await setApplicationTracker(result.tracker);
+      return { ok: true, data: { ...result, tracker } };
+    } catch (error) {
+      return failure(
+        "TRACKER_INVALID",
+        error instanceof Error ? error.message : "The tracker CSV could not be imported.",
+      );
+    }
   }
 
   if (request.type === "PANEL_AI_CONFIG_GET") {

@@ -8,11 +8,14 @@ import {
 } from "@copilot/form-schema";
 import {
   ApplicationPageAnalysisSchema,
+  ApplicationStatusSchema,
   ApplicationTrackerSchema,
   ApprovedUploadFileSchema,
   ApprovedUploadPlanSchema,
   InspectedApplicationPageSchema,
   ReviewedCustomAnswerSchema,
+  TrackerCsvExportSchema,
+  TrackerCsvImportResultSchema,
   UploadResultSchema,
 } from "@copilot/job-schema";
 import {
@@ -48,6 +51,13 @@ export const PanelRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PANEL_SCAN_ACTIVE_TAB") }),
   z.object({ type: z.literal("PANEL_ANALYZE_ACTIVE_TAB") }),
   z.object({ type: z.literal("PANEL_TRACKER_GET") }),
+  z.object({
+    type: z.literal("PANEL_TRACKER_UPDATE_STATUS"),
+    applicationId: z.string().min(1),
+    status: ApplicationStatusSchema,
+  }),
+  z.object({ type: z.literal("PANEL_TRACKER_EXPORT_CSV") }),
+  z.object({ type: z.literal("PANEL_TRACKER_IMPORT_CSV"), csv: z.string().min(1).max(10_000_000) }),
   z.object({ type: z.literal("PANEL_AI_CONFIG_GET") }),
   z.object({ type: z.literal("PANEL_AI_CONFIG_SET"), config: AiSessionConfigSchema }),
   z.object({ type: z.literal("PANEL_AI_CONFIG_CLEAR") }),
@@ -121,6 +131,7 @@ const RuntimeErrorSchema = z.object({
     "AI_POLICY_BLOCKED",
     "AI_PROVIDER_FAILED",
     "AI_OUTPUT_REJECTED",
+    "TRACKER_INVALID",
   ]),
   message: z.string(),
 });
@@ -138,6 +149,8 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
       HighlightResultSchema,
       UploadResultSchema,
       ApplicationTrackerSchema,
+      TrackerCsvExportSchema,
+      TrackerCsvImportResultSchema,
       AiConfigStatusSchema,
       GroundedDraftResultSchema,
       ProfileVaultSchema,
