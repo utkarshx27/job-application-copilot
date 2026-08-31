@@ -25,13 +25,55 @@ describe("browser command allowlist", () => {
     ).toBe(false);
   });
 
-  it("does not expose navigation or submission commands before their gated phases", () => {
+  it("rejects generic navigation and every submission command", () => {
     expect(
       BrowserCommandSchema.safeParse({ type: "CLICK_NEXT", applicationId: "app-1" }).success,
     ).toBe(false);
     expect(
       BrowserCommandSchema.safeParse({ type: "CLICK_SUBMIT", applicationId: "app-1" }).success,
     ).toBe(false);
+  });
+
+  it("allows only a typed controlled Next plan and strips arbitrary selectors", () => {
+    const parsed = BrowserCommandSchema.parse({
+      type: "CLICK_CONTROLLED_NEXT",
+      plan: {
+        intentVersion: 1,
+        id: "intent-1",
+        intentId: "intent-1",
+        applicationId: "application-1",
+        analysisId: "analysis-1",
+        adapter: "WORKDAY",
+        adapterVersion: "1.0.0",
+        sourceUrl: "http://127.0.0.1:4173/workday.html",
+        sourcePageKey: "step-1",
+        sourceFingerprint: "workday:1234abcd",
+        sourceUserEditVersion: 0,
+        targetToken: "WORKDAY_BOTTOM_NAVIGATION_NEXT",
+        expiresAt: new Date(Date.now() + 30_000).toISOString(),
+        selector: "button[type='submit']",
+      },
+    });
+    expect(parsed.type).toBe("CLICK_CONTROLLED_NEXT");
+    if (parsed.type !== "CLICK_CONTROLLED_NEXT") throw new Error("Expected controlled Next.");
+    expect("selector" in parsed.plan).toBe(false);
+    expect(JSON.stringify(parsed)).not.toContain("submit");
+  });
+
+  it("accepts controlled auto-next panel actions but no page-controlled target", () => {
+    expect(
+      PanelRequestSchema.safeParse({
+        type: "PANEL_AUTO_NEXT_SET_ENABLED",
+        analysisId: "analysis-1",
+        enabled: true,
+      }).success,
+    ).toBe(true);
+    const prepared = PanelRequestSchema.parse({
+      type: "PANEL_AUTO_NEXT_PREPARE",
+      analysisId: "analysis-1",
+      selector: "#unsafe",
+    });
+    expect("selector" in prepared).toBe(false);
   });
 
   it("rejects unknown panel messages", () => {

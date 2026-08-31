@@ -18,7 +18,7 @@ The adapter recognizes the common hosted `myworkdayjobs.com` and `myworkdaysite.
 - `job-schema` allowlists `WORKDAY` and validates page type, auth boundary, visible sections, step index/count, navigation visibility, error state, and persisted progress.
 - `application-state` stores only the recovery key, page keys, page type, step position, scan count, a DOM-structure fingerprint, and timestamps. It stores no field values, passwords, cookies, tokens, or raw HTML.
 - The background worker re-inspects the live page and recomputes mappings for every scan. A previous analysis cannot be reused after an SPA step change.
-- The browser command schema has no Next or Submit command. Phase 11 remains the earliest possible controlled auto-navigation workstream.
+- The Phase 7 browser command schema had no Next or Submit command. Phase 11 later added only a fixed-token Next plan for the exact local Test ATS fixture; real Workday navigation and Submit remain unavailable.
 
 ## Workday page model
 

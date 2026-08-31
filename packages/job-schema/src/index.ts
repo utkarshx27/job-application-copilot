@@ -91,12 +91,15 @@ export const WorkdayWorkflowPageSchema = z.object({
   visibleSections: z.array(z.string().min(1).max(200)).max(30),
   authBoundary: WorkdayAuthBoundarySchema,
   prefilledFieldCount: z.number().int().nonnegative(),
+  userEditVersion: z.number().int().nonnegative().default(0),
   resumeReconciliationRequired: z.boolean(),
   navigation: z.object({
-    mode: z.literal("MANUAL_ONLY"),
+    mode: z.enum(["MANUAL_ONLY", "CONTROLLED_TEST_ONLY"]),
     backVisible: z.boolean(),
     nextVisible: z.boolean(),
     submitVisible: z.boolean(),
+    nextConfidence: z.number().min(0).max(1).default(0),
+    nextEvidence: z.array(z.string().min(1).max(500)).max(20).default([]),
     blockedReason: z.string().min(1).max(1_000).optional(),
   }),
   errorState: z

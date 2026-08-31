@@ -636,7 +636,7 @@ for (const fixture of [
   });
 }
 
-test("models Workday steps, protects parsed values, recovers after refresh, and never navigates", async ({
+test("models Workday steps, protects parsed values, and keeps real navigation user-controlled", async ({
   context,
   extensionId,
 }, testInfo) => {
@@ -654,7 +654,7 @@ test("models Workday steps, protects parsed values, recovers after refresh, and 
   await expect(panel.getByRole("heading", { name: "Workday application progress" })).toBeVisible();
   await expect(panel.getByText("MY INFORMATION", { exact: true })).toBeVisible();
   await expect(panel.getByText(/Step 1 of 4/)).toBeVisible();
-  await expect(panel.getByText(/never clicks Next or Submit/)).toBeVisible();
+  await expect(panel.getByText(/off by default.*never clicks Submit/)).toBeVisible();
   await expect(panel.getByText(/Next available/)).toBeVisible();
   await expect(panel.getByLabel("Select Email Address")).toBeDisabled();
   await expect(panel.getByText("Pre-filled · review manually", { exact: true })).toBeVisible();
@@ -697,6 +697,7 @@ test("models Workday steps, protects parsed values, recovers after refresh, and 
   await panel.getByRole("button", { name: "Scan and match visible form" }).click();
   await expect(panel.getByText("Progress recovered from local storage")).toBeVisible();
   await expect(panel.getByText(/across 3 scans/)).toBeVisible();
+  await application.getByLabel("Job Title").fill("Software Engineer");
 
   await application.getByRole("button", { name: "Next" }).click();
   await expect(application.getByRole("heading", { name: "Application Questions" })).toBeVisible();
@@ -705,8 +706,7 @@ test("models Workday steps, protects parsed values, recovers after refresh, and 
   await application.bringToFront();
   await panel.getByRole("button", { name: "Scan and match visible form" }).click();
   const answer = "Built resilient systems for distributed engineering teams.";
-  await panel.getByRole("textbox", { name: "Describe a relevant project" }).fill(answer);
-  await panel.getByRole("button", { name: "Fill reviewed custom answers" }).click();
+  await application.getByLabel("Describe a relevant project").fill(answer);
   await expect(application.getByLabel("Describe a relevant project")).toHaveValue(answer);
 
   await application.getByRole("button", { name: "Next" }).click();
@@ -732,6 +732,98 @@ test("models Workday steps, protects parsed values, recovers after refresh, and 
   await expect(panel.getByText(/WD-CONF-700/)).toBeVisible();
   await panel.screenshot({
     path: testInfo.outputPath("phase7-workday-progress.png"),
+    fullPage: true,
+  });
+});
+
+test("runs one cancelable controlled Next and never retries the same intent", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await saveFillProfile(panel);
+
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/workday.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  await expect(panel.getByRole("heading", { name: "Experimental controlled Next" })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Prepare controlled Next" })).toBeDisabled();
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  await panel.getByLabel("Enable experimental auto-next globally").check();
+  await panel.getByLabel("Enable for this application").check();
+  await expect(panel.getByText("Ready", { exact: true })).toBeVisible();
+
+  await panel.getByRole("button", { name: "Prepare controlled Next" }).click();
+  await expect(panel.getByText(/Next in 3 seconds/)).toBeVisible();
+  await panel.getByRole("button", { name: "Cancel controlled Next" }).click();
+  await expect(panel.getByText("Controlled Next was canceled before click.")).toBeVisible();
+  await expect(application.getByRole("heading", { name: "My Information" })).toBeVisible();
+  await expect
+    .poll(() =>
+      application.evaluate(() =>
+        Number(document.documentElement.getAttribute("data-controlled-next-click-count")),
+      ),
+    )
+    .toBe(0);
+
+  await panel.getByRole("button", { name: "Prepare controlled Next" }).click();
+  await application.getByLabel("Last Name").fill("Sharma edited");
+  await expect(panel.getByText(/page changed after navigation approval/i)).toBeVisible({
+    timeout: 7_000,
+  });
+  await expect
+    .poll(() =>
+      application.evaluate(() =>
+        Number(document.documentElement.getAttribute("data-controlled-next-click-count")),
+      ),
+    )
+    .toBe(0);
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  await panel.getByRole("button", { name: "Prepare controlled Next" }).click();
+  await expect(application.getByRole("heading", { name: "My Experience" })).toBeVisible({
+    timeout: 7_000,
+  });
+  await expect(panel.getByText(/new Workday step was verified/)).toBeVisible();
+  await expect
+    .poll(() =>
+      application.evaluate(() =>
+        Number(document.documentElement.getAttribute("data-controlled-next-click-count")),
+      ),
+    )
+    .toBe(1);
+
+  const replayResponse = await panel.evaluate<unknown>(async () => {
+    const stored: unknown = await chrome.storage.local.get("controlledAutoNext");
+    const intents = (stored as { controlledAutoNext: { intents: Array<{ id: string }> } })
+      .controlledAutoNext.intents;
+    const latest = intents[intents.length - 1];
+    if (!latest) throw new Error("Expected a persisted navigation intent.");
+    const response: unknown = await chrome.runtime.sendMessage({
+      type: "PANEL_AUTO_NEXT_EXECUTE",
+      intentId: latest.id,
+    });
+    return response;
+  });
+  expect(replayResponse).toMatchObject({ ok: false, error: { code: "NAVIGATION_FAILED" } });
+  await expect
+    .poll(() =>
+      application.evaluate(() =>
+        Number(document.documentElement.getAttribute("data-controlled-next-click-count")),
+      ),
+    )
+    .toBe(1);
+
+  await panel.screenshot({
+    path: testInfo.outputPath("phase11-controlled-next.png"),
     fullPage: true,
   });
 });

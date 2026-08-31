@@ -30,6 +30,7 @@
     "@copilot/form-engine": "*",
     "@copilot/grounded-generation": "*",
     "@copilot/job-schema": "*",
+    "@copilot/navigation-core": "*",
     "@copilot/profile-core": "*",
     "@copilot/question-ontology": "*",
     "@copilot/resume-parser": "*",

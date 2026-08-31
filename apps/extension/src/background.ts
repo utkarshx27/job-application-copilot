@@ -35,6 +35,17 @@ import {
   type ReviewedCustomAnswer,
 } from "@copilot/job-schema";
 import {
+  AutoNextActionResultSchema,
+  ControlledNextClickResultSchema,
+  autoNextPanelState,
+  controlledNextPlan,
+  prepareNavigationIntent,
+  setApplicationAutoNext,
+  setAutoNextEnabled,
+  transitionNavigationIntent,
+  type NavigationIntent,
+} from "@copilot/navigation-core";
+import {
   exportProfileBackup,
   importResumeDraft,
   importProfileBackup,
@@ -71,13 +82,14 @@ import {
   revokeSyncDevice,
   runOptionalSync,
 } from "./sync-client";
+import { getAutoNextStore, setAutoNextStore } from "./navigation-storage";
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 const analysesByTab = new Map<number, ApplicationPageAnalysis>();
 
 type RuntimeErrorCode = Extract<RuntimeResponse, { ok: false }>["error"]["code"];
 
-function failure(code: RuntimeErrorCode, message: string): RuntimeResponse {
+function failure(code: RuntimeErrorCode, message: string): Extract<RuntimeResponse, { ok: false }> {
   return { ok: false, error: { code, message } };
 }
 
@@ -87,7 +99,9 @@ async function storeProfile(untrustedVault: unknown) {
   return stored;
 }
 
-async function inspectableActiveTab(): Promise<{ id: number; url: string } | RuntimeResponse> {
+async function inspectableActiveTab(): Promise<
+  { id: number; url: string } | Extract<RuntimeResponse, { ok: false }>
+> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id || !tab.url) return failure("NO_ACTIVE_TAB", "No inspectable active tab was found.");
 
@@ -504,6 +518,187 @@ async function draftCustomAnswer(
   return { ok: true, data: result };
 }
 
+async function activeNavigationContext(analysisId: string) {
+  const tab = await inspectableActiveTab();
+  if ("error" in tab) throw new Error(tab.error.message);
+  const analysis = analysesByTab.get(tab.id);
+  if (!analysis || analysis.analysisId !== analysisId) {
+    throw new Error("Scan the current Workday step again before using controlled auto-next.");
+  }
+  return { tab, analysis };
+}
+
+async function autoNextStatus(analysisId: string) {
+  const { analysis } = await activeNavigationContext(analysisId);
+  return autoNextPanelState(analysis, await getAutoNextStore());
+}
+
+async function setAutoNextFeature(analysisId: string, enabled: boolean) {
+  const { analysis } = await activeNavigationContext(analysisId);
+  let store = setAutoNextEnabled(await getAutoNextStore(), enabled);
+  if (!enabled) {
+    const prepared = store.intents.filter((intent) => intent.state === "PREPARED");
+    for (const intent of prepared) {
+      store = transitionNavigationIntent(store, intent.id, "ABORTED", {
+        message: "The experimental auto-next flag was disabled.",
+      }).store;
+    }
+  }
+  await setAutoNextStore(store);
+  return autoNextPanelState(analysis, store);
+}
+
+async function setApplicationAutoNextFeature(analysisId: string, enabled: boolean) {
+  const { analysis } = await activeNavigationContext(analysisId);
+  if (!analysis.applicationId) throw new Error("The application does not have a stable identity.");
+  let store = setApplicationAutoNext(await getAutoNextStore(), analysis.applicationId, enabled);
+  if (!enabled) {
+    const prepared = store.intents.filter(
+      (intent) => intent.applicationId === analysis.applicationId && intent.state === "PREPARED",
+    );
+    for (const intent of prepared) {
+      store = transitionNavigationIntent(store, intent.id, "ABORTED", {
+        message: "Auto-next was disabled for this application.",
+      }).store;
+    }
+  }
+  await setAutoNextStore(store);
+  return autoNextPanelState(analysis, store);
+}
+
+async function prepareAutoNext(analysisId: string) {
+  const { tab, analysis } = await activeNavigationContext(analysisId);
+  const prepared = prepareNavigationIntent(await getAutoNextStore(), analysis, tab.id);
+  await setAutoNextStore(prepared.store);
+  return AutoNextActionResultSchema.parse({
+    intent: prepared.intent,
+    panelState: autoNextPanelState(analysis, prepared.store),
+  });
+}
+
+async function abortAutoNext(intentId: string) {
+  const store = await getAutoNextStore();
+  const selected = store.intents.find((intent) => intent.id === intentId);
+  if (!selected || selected.state !== "PREPARED") {
+    throw new Error("Only a prepared, not-yet-clicked navigation can be canceled.");
+  }
+  const result = transitionNavigationIntent(store, intentId, "ABORTED", {
+    message: "Canceled by the user during the countdown.",
+  });
+  await setAutoNextStore(result.store);
+  const analysis = analysesByTab.get(selected.tabId);
+  if (!analysis) throw new Error("The application tab is no longer active.");
+  return AutoNextActionResultSchema.parse({
+    intent: result.intent,
+    panelState: autoNextPanelState(analysis, result.store),
+  });
+}
+
+function workflowChanged(
+  intent: NavigationIntent,
+  workflow: NonNullable<ApplicationPageAnalysis["workflow"]> | null,
+): boolean {
+  return Boolean(
+    workflow &&
+    (workflow.pageKey !== intent.sourcePageKey ||
+      workflow.fingerprint !== intent.sourceFingerprint),
+  );
+}
+
+async function waitForWorkdayTransition(tabId: number, intent: NavigationIntent) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const response = await sendContentRequest(tabId, { type: "CONTENT_INSPECT_APPLICATION" });
+    if (response.ok) {
+      const inspected = InspectedApplicationPageSchema.safeParse(response.data);
+      if (inspected.success && workflowChanged(intent, inspected.data.atsReport.workflow)) {
+        return inspected.data.atsReport.workflow;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
+}
+
+async function executeAutoNext(intentId: string) {
+  let store = await getAutoNextStore();
+  const selected = store.intents.find((intent) => intent.id === intentId);
+  if (!selected || selected.state !== "PREPARED") {
+    throw new Error("This navigation intent is not prepared or was already dispatched.");
+  }
+  if (Date.parse(selected.expiresAt) <= Date.now()) {
+    const expired = transitionNavigationIntent(store, intentId, "FAILED", {
+      failureCode: "INTENT_EXPIRED",
+      message: "The countdown approval expired before the click.",
+    });
+    await setAutoNextStore(expired.store);
+    throw new Error(expired.intent.message ?? "The countdown approval expired.");
+  }
+  if (!store.enabled || store.applicationOptIns[selected.applicationId] !== true) {
+    throw new Error("Auto-next was disabled after this navigation was prepared.");
+  }
+  const tab = await inspectableActiveTab();
+  if ("error" in tab) throw new Error(tab.error.message);
+  const analysis = analysesByTab.get(tab.id);
+  if (
+    tab.id !== selected.tabId ||
+    tab.url !== selected.sourceUrl ||
+    !analysis ||
+    analysis.analysisId !== selected.analysisId ||
+    !analysis.workflow ||
+    analysis.workflow.pageKey !== selected.sourcePageKey ||
+    analysis.workflow.fingerprint !== selected.sourceFingerprint
+  ) {
+    throw new Error("The active page changed after auto-next was prepared. Scan it again.");
+  }
+
+  const dispatched = transitionNavigationIntent(store, intentId, "CLICK_DISPATCHED");
+  store = await setAutoNextStore(dispatched.store);
+  const clickResponse = await sendContentRequest(tab.id, {
+    type: "CONTENT_EXECUTE_CONTROLLED_NEXT",
+    plan: controlledNextPlan(dispatched.intent),
+  });
+  if (!clickResponse.ok) {
+    const failed = transitionNavigationIntent(store, intentId, "FAILED", {
+      failureCode: "VALIDATION_ERROR",
+      message: clickResponse.error.message,
+    });
+    await setAutoNextStore(failed.store);
+    throw new Error(clickResponse.error.message);
+  }
+  const clicked = ControlledNextClickResultSchema.parse(clickResponse.data);
+  const verifying = transitionNavigationIntent(store, intentId, "VERIFYING");
+  store = await setAutoNextStore(verifying.store);
+  const immediateChanged =
+    clicked.observedPageKey !== selected.sourcePageKey ||
+    clicked.observedFingerprint !== selected.sourceFingerprint;
+  const destination = immediateChanged
+    ? clicked.observedPageKey
+    : (await waitForWorkdayTransition(tab.id, selected))?.pageKey;
+  if (!destination) {
+    const failed = transitionNavigationIntent(store, intentId, "FAILED", {
+      failureCode: "TRANSITION_TIMEOUT",
+      message:
+        "Next was clicked once, but no verified page transition appeared. Continue manually; the copilot will not retry.",
+    });
+    await setAutoNextStore(failed.store);
+    throw new Error(failed.intent.message ?? "The page transition could not be verified.");
+  }
+  const advanced = transitionNavigationIntent(store, intentId, "ADVANCED", {
+    destinationPageKey: destination,
+    message: "One controlled Next transition was verified.",
+  });
+  await setAutoNextStore(advanced.store);
+  const refreshed = await analyzeActiveTab();
+  const nextAnalysis =
+    refreshed.ok && ApplicationPageAnalysisSchema.safeParse(refreshed.data).success
+      ? ApplicationPageAnalysisSchema.parse(refreshed.data)
+      : analysis;
+  return AutoNextActionResultSchema.parse({
+    intent: advanced.intent,
+    panelState: autoNextPanelState(nextAnalysis, advanced.store),
+  });
+}
+
 async function handlePanelRequest(
   request: ReturnType<typeof PanelRequestSchema.parse>,
 ): Promise<RuntimeResponse> {
@@ -601,6 +796,33 @@ async function handlePanelRequest(
     return { ok: true, data: await deleteOptionalSyncAccount() };
   }
 
+  if (request.type === "PANEL_AUTO_NEXT_STATUS") {
+    return { ok: true, data: await autoNextStatus(request.analysisId) };
+  }
+
+  if (request.type === "PANEL_AUTO_NEXT_SET_ENABLED") {
+    return { ok: true, data: await setAutoNextFeature(request.analysisId, request.enabled) };
+  }
+
+  if (request.type === "PANEL_AUTO_NEXT_SET_APPLICATION") {
+    return {
+      ok: true,
+      data: await setApplicationAutoNextFeature(request.analysisId, request.enabled),
+    };
+  }
+
+  if (request.type === "PANEL_AUTO_NEXT_PREPARE") {
+    return { ok: true, data: await prepareAutoNext(request.analysisId) };
+  }
+
+  if (request.type === "PANEL_AUTO_NEXT_EXECUTE") {
+    return { ok: true, data: await executeAutoNext(request.intentId) };
+  }
+
+  if (request.type === "PANEL_AUTO_NEXT_ABORT") {
+    return { ok: true, data: await abortAutoNext(request.intentId) };
+  }
+
   if (request.type === "PANEL_AI_DRAFT") {
     return draftCustomAnswer(request.analysisId, request.fieldId, request.maxChars);
   }
@@ -674,6 +896,7 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
     const isProfileRequest = parsed.data.type.startsWith("PANEL_PROFILE_");
     const isAiRequest = parsed.data.type.startsWith("PANEL_AI_");
     const isSyncRequest = parsed.data.type.startsWith("PANEL_SYNC_");
+    const isNavigationRequest = parsed.data.type.startsWith("PANEL_AUTO_NEXT_");
     const message = error instanceof Error ? error.message : "Unexpected extension failure.";
     sendResponse(
       failure(
@@ -683,7 +906,9 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
             ? "AI_PROVIDER_FAILED"
             : isSyncRequest
               ? "SYNC_FAILED"
-              : "SCAN_FAILED",
+              : isNavigationRequest
+                ? "NAVIGATION_FAILED"
+                : "SCAN_FAILED",
         message,
       ),
     );

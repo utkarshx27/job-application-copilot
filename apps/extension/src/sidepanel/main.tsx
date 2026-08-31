@@ -32,7 +32,12 @@ import {
   type SyncAccountStatus,
   type SyncDevice,
 } from "@copilot/sync-core";
-import { StrictMode, useEffect, useState, type ChangeEvent } from "react";
+import {
+  AutoNextActionResultSchema,
+  AutoNextPanelStateSchema,
+  type AutoNextPanelState,
+} from "@copilot/navigation-core";
+import { StrictMode, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 
 import { readApprovedResumeFile, readResumeFile } from "../resume-file";
@@ -820,6 +825,140 @@ function ObservePanel() {
   const [aiNotice, setAiNotice] = useState<Notice>(null);
   const [draftingField, setDraftingField] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, GroundedDraftResult>>({});
+  const [autoNext, setAutoNext] = useState<AutoNextPanelState | null>(null);
+  const [navigationNotice, setNavigationNotice] = useState<Notice>(null);
+  const [countdown, setCountdown] = useState<{ intentId: string; remaining: number } | null>(null);
+  const executingIntent = useRef<string | null>(null);
+
+  async function executePreparedNext(intentId: string) {
+    if (executingIntent.current === intentId) return;
+    executingIntent.current = intentId;
+    setActing(true);
+    setNavigationNotice(null);
+    try {
+      const response = await sendPanelRequest({ type: "PANEL_AUTO_NEXT_EXECUTE", intentId });
+      if (!response.ok) throw new Error(response.error.message);
+      const result = AutoNextActionResultSchema.safeParse(response.data);
+      if (!result.success) throw new Error("The controlled navigation result was invalid.");
+      setAutoNext(result.data.panelState);
+      setNavigationNotice({
+        kind: "success",
+        message: "One Next click was dispatched and the new Workday step was verified.",
+      });
+      await scan();
+    } catch (error) {
+      setNavigationNotice({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Controlled navigation stopped without retrying.",
+      });
+    } finally {
+      setActing(false);
+      executingIntent.current = null;
+    }
+  }
+
+  useEffect(() => {
+    if (!countdown) return;
+    if (countdown.remaining <= 0) {
+      const intentId = countdown.intentId;
+      setCountdown(null);
+      void executePreparedNext(intentId);
+      return;
+    }
+    const timer = window.setTimeout(
+      () =>
+        setCountdown((current) =>
+          current?.intentId === countdown.intentId
+            ? { ...current, remaining: current.remaining - 1 }
+            : current,
+        ),
+      1_000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [countdown]);
+
+  async function updateAutoNextSetting(
+    type: "PANEL_AUTO_NEXT_SET_ENABLED" | "PANEL_AUTO_NEXT_SET_APPLICATION",
+    enabled: boolean,
+  ) {
+    if (state.status !== "success") return;
+    if (autoNext) {
+      setAutoNext({
+        ...autoNext,
+        ...(type === "PANEL_AUTO_NEXT_SET_ENABLED" ? { enabled } : { applicationOptedIn: enabled }),
+      });
+    }
+    setActing(true);
+    setNavigationNotice(null);
+    try {
+      const response = await sendPanelRequest({
+        type,
+        analysisId: state.analysis.analysisId,
+        enabled,
+      });
+      if (!response.ok) throw new Error(response.error.message);
+      const parsed = AutoNextPanelStateSchema.safeParse(response.data);
+      if (!parsed.success) throw new Error("The auto-next setting response was invalid.");
+      setAutoNext(parsed.data);
+      if (!enabled && countdown) setCountdown(null);
+    } catch (error) {
+      setNavigationNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not update auto-next settings.",
+      });
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function prepareAutoNextCountdown() {
+    if (state.status !== "success") return;
+    setActing(true);
+    setNavigationNotice(null);
+    try {
+      const response = await sendPanelRequest({
+        type: "PANEL_AUTO_NEXT_PREPARE",
+        analysisId: state.analysis.analysisId,
+      });
+      if (!response.ok) throw new Error(response.error.message);
+      const result = AutoNextActionResultSchema.safeParse(response.data);
+      if (!result.success) throw new Error("The prepared navigation result was invalid.");
+      setAutoNext(result.data.panelState);
+      setCountdown({ intentId: result.data.intent.id, remaining: 3 });
+    } catch (error) {
+      setNavigationNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Controlled navigation was not ready.",
+      });
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function cancelAutoNextCountdown() {
+    if (!countdown) return;
+    const intentId = countdown.intentId;
+    setCountdown(null);
+    try {
+      const response = await sendPanelRequest({ type: "PANEL_AUTO_NEXT_ABORT", intentId });
+      if (!response.ok) throw new Error(response.error.message);
+      const result = AutoNextActionResultSchema.safeParse(response.data);
+      if (!result.success) throw new Error("The cancellation result was invalid.");
+      setAutoNext(result.data.panelState);
+      setNavigationNotice({
+        kind: "success",
+        message: "Controlled Next was canceled before click.",
+      });
+    } catch (error) {
+      setNavigationNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not cancel controlled Next.",
+      });
+    }
+  }
 
   async function loadAiStatus() {
     try {
@@ -943,6 +1082,18 @@ function ObservePanel() {
         ),
       );
       setState({ status: "success", analysis: analysis.data });
+      if (analysis.data.workflow) {
+        const navigationResponse = await sendPanelRequest({
+          type: "PANEL_AUTO_NEXT_STATUS",
+          analysisId: analysis.data.analysisId,
+        });
+        const navigationState = navigationResponse.ok
+          ? AutoNextPanelStateSchema.safeParse(navigationResponse.data)
+          : null;
+        setAutoNext(navigationState?.success ? navigationState.data : null);
+      } else {
+        setAutoNext(null);
+      }
       setCustomAnswers(
         Object.fromEntries(
           analysis.data.customQuestions.flatMap((question) => {
@@ -1264,8 +1415,9 @@ function ObservePanel() {
                   </p>
                 )}
                 <p className="help">
-                  Navigation is manual-only. Complete this page yourself, move forward once, then
-                  rescan. The copilot never clicks Next or Submit.
+                  {state.analysis.workflow.navigation.mode === "CONTROLLED_TEST_ONLY"
+                    ? "Controlled Next is available only on this local Test ATS fixture. It is off by default, clicks once after a cancelable countdown, and never clicks Submit."
+                    : "Navigation is manual-only on real Workday pages. Complete this page yourself, move forward once, then rescan. The copilot never clicks Next or Submit."}
                 </p>
                 <p className="help">
                   Page controls: Back{" "}
@@ -1321,6 +1473,85 @@ function ObservePanel() {
                   <div className="notice error" role="alert">
                     <strong>{state.analysis.workflow.errorState.kind.replaceAll("_", " ")}</strong>
                     <span>{state.analysis.workflow.errorState.message}</span>
+                  </div>
+                )}
+                {autoNext && state.analysis.workflow.navigation.mode === "CONTROLLED_TEST_ONLY" && (
+                  <div className="auto-next-controls" aria-labelledby="auto-next-heading">
+                    <div className="section-heading">
+                      <div>
+                        <h3 id="auto-next-heading">Experimental controlled Next</h3>
+                        <p className="help">Both switches must be on for this application.</p>
+                      </div>
+                      <span className="status">
+                        {autoNext.readiness.ready ? "Ready" : "Stopped"}
+                      </span>
+                    </div>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={autoNext.enabled}
+                        disabled={acting || Boolean(countdown)}
+                        onChange={(event) =>
+                          void updateAutoNextSetting(
+                            "PANEL_AUTO_NEXT_SET_ENABLED",
+                            event.target.checked,
+                          )
+                        }
+                      />
+                      Enable experimental auto-next globally
+                    </label>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={autoNext.applicationOptedIn}
+                        disabled={acting || !autoNext.enabled || Boolean(countdown)}
+                        onChange={(event) =>
+                          void updateAutoNextSetting(
+                            "PANEL_AUTO_NEXT_SET_APPLICATION",
+                            event.target.checked,
+                          )
+                        }
+                      />
+                      Enable for this application
+                    </label>
+                    <ul className="readiness-list" aria-label="Controlled Next readiness checks">
+                      {autoNext.readiness.checks.map((item) => (
+                        <li className={item.passed ? "passed" : "blocked"} key={item.code}>
+                          <span aria-hidden="true">{item.passed ? "✓" : "!"}</span>
+                          {item.message}
+                        </li>
+                      ))}
+                    </ul>
+                    {countdown ? (
+                      <div className="notice warning" role="status">
+                        <strong>Next in {countdown.remaining} seconds</strong>
+                        <span>You can cancel until the single click is dispatched.</span>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => void cancelAutoNextCountdown()}
+                        >
+                          Cancel controlled Next
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="primary"
+                        disabled={acting || !autoNext.readiness.ready}
+                        onClick={() => void prepareAutoNextCountdown()}
+                      >
+                        Prepare controlled Next
+                      </button>
+                    )}
+                    {navigationNotice && (
+                      <div
+                        className={`notice ${navigationNotice.kind}`}
+                        role={navigationNotice.kind === "error" ? "alert" : "status"}
+                      >
+                        {navigationNotice.message}
+                      </div>
+                    )}
                   </div>
                 )}
               </section>

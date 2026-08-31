@@ -6,6 +6,7 @@ const progressSteps = Array.from(
   document.querySelectorAll("[data-automation-id='progressBarStep']"),
 );
 const storageKey = "controlled-workday-step";
+const nextClickStorageKey = "controlled-workday-next-clicks";
 
 const steps = [
   {
@@ -161,6 +162,7 @@ function renderStep(index) {
     }
   });
   root.innerHTML = `${step.html}
+    <div data-navigation-validation role="alert" hidden></div>
     <nav class="workday-navigation" aria-label="Workday fixture navigation">
       ${safeIndex > 0 ? '<button type="button" data-automation-id="bottom-navigation-back-button">Back</button>' : ""}
       ${safeIndex < steps.length - 1 ? '<button type="button" data-automation-id="bottom-navigation-next-button">Next</button>' : '<button type="button" data-automation-id="submit" disabled>Submit disabled in Test ATS</button>'}
@@ -170,9 +172,30 @@ function renderStep(index) {
     ?.addEventListener("click", () => renderStep(safeIndex - 1));
   root
     .querySelector("[data-automation-id='bottom-navigation-next-button']")
-    ?.addEventListener("click", () => renderStep(safeIndex + 1));
+    ?.addEventListener("click", () => {
+      const form = root.querySelector("form");
+      const alert = root.querySelector("[data-navigation-validation]");
+      if (form && !form.checkValidity()) {
+        if (alert) {
+          alert.hidden = false;
+          alert.textContent = "Complete the visible required fields before continuing.";
+        }
+        form.reportValidity();
+        return;
+      }
+      const clickCount = Number(sessionStorage.getItem(nextClickStorageKey) ?? "0") + 1;
+      sessionStorage.setItem(nextClickStorageKey, String(clickCount));
+      document.documentElement.setAttribute("data-controlled-next-click-count", String(clickCount));
+      if (new URLSearchParams(location.search).get("navigation") !== "stuck") {
+        renderStep(safeIndex + 1);
+      }
+    });
   attachDynamicBehavior();
 }
 
 const restoredStep = Number(sessionStorage.getItem(storageKey) ?? "0");
+document.documentElement.setAttribute(
+  "data-controlled-next-click-count",
+  sessionStorage.getItem(nextClickStorageKey) ?? "0",
+);
 renderStep(Number.isInteger(restoredStep) ? restoredStep : 0);

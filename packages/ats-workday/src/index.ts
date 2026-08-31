@@ -254,6 +254,16 @@ function workflowError(targetDocument: Document, authBoundary: WorkdayAuthBounda
   return { kind: "VALIDATION" as const, message: alert, recoverable: true };
 }
 
+function controlledTestNavigation(targetDocument: Document): boolean {
+  const url = new URL(targetDocument.location.href);
+  return (
+    url.protocol === "http:" &&
+    url.hostname === "127.0.0.1" &&
+    url.port === "4173" &&
+    url.pathname === "/workday.html"
+  );
+}
+
 export const workdayAdapter: AtsAdapter = {
   id: "WORKDAY",
   version: "1",
@@ -273,11 +283,13 @@ export const workdayAdapter: AtsAdapter = {
     return AtsDetectionSchema.parse({
       adapter: "WORKDAY",
       adapterVersion: this.version,
-      confidence: evidence.some((item) => item.startsWith("host:"))
+      confidence: controlledTestNavigation(targetDocument)
         ? 0.999
-        : evidence.length
-          ? 0.98
-          : 0,
+        : evidence.some((item) => item.startsWith("host:"))
+          ? 0.999
+          : evidence.length
+            ? 0.98
+            : 0,
       supported: evidence.length > 0,
       evidence,
     });
@@ -407,6 +419,18 @@ export const workdayAdapter: AtsAdapter = {
       targetDocument.querySelector<HTMLButtonElement>(
         "button[data-automation-id='bottom-navigation-next-button'][data-submit='true'], button[data-automation-id='submit']",
       ) ?? exactButton(targetDocument, /^submit$/i);
+    const controlledNavigation = controlledTestNavigation(targetDocument);
+    const rawUserEditVersion = Number(
+      targetDocument.documentElement.getAttribute("data-job-copilot-user-edit-version") ?? "0",
+    );
+    const userEditVersion =
+      Number.isInteger(rawUserEditVersion) && rawUserEditVersion >= 0 ? rawUserEditVersion : 0;
+    const exactNext = Boolean(
+      next?.matches("button[data-automation-id='bottom-navigation-next-button']") &&
+      compactText(next.textContent).toLocaleLowerCase() === "next" &&
+      next.getAttribute("type") !== "submit" &&
+      next.getAttribute("data-submit") !== "true",
+    );
     const blockedReason =
       authBoundary !== "NONE"
         ? "Complete the Workday account or authentication step manually, then rescan."
@@ -427,12 +451,23 @@ export const workdayAdapter: AtsAdapter = {
       visibleSections: sections,
       authBoundary,
       prefilledFieldCount: prefilled,
+      userEditVersion,
       resumeReconciliationRequired: pageType === "MY_EXPERIENCE" && prefilled > 0,
       navigation: {
-        mode: "MANUAL_ONLY",
+        mode: controlledNavigation ? "CONTROLLED_TEST_ONLY" : "MANUAL_ONLY",
         backVisible: Boolean(back && !back.disabled),
         nextVisible: Boolean(next && !next.disabled && next !== submit),
         submitVisible: Boolean(submit && !submit.disabled),
+        nextConfidence: controlledNavigation && exactNext ? 0.999 : 0,
+        nextEvidence:
+          controlledNavigation && exactNext
+            ? [
+                "controlled-origin:http://127.0.0.1:4173/workday.html",
+                "automation-id:bottom-navigation-next-button",
+                "exact-text:Next",
+                "not-submit",
+              ]
+            : [],
         ...(blockedReason ? { blockedReason } : {}),
       },
       errorState: workflowError(targetDocument, authBoundary),

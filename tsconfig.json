@@ -7,6 +7,7 @@
     { "path": "./packages/grounded-generation" },
     { "path": "./packages/form-engine" },
     { "path": "./packages/job-schema" },
+    { "path": "./packages/navigation-core" },
     { "path": "./packages/ats-core" },
     { "path": "./packages/ats-greenhouse" },
     { "path": "./packages/ats-lever" },

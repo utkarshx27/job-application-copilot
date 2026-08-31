@@ -4,6 +4,7 @@ import { inspectApplicationPage } from "./ats-page";
 import { scanVisibleForm } from "./scanner";
 import { uploadApprovedFile } from "./upload-driver";
 import { applyFillPlan, highlightFields, installUserEditTracking } from "./form-driver";
+import { executeControlledNext } from "./navigation-driver";
 
 declare global {
   interface Window {
@@ -46,6 +47,11 @@ if (!window.__jobApplicationCopilotLoaded) {
           sendResponse({
             ok: true,
             data: await uploadApprovedFile(request.data.plan),
+          } satisfies RuntimeResponse);
+        } else if (request.data.type === "CONTENT_EXECUTE_CONTROLLED_NEXT") {
+          sendResponse({
+            ok: true,
+            data: executeControlledNext(request.data.plan),
           } satisfies RuntimeResponse);
         }
       } catch (error) {

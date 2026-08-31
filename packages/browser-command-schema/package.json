@@ -12,6 +12,7 @@
     "@copilot/form-schema": "*",
     "@copilot/grounded-generation": "*",
     "@copilot/job-schema": "*",
+    "@copilot/navigation-core": "*",
     "@copilot/profile-core": "*",
     "@copilot/sync-core": "*",
     "zod": "^4.1.5"

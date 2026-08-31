@@ -85,4 +85,4 @@ The controlled Phase 10 gate covers authenticated encryption and tamper rejectio
 
 Before treating the service as an internet-scale production offering, replace the JSON repository with a transactional database, add distributed rate limiting and verified account recovery, use managed secret/KMS infrastructure for server operational secrets, add abuse monitoring and email verification, conduct an independent cryptographic/security review, and exercise disaster recovery. Binary résumé files are still transient in the current application; their source metadata is covered inside the profile vault, but a future persistent résumé library will need a separately chunked encrypted-object protocol.
 
-Phase 11—controlled auto-next—remains disabled and is the next roadmap phase.
+Phase 11 now provides a separately gated one-shot Next action on the exact local Workday Test ATS fixture. It does not change Phase 10's sync boundary; real ATS navigation and all submission remain disabled.

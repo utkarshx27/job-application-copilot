@@ -3036,6 +3036,8 @@ Local mode remains supported.
 
 ## Phase 11 — Controlled auto-next
 
+**Controlled Test ATS implementation completed 2026-08-31.** The extension now provides a persisted one-shot navigation intent state machine, global and per-application opt-ins, a cancelable three-second countdown, exact adapter-owned Workday Next evidence, pre-click validation and stale-page checks, post-click transition verification, content-free outcome metrics, and no retry after dispatch. The capability is restricted to the local Workday Test ATS fixture. Real Workday auto-next remains disabled pending the separate 250-form validation gate. Submit remains absent from the command protocol. See `docs/architecture/phase-11-controlled-auto-next.md`.
+
 Only supported adapters.
 
 Release behind flag.

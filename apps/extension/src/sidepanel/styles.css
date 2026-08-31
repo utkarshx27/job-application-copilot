@@ -292,6 +292,40 @@ input:disabled {
 .workflow-card .job-heading h2 {
   margin: 0;
 }
+.auto-next-controls {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #dfe4e0;
+}
+.auto-next-controls h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.auto-next-controls .help {
+  margin: 4px 0 0;
+}
+.readiness-list {
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 4px;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+.readiness-list li {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 6px;
+  align-items: start;
+}
+.readiness-list .passed {
+  color: #25633b;
+}
+.readiness-list .blocked {
+  color: #7b3d18;
+}
 .data-tools {
   margin-top: 22px;
   padding-top: 18px;

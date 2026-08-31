@@ -11,6 +11,7 @@ const USER_EDITED_ATTRIBUTE = "data-job-copilot-user-edited";
 const FILLED_ATTRIBUTE = "data-job-copilot-filled";
 const HIGHLIGHT_ATTRIBUTE = "data-job-copilot-highlight";
 const STYLE_ID = "job-application-copilot-highlight-style";
+const USER_EDIT_VERSION_ATTRIBUTE = "data-job-copilot-user-edit-version";
 const trackedDocuments = new WeakSet<Document>();
 const automatedControls = new WeakSet<SupportedControl>();
 
@@ -28,6 +29,12 @@ export function installUserEditTracking(targetDocument: Document = document): vo
     if (!isSupportedControl(event.target) || automatedControls.has(event.target)) return;
     event.target.setAttribute(USER_EDITED_ATTRIBUTE, "true");
     event.target.removeAttribute(FILLED_ATTRIBUTE);
+    const root = event.target.ownerDocument.documentElement;
+    const current = Number(root.getAttribute(USER_EDIT_VERSION_ATTRIBUTE) ?? "0");
+    root.setAttribute(
+      USER_EDIT_VERSION_ATTRIBUTE,
+      String(Number.isFinite(current) ? current + 1 : 1),
+    );
   };
   targetDocument.addEventListener("input", markEdited, true);
   targetDocument.addEventListener("change", markEdited, true);

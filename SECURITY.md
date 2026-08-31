@@ -31,10 +31,15 @@ Reports are especially helpful for:
 - credential, file, or cross-tab leakage;
 - sync authentication/session bypasses, ciphertext tampering, key leakage, or cross-account access;
 - device revocation, encrypted-backup, or account-deletion failures;
+- controlled-navigation origin, intent persistence, validation, duplicate-dispatch, or transition-verification bypasses;
 - incorrect work-authorization or legal-answer automation.
 
 ## Optional sync deployment
 
 The bundled sync server is a controlled, self-hostable MVP. Do not expose the default JSON-backed deployment directly to the public internet. Use TLS, restrict allowed origins, protect and back up the state file, monitor access, and complete the production-hardening work documented in [`docs/architecture/phase-10-optional-cloud-sync.md`](./docs/architecture/phase-10-optional-cloud-sync.md).
+
+## Controlled navigation boundary
+
+Auto-next is limited to the exact local Workday Test ATS fixture, defaults off, and requires a second per-application opt-in. Real ATS pages remain manual-only. The extension persists dispatch before clicking, performs at most one click, verifies the transition, never retries, and has no Submit command. See [`docs/architecture/phase-11-controlled-auto-next.md`](./docs/architecture/phase-11-controlled-auto-next.md).
 
 The project is pre-release. Security fixes are applied to the latest `main` branch until versioned releases begin.

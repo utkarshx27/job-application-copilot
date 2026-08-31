@@ -58,7 +58,8 @@ Phases 0 through 6 and Phases 8 through 10 are complete as controlled implementa
 - Read-only Workday SPA step modeling with persisted local progress and refresh recovery.
 - Privacy-preserving prefilled-state detection: résumé/account-parsed values are never captured and are protected from overwrite.
 - Deterministic first-record work-history and education mappings, manual-only skill widgets, and dynamic questionnaire rescanning.
-- No browser navigation command: Workday Back, Next, authentication, and Submit remain user actions.
+- Controlled Test ATS auto-next with default-off global and per-application opt-ins, a cancelable countdown, persisted one-shot intents, exact Workday Next evidence, and verified transitions.
+- Real ATS navigation remains manual, and Submit is absent from the browser command protocol in every environment.
 - Version 2 local tracker with automatic preservation and migration of version 1 application history.
 - Canonical ATS requisition/URL job identities and append-only, changed-only job snapshots.
 - Evidence-backed duplicate warnings for existing records, requisitions, URLs, and matching job details.
@@ -73,7 +74,7 @@ Phases 0 through 6 and Phases 8 through 10 are complete as controlled implementa
 - Self-hostable Fastify sync service with atomic JSON persistence for controlled/local deployments.
 - Runtime-requested optional host access and a real Chromium create-account, backup, and session-lock test.
 
-Phase 10 is complete as a controlled, self-hostable implementation. Local data remains fully usable without an account, and sync runs only after the user grants access and unlocks the session. Internet-scale hosting still requires a transactional database, distributed abuse controls, account recovery, managed infrastructure, and an independent security review. Phase 11—controlled auto-next—is next. See the [Phase 10 architecture](./docs/architecture/phase-10-optional-cloud-sync.md), [Phase 9 architecture](./docs/architecture/phase-9-additional-ats.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
+Phase 11 is complete for the controlled local Workday Test ATS only. Real Workday and all other ATS navigation remain disabled pending separate production validation; final submission is always manual. Phase 12—controlled submission—is next and is intentionally not part of this release. See the [Phase 11 architecture](./docs/architecture/phase-11-controlled-auto-next.md), [Phase 10 architecture](./docs/architecture/phase-10-optional-cloud-sync.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
 
 ## Design principles
 
@@ -119,6 +120,7 @@ packages/
   profile-core/              Truth Vault, versioning, migration, and import review
   resume-parser/             Conservative local résumé text parser
   sync-core/                 Encryption, sync schemas, revisions, and conflict merging
+  navigation-core/           Controlled Next readiness, persisted intents, and metrics
   shared/                    Site policy and shared utilities
 fixtures/ats/                Sanitized ATS regression fixtures
 qa/ats/                      Public-form QA URL template and manual-review workflow
@@ -150,6 +152,7 @@ npm run check:phase7
 npm run check:phase8
 npm run check:phase9
 npm run check:phase10
+npm run check:phase11
 ```
 
 Build the production extension:
@@ -175,7 +178,7 @@ Then:
 5. Open an employer or controlled application form.
 6. Open the extension side panel and choose **Scan and match visible form**.
 
-The controlled site includes `/ashby.html`, `/smartrecruiters.html`, `/workday.html`, `/icims.html`, `/taleo.html`, `/workable.html`, `/bamboohr.html`, `/jobvite.html`, and `/comeet.html` alongside the existing Greenhouse and Lever pages when `npm run serve --workspace @copilot/test-ats` is running. The Workday fixture preserves its current step across refreshes so recovery can be tested locally.
+The controlled site includes `/ashby.html`, `/smartrecruiters.html`, `/workday.html`, `/icims.html`, `/taleo.html`, `/workable.html`, `/bamboohr.html`, `/jobvite.html`, and `/comeet.html` alongside the existing Greenhouse and Lever pages when `npm run serve --workspace @copilot/test-ats` is running. The Workday fixture preserves its current step across refreshes. On that exact local fixture only, the Observe tab can enable experimental auto-next globally and for the current application, then prepare one Next click with a three-second cancellation window. Fill and rescan the visible step before preparing it.
 
 AI drafting is optional. In the Observe tab, enter an OpenAI model and API key and enable it for the current browser session. The extension asks for access only to the OpenAI API origin. For an eligible narrative question, choose **Draft with grounded AI**, inspect the draft and evidence IDs, choose **Use this draft in review**, edit it if needed, and finally choose **Fill reviewed custom answers**. No AI action navigates or submits the application.
 
@@ -201,6 +204,7 @@ npm run check:phase7     # Controlled Phase 7 gate; public Workday validation is
 npm run check:phase8     # Complete Phase 8 tracker and duplicate-engine gate
 npm run check:phase9     # Controlled Phase 9 additional-ATS gate
 npm run check:phase10    # Controlled Phase 10 encrypted-sync gate
+npm run check:phase11    # Controlled Phase 11 one-shot auto-next gate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -216,7 +220,7 @@ npm run ats:qa:replay
 ## Safety and privacy
 
 - The extension does not submit applications.
-- Fields are filled only after explicit side-panel review; navigation and submission remain manual.
+- Fields are filled only after explicit side-panel review. Navigation remains manual except for the separately enabled one-shot Next action on the exact local Workday Test ATS fixture; submission is always manual.
 - Résumé upload requires selecting the exact file and pressing a separate approval button; raw files are not retained.
 - LinkedIn is manual-only and is not scanned.
 - Password and hidden fields are excluded from discovery.
@@ -232,7 +236,7 @@ npm run ats:qa:replay
 - AI output cannot issue browser commands and never fills automatically. Invalid, unsupported, sensitive, or over-limit drafts are withheld.
 - Role-based custom ATS widgets are scanned as manual-only controls and cannot be targeted by the native fill driver.
 - Existing values are represented only as an empty/prefilled state; their contents are not captured, and reviewed fill plans cannot overwrite them.
-- Workday authentication, Back, Next, and Submit remain manual. The runtime protocol exposes no navigation or submission command.
+- Real Workday authentication, Back, Next, and Submit remain manual. The runtime protocol exposes only a fixed-token controlled Next plan for the local fixture and exposes no Submit command.
 - Duplicate detection is advisory and local; it never merges applications or blocks user actions.
 - Tracker CSV exports can contain application history and should be stored securely.
 - Phase 9 custom ATS widgets, unknown questions, salary, references, consent, and disclosures remain manual or explicitly reviewed.
@@ -242,7 +246,7 @@ npm run ats:qa:replay
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase10` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase11` before opening a pull request.
 
 Good early contribution areas include:
 
