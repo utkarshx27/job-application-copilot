@@ -1,0 +1,15 @@
+{
+  "name": "@copilot/ats-bamboohr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@copilot/ats-core": "*",
+    "@copilot/form-schema": "*",
+    "@copilot/job-schema": "*"
+  }
+}

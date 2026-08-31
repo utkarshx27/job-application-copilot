@@ -1,0 +1,87 @@
+{
+  "fixtureVersion": 1,
+  "id": "comeet-application-v1",
+  "adapter": "COMEET",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-31T10:00:00.000Z",
+  "source": {
+    "host": "www.comeet.co",
+    "pathPattern": "/jobs/:company/:companyUid/:slug/:positionUid"
+  },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://www.comeet.co/jobs/example/E5.007/backend-engineer/C9601",
+    "title": "Backend Engineer — Example",
+    "capturedAt": "2026-08-31T10:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "comeet-first",
+        "controlKind": "text",
+        "accessibleName": "First name",
+        "labelText": "First name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "first_name",
+        "domId": "comeet-first",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "comeet-mobile",
+        "controlKind": "tel",
+        "accessibleName": "Mobile phone",
+        "labelText": "Mobile phone",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "mobile_phone",
+        "domId": "comeet-mobile",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "comeet-linkedin",
+        "controlKind": "url",
+        "accessibleName": "LinkedIn",
+        "labelText": "LinkedIn",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "linkedin_url",
+        "domId": "comeet-linkedin",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "comeet-custom",
+        "controlKind": "textarea",
+        "accessibleName": "Salary expectations",
+        "labelText": "Salary expectations",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "salary_expectations",
+        "domId": "comeet-custom",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "comeet-first": "IDENTITY.legal_name.given",
+    "comeet-mobile": "CONTACT.phone",
+    "comeet-linkedin": "LINKS.linkedin",
+    "comeet-custom": null
+  },
+  "dynamicBehavior": ["Salary expectations require explicit review."],
+  "sanitized": true
+}

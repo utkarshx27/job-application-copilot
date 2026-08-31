@@ -1,0 +1,87 @@
+{
+  "fixtureVersion": 1,
+  "id": "taleo-application-v1",
+  "adapter": "TALEO",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-31T10:00:00.000Z",
+  "source": {
+    "host": "example.taleo.net",
+    "pathPattern": "/careersection/ex/jobapply.ftl?job=:jobId"
+  },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://example.taleo.net/careersection/ex/jobapply.ftl?job=9201",
+    "title": "Systems Engineer — Example",
+    "capturedAt": "2026-08-31T10:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "taleo-first",
+        "controlKind": "text",
+        "accessibleName": "First name",
+        "labelText": "First name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "firstName",
+        "domId": "taleo-first",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "taleo-last",
+        "controlKind": "text",
+        "accessibleName": "Last name",
+        "labelText": "Last name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "lastName",
+        "domId": "taleo-last",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "taleo-resume",
+        "controlKind": "file",
+        "accessibleName": "Résumé",
+        "labelText": "Résumé",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "resumeUpload",
+        "domId": "taleo-resume",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "taleo-custom",
+        "controlKind": "textarea",
+        "accessibleName": "Additional information",
+        "labelText": "Additional information",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "question9201",
+        "domId": "taleo-custom",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "taleo-first": "IDENTITY.legal_name.given",
+    "taleo-last": "IDENTITY.legal_name.family",
+    "taleo-resume": "APPLICATION.resume",
+    "taleo-custom": null
+  },
+  "dynamicBehavior": ["Career-section navigation remains manual."],
+  "sanitized": true
+}

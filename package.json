@@ -53,7 +53,8 @@
     "check:phase5": "npm run check && npm run test:e2e",
     "check:phase6": "npm run check && npm run test:e2e",
     "check:phase7": "npm run check && npm run test:e2e",
-    "check:phase8": "npm run check && npm run test:e2e"
+    "check:phase8": "npm run check && npm run test:e2e",
+    "check:phase9": "npm run check && npm run test:e2e"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",

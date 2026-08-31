@@ -1,0 +1,84 @@
+{
+  "fixtureVersion": 1,
+  "id": "bamboohr-application-v1",
+  "adapter": "BAMBOOHR",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-31T10:00:00.000Z",
+  "source": { "host": "example.bamboohr.com", "pathPattern": "/careers/:jobId" },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://example.bamboohr.com/careers/9401",
+    "title": "QA Engineer — Example",
+    "capturedAt": "2026-08-31T10:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "bamboo-first",
+        "controlKind": "text",
+        "accessibleName": "First name",
+        "labelText": "First name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "firstName",
+        "domId": "bamboo-first",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "bamboo-phone",
+        "controlKind": "tel",
+        "accessibleName": "Phone",
+        "labelText": "Phone",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "phoneNumber",
+        "domId": "bamboo-phone",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "bamboo-resume",
+        "controlKind": "file",
+        "accessibleName": "Résumé",
+        "labelText": "Résumé",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "resume",
+        "domId": "bamboo-resume",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "bamboo-custom",
+        "controlKind": "textarea",
+        "accessibleName": "References",
+        "labelText": "References",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "references",
+        "domId": "bamboo-custom",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "bamboo-first": "IDENTITY.legal_name.given",
+    "bamboo-phone": "CONTACT.phone",
+    "bamboo-resume": "APPLICATION.resume",
+    "bamboo-custom": null
+  },
+  "dynamicBehavior": ["References are never inferred from profile data."],
+  "sanitized": true
+}

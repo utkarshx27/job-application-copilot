@@ -1,0 +1,84 @@
+{
+  "fixtureVersion": 1,
+  "id": "workable-application-v1",
+  "adapter": "WORKABLE",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-31T10:00:00.000Z",
+  "source": { "host": "apply.workable.com", "pathPattern": "/example/j/:shortcode" },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://apply.workable.com/example/j/W9301",
+    "title": "Product Engineer — Example",
+    "capturedAt": "2026-08-31T10:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "workable-full",
+        "controlKind": "text",
+        "accessibleName": "Full name",
+        "labelText": "Full name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "fullName",
+        "domId": "workable-full",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "workable-linkedin",
+        "controlKind": "url",
+        "accessibleName": "LinkedIn",
+        "labelText": "LinkedIn",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "linkedinUrl",
+        "domId": "workable-linkedin",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "workable-resume",
+        "controlKind": "file",
+        "accessibleName": "Résumé",
+        "labelText": "Résumé",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "resumeFile",
+        "domId": "workable-resume",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "workable-custom",
+        "controlKind": "textarea",
+        "accessibleName": "Why join us?",
+        "labelText": "Why join us?",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "question9301",
+        "domId": "workable-custom",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "workable-full": "IDENTITY.legal_name.full",
+    "workable-linkedin": "LINKS.linkedin",
+    "workable-resume": "APPLICATION.resume",
+    "workable-custom": null
+  },
+  "dynamicBehavior": ["Embedded custom controls remain manual-only."],
+  "sanitized": true
+}

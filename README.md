@@ -10,7 +10,7 @@ A local-first, user-controlled Chrome extension for safely assisting with job ap
 
 ## Project status
 
-Phases 0 through 6 and Phase 8 are complete. Phase 7 has a complete controlled Workday implementation; its separate 250-form public validation gate remains open:
+Phases 0 through 6, Phase 8, and Phase 9 are complete. Phase 7 has a complete controlled Workday implementation; its separate 250-form public validation gate remains open:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -64,8 +64,11 @@ Phases 0 through 6 and Phase 8 are complete. Phase 7 has a complete controlled W
 - Evidence-backed duplicate warnings for existing records, requisitions, URLs, and matching job details.
 - Editable lifecycle statuses, summary counts, filters, and accessible board/table tracker views.
 - Validated CSV import/export with per-row errors and spreadsheet-formula neutralization.
+- Deterministic iCIMS, Taleo, Workable, BambooHR, Jobvite, and Comeet adapters.
+- JSON-LD-first job extraction with platform-specific host, DOM, and requisition-route evidence.
+- Sanitized metadata fixtures and real Chromium reviewed-fill/résumé-upload coverage for all six Phase 9 ATS platforms.
 
-Phase 8 is complete and remains local-only. Duplicate results warn but never merge, block, navigate, or submit. Phase 9 is next: additional ATS adapters. The Phase 7 public Workday validation remains a separate production-readiness gate. See the [Phase 8 architecture](./docs/architecture/phase-8-tracker.md), [Phase 7 architecture](./docs/architecture/phase-7-workday.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
+Phase 9 is complete as a controlled implementation. The added ATS adapters use the same reviewed-fill boundary and never navigate or submit. Broad public-site validation, especially for branded custom domains, remains a production-readiness task. Phase 10—optional cloud sync—is next. See the [Phase 9 architecture](./docs/architecture/phase-9-additional-ats.md), [Phase 8 architecture](./docs/architecture/phase-8-tracker.md), [Phase 7 architecture](./docs/architecture/phase-7-workday.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
 
 ## Design principles
 
@@ -99,6 +102,12 @@ packages/
   ats-ashby/                 Ashby detector, extraction, and field rules
   ats-smartrecruiters/       SmartRecruiters detector, extraction, and field rules
   ats-workday/               Workday detector, workflow model, and safe field rules
+  ats-icims/                 iCIMS detector, extraction, and field rules
+  ats-taleo/                 Oracle Taleo detector, extraction, and field rules
+  ats-workable/              Workable detector, extraction, and field rules
+  ats-bamboohr/              BambooHR detector, extraction, and field rules
+  ats-jobvite/               Jobvite detector, extraction, and field rules
+  ats-comeet/                Comeet detector, extraction, and field rules
   ats-qa/                    Sanitization, replay metrics, and human-review contracts
   application-state/         Local application tracker transitions
   profile-core/              Truth Vault, versioning, migration, and import review
@@ -132,6 +141,7 @@ npm run check:phase5
 npm run check:phase6
 npm run check:phase7
 npm run check:phase8
+npm run check:phase9
 ```
 
 Build the production extension:
@@ -149,7 +159,7 @@ Then:
 5. Open an employer or controlled application form.
 6. Open the extension side panel and choose **Scan and match visible form**.
 
-The controlled site includes `/ashby.html`, `/smartrecruiters.html`, `/workday.html`, `/workday-auth.html`, and `/workday-confirmation.html` alongside the existing Greenhouse and Lever pages when `npm run serve --workspace @copilot/test-ats` is running. The Workday fixture preserves its current step across refreshes so recovery can be tested locally.
+The controlled site includes `/ashby.html`, `/smartrecruiters.html`, `/workday.html`, `/icims.html`, `/taleo.html`, `/workable.html`, `/bamboohr.html`, `/jobvite.html`, and `/comeet.html` alongside the existing Greenhouse and Lever pages when `npm run serve --workspace @copilot/test-ats` is running. The Workday fixture preserves its current step across refreshes so recovery can be tested locally.
 
 AI drafting is optional. In the Observe tab, enter an OpenAI model and API key and enable it for the current browser session. The extension asks for access only to the OpenAI API origin. For an eligible narrative question, choose **Draft with grounded AI**, inspect the draft and evidence IDs, choose **Use this draft in review**, edit it if needed, and finally choose **Fill reviewed custom answers**. No AI action navigates or submits the application.
 
@@ -173,6 +183,7 @@ npm run check:phase5     # Complete Phase 5 release gate
 npm run check:phase6     # Complete Phase 6 release gate
 npm run check:phase7     # Controlled Phase 7 gate; public Workday validation is separate
 npm run check:phase8     # Complete Phase 8 tracker and duplicate-engine gate
+npm run check:phase9     # Controlled Phase 9 additional-ATS gate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -207,10 +218,11 @@ npm run ats:qa:replay
 - Workday authentication, Back, Next, and Submit remain manual. The runtime protocol exposes no navigation or submission command.
 - Duplicate detection is advisory and local; it never merges applications or blocks user actions.
 - Tracker CSV exports can contain application history and should be stored securely.
+- Phase 9 custom ATS widgets, unknown questions, salary, references, consent, and disclosures remain manual or explicitly reviewed.
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase8` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase9` before opening a pull request.
 
 Good early contribution areas include:
 
@@ -228,7 +240,7 @@ Do not report sensitive vulnerabilities in public issues. Follow [SECURITY.md](.
 
 ## Disclaimer
 
-This project is not affiliated with Greenhouse, Lever, Ashby, Workday, LinkedIn, or any other ATS or job platform. Users and contributors are responsible for complying with applicable site terms, laws, and employer policies.
+This project is not affiliated with Greenhouse, Lever, Ashby, SmartRecruiters, Workday, iCIMS, Oracle Taleo, Workable, BambooHR, Jobvite, Comeet, LinkedIn, or any other ATS or job platform. Users and contributors are responsible for complying with applicable site terms, laws, and employer policies.
 
 ## License
 

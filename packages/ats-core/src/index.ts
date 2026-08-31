@@ -18,7 +18,7 @@ import {
 } from "@copilot/form-schema";
 
 export interface AtsAdapter {
-  readonly id: Extract<AtsId, "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS" | "WORKDAY">;
+  readonly id: Exclude<AtsId, "GENERIC" | "UNKNOWN">;
   readonly version: string;
   detect(targetDocument: Document): AtsDetection;
   extractJob(targetDocument: Document, detection: AtsDetection): NormalizedJob | null;
@@ -29,7 +29,7 @@ export interface AtsAdapter {
 
 export function atsFieldRule(
   field: RawField,
-  adapter: Extract<AtsId, "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS" | "WORKDAY">,
+  adapter: Exclude<AtsId, "GENERIC" | "UNKNOWN">,
   canonicalQuestion: CanonicalQuestion,
   evidence: string,
 ): FieldMapping {
@@ -41,6 +41,173 @@ export function atsFieldRule(
     evidence: [`ats:${adapter.toLocaleLowerCase()}:${evidence}`],
     fillable: false,
   });
+}
+
+export const STANDARD_APPLICATION_FIELD_RULES: Array<[RegExp, CanonicalQuestion]> = [
+  [/\b(first_?name|firstname|given_?name)\b/, "IDENTITY.legal_name.given"],
+  [/\b(last_?name|lastname|family_?name|surname)\b/, "IDENTITY.legal_name.family"],
+  [/\b(full_?name|fullname|candidate_?name)\b/, "IDENTITY.legal_name.full"],
+  [/\b(email|email_?address)\b/, "CONTACT.email"],
+  [/\b(phone|phone_?number|mobile|mobile_?phone)\b/, "CONTACT.phone"],
+  [/\b(linkedin|linkedin_?url|linkedin_?profile)\b/, "LINKS.linkedin"],
+  [/\b(portfolio|portfolio_?url|website|website_?url)\b/, "LINKS.portfolio"],
+  [/\b(resume|resume_?file|resume_?upload|cv|cv_?file)\b/, "APPLICATION.resume"],
+  [/\b(cover_?letter|coverletter)\b/, "APPLICATION.cover_letter"],
+  [/\b(current_?company|company_?name|employer)\b/, "WORK_HISTORY.0.employer"],
+  [/\b(current_?title|job_?title|position_?title)\b/, "WORK_HISTORY.0.title"],
+  [/\b(school|college|institution|university)\b/, "EDUCATION.0.institution"],
+  [/\bdegree\b/, "EDUCATION.0.degree"],
+];
+
+export type StandardAtsAdapterConfig = {
+  id: Exclude<AtsId, "GENERIC" | "UNKNOWN">;
+  slug: string;
+  version?: string;
+  hostPatterns: RegExp[];
+  domSelectors: string[];
+  routeId(url: URL): string;
+  fieldRules?: Array<[RegExp, CanonicalQuestion]>;
+  titleSelectors?: string[];
+  companySelectors?: string[];
+  descriptionSelectors?: string[];
+  locationSelectors?: string[];
+};
+
+export function createStandardAtsAdapter(config: StandardAtsAdapterConfig): AtsAdapter {
+  const version = config.version ?? "1";
+  return {
+    id: config.id,
+    version,
+
+    detect(targetDocument) {
+      const url = new URL(targetDocument.location.href);
+      const evidence: string[] = [];
+      if (config.hostPatterns.some((pattern) => pattern.test(url.hostname)))
+        evidence.push(`host:${url.hostname}`);
+      if (metaContent(targetDocument, "copilot-ats").toLocaleLowerCase() === config.slug)
+        evidence.push(`meta:copilot-ats=${config.slug}`);
+      if (config.domSelectors.some((selector) => targetDocument.querySelector(selector)))
+        evidence.push(`dom:${config.slug}-job`);
+      return AtsDetectionSchema.parse({
+        adapter: config.id,
+        adapterVersion: version,
+        confidence: evidence.some((item) => item.startsWith("host:"))
+          ? 0.999
+          : evidence.length
+            ? 0.98
+            : 0,
+        supported: evidence.length > 0,
+        evidence,
+      });
+    },
+
+    extractJob(targetDocument, detection) {
+      if (!detection.supported) return null;
+      const url = new URL(targetDocument.location.href);
+      const json = jsonLdJob(targetDocument);
+      const title =
+        compactText(json?.title) ||
+        selectorText(
+          targetDocument,
+          config.titleSelectors ?? ["[data-job-title]", "[itemprop='title']", "h1"],
+        );
+      const company =
+        compactText(json?.hiringOrganization?.name) ||
+        metaContent(targetDocument, "copilot-company") ||
+        selectorText(
+          targetDocument,
+          config.companySelectors ?? ["[data-company-name]", "[itemprop='hiringOrganization']"],
+        ) ||
+        metaContent(targetDocument, "og:site_name");
+      if (!title || !company) return null;
+      const jsonIdentifier =
+        typeof json?.identifier === "string"
+          ? json.identifier
+          : compactText(json?.identifier?.value);
+      const externalRequisitionId =
+        compactText(jsonIdentifier) ||
+        metaContent(targetDocument, "copilot-requisition-id") ||
+        compactText(targetDocument.querySelector<HTMLElement>("[data-job-id]")?.dataset.jobId) ||
+        compactText(config.routeId(url));
+      const description =
+        jsonLdDescription(json) ||
+        selectorText(
+          targetDocument,
+          config.descriptionSelectors ?? [
+            "[data-job-description]",
+            "[itemprop='description']",
+            ".job-description",
+          ],
+        ) ||
+        metaContent(targetDocument, "description");
+      const location =
+        jsonLdLocation(json) ||
+        selectorText(
+          targetDocument,
+          config.locationSelectors ?? [
+            "[data-job-location]",
+            "[itemprop='jobLocation']",
+            ".job-location",
+          ],
+        );
+      const employmentType = compactText(json?.employmentType);
+      const workplaceType = selectorText(targetDocument, ["[data-workplace-type]"]);
+      return normalizedJob({
+        id: stableJobId(config.id, externalRequisitionId, url.href),
+        ats: config.id,
+        ...(externalRequisitionId ? { externalRequisitionId } : {}),
+        title,
+        company,
+        description,
+        ...(location ? { location } : {}),
+        remotePolicy: /\bremote\b/i.test(`${location} ${workplaceType}`)
+          ? "REMOTE"
+          : /\bhybrid\b/i.test(`${location} ${workplaceType}`)
+            ? "HYBRID"
+            : /\bon.?site\b/i.test(workplaceType)
+              ? "ONSITE"
+              : "UNKNOWN",
+        ...(employmentType ? { employmentType } : {}),
+        requiredSkills: [],
+        preferredSkills: [],
+        sourceUrl: url.href,
+        applicationUrl: url.href,
+        snapshotAt: new Date().toISOString(),
+      });
+    },
+
+    detectConfirmation(targetDocument) {
+      const container = targetDocument.querySelector(
+        `.${config.slug}-application-confirmation, [data-ats-confirmation='${config.slug}'], [data-testid='application-success'], [data-application-confirmation='true']`,
+      );
+      const heading = compactText(
+        container?.querySelector("h1, h2, [role='heading']")?.textContent,
+      );
+      const content = compactText(container?.textContent);
+      if (
+        !container ||
+        !/thank you|application (was )?(received|submitted|complete)/i.test(`${heading} ${content}`)
+      )
+        return noConfirmation();
+      const referenceId = compactText(
+        targetDocument.querySelector("[data-confirmation-id]")?.textContent,
+      );
+      return ConfirmationEvidenceSchema.parse({
+        confirmed: true,
+        heading: heading || "Application received",
+        ...(referenceId ? { referenceId } : {}),
+        evidence: [`dom:${config.slug}-confirmation`],
+      });
+    },
+
+    classifyField(field) {
+      const machine = `${field.name} ${field.domId}`.toLocaleLowerCase();
+      const match = (config.fieldRules ?? STANDARD_APPLICATION_FIELD_RULES).find(([pattern]) =>
+        pattern.test(machine),
+      );
+      return match ? atsFieldRule(field, config.id, match[1], machine) : null;
+    },
+  };
 }
 
 export function compactText(value: string | null | undefined): string {

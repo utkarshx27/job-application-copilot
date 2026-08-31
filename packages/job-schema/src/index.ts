@@ -10,6 +10,12 @@ export const AtsIdSchema = z.enum([
   "ASHBY",
   "SMARTRECRUITERS",
   "WORKDAY",
+  "ICIMS",
+  "TALEO",
+  "WORKABLE",
+  "BAMBOOHR",
+  "JOBVITE",
+  "COMEET",
   "GENERIC",
   "UNKNOWN",
 ]);

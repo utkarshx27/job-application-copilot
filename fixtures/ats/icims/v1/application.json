@@ -1,0 +1,84 @@
+{
+  "fixtureVersion": 1,
+  "id": "icims-application-v1",
+  "adapter": "ICIMS",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-31T10:00:00.000Z",
+  "source": { "host": "careers.example.icims.com", "pathPattern": "/jobs/:jobId/job" },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://careers.example.icims.com/jobs/9101/job",
+    "title": "Backend Engineer — Example",
+    "capturedAt": "2026-08-31T10:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "icims-first",
+        "controlKind": "text",
+        "accessibleName": "First name",
+        "labelText": "First name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "firstName",
+        "domId": "icims-first",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "icims-email",
+        "controlKind": "email",
+        "accessibleName": "Email",
+        "labelText": "Email",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "emailAddress",
+        "domId": "icims-email",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "icims-resume",
+        "controlKind": "file",
+        "accessibleName": "Résumé",
+        "labelText": "Résumé",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "resumeFile",
+        "domId": "icims-resume",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "icims-custom",
+        "controlKind": "textarea",
+        "accessibleName": "Why this role?",
+        "labelText": "Why this role?",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "customQuestion9101",
+        "domId": "icims-custom",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "icims-first": "IDENTITY.legal_name.given",
+    "icims-email": "CONTACT.email",
+    "icims-resume": "APPLICATION.resume",
+    "icims-custom": null
+  },
+  "dynamicBehavior": ["Custom questions require explicit review."],
+  "sanitized": true
+}

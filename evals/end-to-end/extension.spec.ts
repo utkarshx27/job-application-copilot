@@ -547,6 +547,56 @@ test("detects SmartRecruiters, fills safe fields, rescans screening dynamics, an
   await expect(panel.getByText(/SR-CONF-400/)).toBeVisible();
 });
 
+for (const fixture of [
+  { slug: "icims", adapter: "ICIMS", title: "Backend Engineer" },
+  { slug: "taleo", adapter: "TALEO", title: "Systems Engineer" },
+  { slug: "workable", adapter: "WORKABLE", title: "Product Engineer" },
+  { slug: "bamboohr", adapter: "BAMBOOHR", title: "QA Engineer" },
+  { slug: "jobvite", adapter: "JOBVITE", title: "Frontend Engineer" },
+  { slug: "comeet", adapter: "COMEET", title: "Platform Engineer" },
+]) {
+  test(`detects and safely fills the controlled ${fixture.adapter} application`, async ({
+    context,
+    extensionId,
+  }, testInfo) => {
+    const panel = await context.newPage();
+    await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+    await saveFillProfile(panel);
+    const application = await context.newPage();
+    await application.goto(`http://127.0.0.1:4173/${fixture.slug}.html`);
+    await application.bringToFront();
+    await panel.getByRole("button", { name: "Observe" }).click();
+    await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+    await expect(panel.getByText(fixture.adapter, { exact: true })).toBeVisible();
+    await expect(panel.getByRole("heading", { name: fixture.title })).toBeVisible();
+    const customWidget = panel.locator(".custom-question").filter({ hasText: "Preferred team" });
+    await expect(customWidget.getByText(/requires manual completion/)).toBeVisible();
+    await panel.getByRole("button", { name: "Fill selected fields" }).click();
+    await expect(application.getByLabel("First name")).toHaveValue("Priya");
+    await expect(application.getByLabel("Last name")).toHaveValue("Sharma");
+    await expect(application.getByLabel("Email")).toHaveValue("priya@example.test");
+    await expect(application.getByLabel("Phone")).toHaveValue("+919876543210");
+    await expect(application.getByLabel("LinkedIn URL")).toHaveValue(
+      "https://linkedin.com/in/priya-example",
+    );
+    await expect(application.getByLabel("Preferred team")).toHaveValue("");
+
+    const resumePath = fileURLToPath(
+      new URL("../../fixtures/resumes/synthetic-resume.pdf", import.meta.url),
+    );
+    await panel.getByLabel("Choose résumé for this application").setInputFiles(resumePath);
+    await panel.getByRole("button", { name: "Upload this approved résumé" }).click();
+    await expect(application.locator(`#${fixture.slug}-resume-output`)).toHaveText(
+      "synthetic-resume.pdf",
+    );
+    await panel.screenshot({
+      path: testInfo.outputPath(`phase9-${fixture.slug}-panel.png`),
+      fullPage: true,
+    });
+  });
+}
+
 test("models Workday steps, protects parsed values, recovers after refresh, and never navigates", async ({
   context,
   extensionId,

@@ -1,0 +1,84 @@
+{
+  "fixtureVersion": 1,
+  "id": "jobvite-application-v1",
+  "adapter": "JOBVITE",
+  "adapterVersion": "1",
+  "capturedAt": "2026-08-31T10:00:00.000Z",
+  "source": { "host": "jobs.jobvite.com", "pathPattern": "/example/job/:jobId" },
+  "snapshot": {
+    "schemaVersion": 1,
+    "url": "https://jobs.jobvite.com/example/job/J9501",
+    "title": "Frontend Engineer — Example",
+    "capturedAt": "2026-08-31T10:00:00.000Z",
+    "fields": [
+      {
+        "fieldId": "jobvite-first",
+        "controlKind": "text",
+        "accessibleName": "First name",
+        "labelText": "First name",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "firstName",
+        "domId": "jobvite-first",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "jobvite-email",
+        "controlKind": "email",
+        "accessibleName": "Email",
+        "labelText": "Email",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "email",
+        "domId": "jobvite-email",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "jobvite-resume",
+        "controlKind": "file",
+        "accessibleName": "Résumé",
+        "labelText": "Résumé",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "resume",
+        "domId": "jobvite-resume",
+        "required": true,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      },
+      {
+        "fieldId": "jobvite-custom",
+        "controlKind": "textarea",
+        "accessibleName": "Additional information",
+        "labelText": "Additional information",
+        "ariaLabel": "",
+        "placeholder": "",
+        "name": "custom9501",
+        "domId": "jobvite-custom",
+        "required": false,
+        "disabled": false,
+        "readOnly": false,
+        "autocomplete": "",
+        "options": []
+      }
+    ]
+  },
+  "expectedCanonicalQuestions": {
+    "jobvite-first": "IDENTITY.legal_name.given",
+    "jobvite-email": "CONTACT.email",
+    "jobvite-resume": "APPLICATION.resume",
+    "jobvite-custom": null
+  },
+  "dynamicBehavior": ["Apply and submit actions remain manual."],
+  "sanitized": true
+}
