@@ -39,7 +39,6 @@ export const BrowserCommandSchema = z.discriminatedUnion("type", [
     approvedFileId: z.string().min(1),
     expectedSha256: z.string().regex(/^[a-f0-9]{64}$/i),
   }),
-  z.object({ type: z.literal("CLICK_NEXT"), applicationId: z.string().min(1) }),
   z.object({ type: z.literal("READ_VALIDATION"), applicationId: z.string().min(1) }),
   z.object({ type: z.literal("READ_CONFIRMATION"), applicationId: z.string().min(1) }),
 ]);

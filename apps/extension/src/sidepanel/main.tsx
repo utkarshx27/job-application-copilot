@@ -1218,6 +1218,87 @@ function ObservePanel() {
                 <p>Job metadata was not available on this page.</p>
               )}
             </section>
+            {state.analysis.workflow && (
+              <section className="phase3-card workflow-card" aria-labelledby="workflow-heading">
+                <div className="job-heading">
+                  <h2 id="workflow-heading">Workday application progress</h2>
+                  <span className="status">
+                    {state.analysis.workflow.pageType.replaceAll("_", " ")}
+                  </span>
+                </div>
+                <p>
+                  Tenant {state.analysis.workflow.tenant} · Site {state.analysis.workflow.site}
+                </p>
+                {state.analysis.workflow.stepLabel && (
+                  <p>
+                    <strong>{state.analysis.workflow.stepLabel}</strong>
+                    {state.analysis.workflow.stepIndex && state.analysis.workflow.stepCount
+                      ? ` · Step ${state.analysis.workflow.stepIndex} of ${state.analysis.workflow.stepCount}`
+                      : ""}
+                  </p>
+                )}
+                <p className="help">
+                  Navigation is manual-only. Complete this page yourself, move forward once, then
+                  rescan. The copilot never clicks Next or Submit.
+                </p>
+                <p className="help">
+                  Page controls: Back{" "}
+                  {state.analysis.workflow.navigation.backVisible ? "available" : "not available"}
+                  {" · "}Next{" "}
+                  {state.analysis.workflow.navigation.nextVisible ? "available" : "not available"}
+                  {" · "}Submit{" "}
+                  {state.analysis.workflow.navigation.submitVisible ? "available" : "not available"}
+                </p>
+                {state.analysis.workflowProgress?.recovered && (
+                  <div className="notice success" role="status">
+                    <strong>Progress recovered from local storage</strong>
+                    <span>
+                      {state.analysis.workflowProgress.observedPageKeys.length} distinct Workday
+                      page
+                      {state.analysis.workflowProgress.observedPageKeys.length === 1
+                        ? ""
+                        : "s"}{" "}
+                      observed across {state.analysis.workflowProgress.observationCount} scans.
+                    </span>
+                  </div>
+                )}
+                {state.analysis.workflow.resumeReconciliationRequired && (
+                  <div className="notice warning" role="status">
+                    <strong>Review résumé-parsed values</strong>
+                    <span>
+                      {state.analysis.workflow.prefilledFieldCount} visible field
+                      {state.analysis.workflow.prefilledFieldCount === 1 ? " is" : "s are"}
+                      already populated. They are protected from overwrite and require manual
+                      reconciliation.
+                    </span>
+                  </div>
+                )}
+                {state.analysis.workflow.authBoundary !== "NONE" && (
+                  <div className="notice warning" role="status">
+                    <strong>Manual authentication boundary</strong>
+                    <span>
+                      {state.analysis.workflow.navigation.blockedReason ??
+                        "Complete authentication manually, then rescan."}
+                    </span>
+                  </div>
+                )}
+                {state.analysis.workflowProgress?.revisitDetected && (
+                  <div className="notice warning" role="status">
+                    <strong>Previously visited step detected</strong>
+                    <span>
+                      Check page validation before continuing. The copilot will not repeat a
+                      navigation action.
+                    </span>
+                  </div>
+                )}
+                {state.analysis.workflow.errorState && (
+                  <div className="notice error" role="alert">
+                    <strong>{state.analysis.workflow.errorState.kind.replaceAll("_", " ")}</strong>
+                    <span>{state.analysis.workflow.errorState.message}</span>
+                  </div>
+                )}
+              </section>
+            )}
             {state.analysis.confirmation.confirmed && (
               <div className="notice success" role="status">
                 <strong>{state.analysis.confirmation.heading ?? "Application confirmed"}</strong>
@@ -1291,6 +1372,9 @@ function ObservePanel() {
                       <span>{Math.round(mapping.confidence * 100)}%</span>
                       {field?.required && <span>Required</span>}
                       {field?.userEdited && <span className="protected">User edited</span>}
+                      {field?.valueState === "PREFILLED" && (
+                        <span className="protected">Pre-filled · review manually</span>
+                      )}
                     </div>
                   </li>
                 );
@@ -1512,6 +1596,15 @@ function ApplicationsPanel() {
                 {application.ats} · Profile v{application.profileVersion}
               </small>
               {application.resumeFileName && <small>Résumé: {application.resumeFileName}</small>}
+              {application.workflowProgress && (
+                <small>
+                  Workday: {application.workflowProgress.currentPageType.replaceAll("_", " ")}
+                  {application.workflowProgress.currentStepIndex &&
+                  application.workflowProgress.stepCount
+                    ? ` · Step ${application.workflowProgress.currentStepIndex} of ${application.workflowProgress.stepCount}`
+                    : ""}
+                </small>
+              )}
             </div>
             <span className="status">{application.status}</span>
           </li>

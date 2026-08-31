@@ -282,6 +282,16 @@ input:disabled {
   border: 1px solid #a7d0b4;
   background: #edf8f0;
 }
+
+.notice.warning {
+  border-color: #d8a62a;
+  background: #fff8df;
+  color: #654900;
+}
+
+.workflow-card .job-heading h2 {
+  margin: 0;
+}
 .data-tools {
   margin-top: 22px;
   padding-top: 18px;

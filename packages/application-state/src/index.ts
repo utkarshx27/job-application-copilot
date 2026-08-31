@@ -5,6 +5,7 @@ import {
   type ApplicationRecord,
   type ApplicationTracker,
   type ConfirmationEvidence,
+  type WorkdayWorkflowPage,
 } from "@copilot/job-schema";
 
 export function createEmptyTracker(now = new Date().toISOString()): ApplicationTracker {
@@ -84,6 +85,55 @@ export function recordConfirmation(
       appliedAt: existing.appliedAt ?? now,
       updatedAt: now,
       confirmation,
+    },
+    now,
+  );
+}
+
+export function recordWorkdayWorkflow(
+  trackerInput: ApplicationTracker,
+  applicationId: string,
+  workflow: WorkdayWorkflowPage,
+  now = new Date().toISOString(),
+): ApplicationTracker {
+  const tracker = ApplicationTrackerSchema.parse(trackerInput);
+  const existing = tracker.applications.find((item) => item.id === applicationId);
+  if (!existing || existing.ats !== "WORKDAY") return tracker;
+
+  const previous = existing.workflowProgress;
+  const recoveryKey = `${workflow.tenant}:${workflow.site}:${existing.canonicalJobId}`;
+  const sameSession = previous?.recoveryKey === recoveryKey;
+  const observedPageKeys = sameSession
+    ? [
+        ...previous.observedPageKeys.filter((key) => key !== workflow.pageKey),
+        workflow.pageKey,
+      ].slice(-50)
+    : [workflow.pageKey];
+  const revisitDetected = Boolean(
+    sameSession &&
+    previous.currentPageKey !== workflow.pageKey &&
+    previous.observedPageKeys.includes(workflow.pageKey),
+  );
+
+  return replaceRecord(
+    tracker,
+    {
+      ...existing,
+      updatedAt: now,
+      workflowProgress: {
+        schemaVersion: 1,
+        recoveryKey,
+        currentPageKey: workflow.pageKey,
+        currentPageType: workflow.pageType,
+        ...(workflow.stepIndex ? { currentStepIndex: workflow.stepIndex } : {}),
+        ...(workflow.stepCount ? { stepCount: workflow.stepCount } : {}),
+        observedPageKeys,
+        observationCount: sameSession ? previous.observationCount + 1 : 1,
+        recovered: Boolean(sameSession),
+        revisitDetected,
+        lastFingerprint: workflow.fingerprint,
+        lastObservedAt: now,
+      },
     },
     now,
   );

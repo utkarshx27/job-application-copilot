@@ -18,6 +18,7 @@
     "@copilot/ats-greenhouse": "*",
     "@copilot/ats-lever": "*",
     "@copilot/ats-smartrecruiters": "*",
+    "@copilot/ats-workday": "*",
     "@copilot/browser-command-schema": "*",
     "@copilot/form-schema": "*",
     "@copilot/form-engine": "*",

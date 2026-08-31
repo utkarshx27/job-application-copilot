@@ -25,6 +25,15 @@ describe("browser command allowlist", () => {
     ).toBe(false);
   });
 
+  it("does not expose navigation or submission commands before their gated phases", () => {
+    expect(
+      BrowserCommandSchema.safeParse({ type: "CLICK_NEXT", applicationId: "app-1" }).success,
+    ).toBe(false);
+    expect(
+      BrowserCommandSchema.safeParse({ type: "CLICK_SUBMIT", applicationId: "app-1" }).success,
+    ).toBe(false);
+  });
+
   it("rejects unknown panel messages", () => {
     expect(PanelRequestSchema.safeParse({ type: "PANEL_SUBMIT_APPLICATION" }).success).toBe(false);
   });

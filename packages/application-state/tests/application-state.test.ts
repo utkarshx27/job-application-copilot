@@ -7,6 +7,7 @@ import {
   recordApplying,
   recordConfirmation,
   recordResumeUpload,
+  recordWorkdayWorkflow,
 } from "../src/index";
 
 const now = "2026-08-29T08:00:00.000Z";
@@ -67,5 +68,61 @@ describe("application tracker", () => {
       now,
     );
     expect(tracker.applications[0]).toMatchObject({ status: "APPLIED", appliedAt: now });
+  });
+
+  it("persists Workday progress and recovers without issuing navigation commands", () => {
+    const workdayAnalysis = ApplicationPageAnalysisSchema.parse({
+      ...analysis,
+      applicationId: "application:workday:abc",
+      ats: { ...analysis.ats, adapter: "WORKDAY" },
+      job: { ...analysis.job!, id: "workday:abc", ats: "WORKDAY" },
+      workflow: {
+        schemaVersion: 1,
+        tenant: "example",
+        site: "External",
+        pageType: "MY_INFORMATION",
+        pageKey: "example:External:MY_INFORMATION",
+        fingerprint: "workday:1234abcd",
+        heading: "My Information",
+        stepLabel: "My Information",
+        stepIndex: 1,
+        stepCount: 4,
+        visibleSections: ["Contact Information"],
+        authBoundary: "NONE",
+        prefilledFieldCount: 1,
+        resumeReconciliationRequired: true,
+        navigation: {
+          mode: "MANUAL_ONLY",
+          backVisible: false,
+          nextVisible: true,
+          submitVisible: false,
+        },
+        errorState: null,
+      },
+    });
+    let tracker = recordApplying(createEmptyTracker(now), workdayAnalysis, 3, now);
+    tracker = recordWorkdayWorkflow(
+      tracker,
+      workdayAnalysis.applicationId!,
+      workdayAnalysis.workflow!,
+      now,
+    );
+    expect(tracker.applications[0]?.workflowProgress).toMatchObject({
+      currentPageType: "MY_INFORMATION",
+      observationCount: 1,
+      recovered: false,
+    });
+
+    tracker = recordWorkdayWorkflow(
+      tracker,
+      workdayAnalysis.applicationId!,
+      workdayAnalysis.workflow!,
+      "2026-08-29T08:01:00.000Z",
+    );
+    expect(tracker.applications[0]?.workflowProgress).toMatchObject({
+      observationCount: 2,
+      recovered: true,
+      observedPageKeys: ["example:External:MY_INFORMATION"],
+    });
   });
 });

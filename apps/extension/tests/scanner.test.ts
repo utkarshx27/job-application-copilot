@@ -26,8 +26,20 @@ describe("scanVisibleForm", () => {
       fieldId: "full-name",
       accessibleName: "Full name",
       required: true,
+      valueState: "EMPTY",
     });
     expect(snapshot.fields[1]?.options).toEqual([{ value: "IN", text: "India", disabled: false }]);
+  });
+
+  it("records only the presence of parsed values and Workday automation IDs", () => {
+    document.body.innerHTML = `
+      <label for="company">Company</label>
+      <input id="company" data-automation-id="workExperience-1-company" value="Private value is not captured" />`;
+    expect(scanVisibleForm().fields[0]).toMatchObject({
+      automationId: "workExperience-1-company",
+      valueState: "PREFILLED",
+    });
+    expect(JSON.stringify(scanVisibleForm())).not.toContain("Private value is not captured");
   });
 
   it("never includes password, hidden, or visually hidden controls", () => {

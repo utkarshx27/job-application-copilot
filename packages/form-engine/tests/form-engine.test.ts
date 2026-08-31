@@ -147,6 +147,30 @@ describe("generic semantic form engine", () => {
     expect(analysis.mappings[3]?.operation).toEqual({ kind: "check", checked: true });
   });
 
+  it("requires manual reconciliation for prefilled application values", () => {
+    const analysis = analyzeForm(
+      {
+        schemaVersion: 1,
+        url: "https://example.wd5.myworkdayjobs.com/apply",
+        title: "Application",
+        capturedAt: now,
+        fields: [
+          field("company", {
+            labelText: "Current employer",
+            valueState: "PREFILLED",
+          }),
+        ],
+      },
+      verifiedProfile(),
+      "analysis-prefilled",
+    );
+    expect(analysis.mappings[0]).toMatchObject({
+      canonicalQuestion: "WORK_HISTORY.0.employer",
+      fillable: false,
+    });
+    expect(analysis.mappings[0]?.blockedReason).toContain("résumé-parsed");
+  });
+
   it("does not let broad words override work authorization or essay meaning", () => {
     const cases: Array<[RawField, CanonicalQuestion | null]> = [
       [

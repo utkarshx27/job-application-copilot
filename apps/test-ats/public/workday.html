@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="copilot-ats" content="workday" />
+    <meta name="copilot-company" content="Example Systems" />
+    <meta name="copilot-requisition-id" content="R12345" />
+    <meta name="copilot-workday-tenant" content="example" />
+    <meta name="copilot-workday-site" content="External" />
+    <meta name="copilot-workday-page" content="MY_INFORMATION" />
+    <meta name="copilot-workday-step-label" content="My Information" />
+    <meta name="copilot-workday-step-index" content="1" />
+    <meta name="copilot-workday-step-count" content="4" />
+    <meta name="description" content="Build resilient platforms for distributed teams." />
+    <title>Platform Engineer — Example Systems Workday fixture</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+      {
+        "@type": "JobPosting",
+        "title": "Platform Engineer",
+        "description": "Build resilient platforms for distributed teams.",
+        "identifier": { "value": "R12345" },
+        "hiringOrganization": { "name": "Example Systems" },
+        "jobLocation": {
+          "address": { "addressLocality": "Bengaluru", "addressRegion": "India" }
+        },
+        "employmentType": "FULL_TIME"
+      }
+    </script>
+  </head>
+  <body data-workday-application>
+    <header data-automation-id="jobPostingHeader">
+      <span class="company" data-company-name>Example Systems · Workday fixture</span>
+      <h1 data-job-title>Platform Engineer</h1>
+      <p data-job-location>Bengaluru, India</p>
+      <p data-job-description>Build resilient platforms for distributed teams.</p>
+    </header>
+    <main data-automation-id="applicationPage">
+      <p class="eyebrow">Controlled multi-step Test ATS</p>
+      <ol class="workday-progress" aria-label="Application progress">
+        <li data-automation-id="progressBarStep">My Information</li>
+        <li data-automation-id="progressBarStep">My Experience</li>
+        <li data-automation-id="progressBarStep">Application Questions</li>
+        <li data-automation-id="progressBarStep">Review</li>
+      </ol>
+      <div id="workday-step-root"></div>
+    </main>
+    <script src="workday-fixture.js"></script>
+  </body>
+</html>

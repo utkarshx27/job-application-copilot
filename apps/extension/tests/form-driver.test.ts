@@ -90,6 +90,28 @@ describe("reviewed form driver", () => {
     expect(result.skipped[0]?.reason).toContain("user edit");
   });
 
+  it("refuses to overwrite application or résumé-parsed values", () => {
+    document.body.innerHTML = `<input id="company" value="Parsed Resume Company" />`;
+    const result = applyFillPlan(
+      {
+        analysisId: "analysis-prefilled",
+        items: [
+          {
+            fieldId: "company",
+            canonicalQuestion: "WORK_HISTORY.0.employer",
+            operation: { kind: "text", value: "Verified Profile Company" },
+          },
+        ],
+      },
+      document,
+    );
+    expect((document.getElementById("company") as HTMLInputElement).value).toBe(
+      "Parsed Resume Company",
+    );
+    expect(result.filledFieldIds).toEqual([]);
+    expect(result.skipped[0]?.reason).toContain("résumé-parsed");
+  });
+
   it("highlights only requested visible controls", () => {
     document.body.innerHTML = `<input id="given" /><input id="email" type="email" />`;
     const result = highlightFields(["email", "missing"], document);

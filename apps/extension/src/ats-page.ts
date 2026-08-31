@@ -3,6 +3,7 @@ import { ashbyAdapter } from "@copilot/ats-ashby";
 import { greenhouseAdapter } from "@copilot/ats-greenhouse";
 import { leverAdapter } from "@copilot/ats-lever";
 import { smartRecruitersAdapter } from "@copilot/ats-smartrecruiters";
+import { workdayAdapter } from "@copilot/ats-workday";
 import { InspectedApplicationPageSchema, type AtsId } from "@copilot/job-schema";
 
 import { scanVisibleForm } from "./scanner";
@@ -12,6 +13,7 @@ export const supportedAdapters = [
   leverAdapter,
   ashbyAdapter,
   smartRecruitersAdapter,
+  workdayAdapter,
 ];
 
 export function adapterForId(id: AtsId) {

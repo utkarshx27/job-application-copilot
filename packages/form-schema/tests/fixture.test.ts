@@ -11,6 +11,7 @@ describe("sanitized ATS fixture format", () => {
       "../../../fixtures/ats/lever/v1/application.json",
       "../../../fixtures/ats/ashby/v1/application.json",
       "../../../fixtures/ats/smartrecruiters/v1/application.json",
+      "../../../fixtures/ats/workday/v1/application.json",
     ]) {
       const fixture: unknown = JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
       expect(SanitizedFixtureSchema.safeParse(fixture), path).toMatchObject({ success: true });

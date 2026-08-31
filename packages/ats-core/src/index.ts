@@ -8,6 +8,7 @@ import {
   type AtsPageReport,
   type ConfirmationEvidence,
   type NormalizedJob,
+  type WorkdayWorkflowPage,
 } from "@copilot/job-schema";
 import {
   FieldMappingSchema,
@@ -17,17 +18,18 @@ import {
 } from "@copilot/form-schema";
 
 export interface AtsAdapter {
-  readonly id: Extract<AtsId, "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS">;
+  readonly id: Extract<AtsId, "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS" | "WORKDAY">;
   readonly version: string;
   detect(targetDocument: Document): AtsDetection;
   extractJob(targetDocument: Document, detection: AtsDetection): NormalizedJob | null;
   detectConfirmation(targetDocument: Document): ConfirmationEvidence;
   classifyField(field: RawField): FieldMapping | null;
+  inspectWorkflow?(targetDocument: Document, detection: AtsDetection): WorkdayWorkflowPage | null;
 }
 
 export function atsFieldRule(
   field: RawField,
-  adapter: Extract<AtsId, "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS">,
+  adapter: Extract<AtsId, "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS" | "WORKDAY">,
   canonicalQuestion: CanonicalQuestion,
   evidence: string,
 ): FieldMapping {
@@ -192,6 +194,7 @@ export function inspectWithAdapters(
       },
       job: null,
       confirmation: noConfirmation(),
+      workflow: null,
     });
   }
   return AtsPageReportSchema.parse({
@@ -199,5 +202,6 @@ export function inspectWithAdapters(
     detection: AtsDetectionSchema.parse(selected.result),
     job: selected.adapter.extractJob(targetDocument, selected.result),
     confirmation: selected.adapter.detectConfirmation(targetDocument),
+    workflow: selected.adapter.inspectWorkflow?.(targetDocument, selected.result) ?? null,
   });
 }

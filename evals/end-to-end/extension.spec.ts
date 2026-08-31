@@ -494,6 +494,106 @@ test("detects SmartRecruiters, fills safe fields, rescans screening dynamics, an
   await expect(panel.getByText(/SR-CONF-400/)).toBeVisible();
 });
 
+test("models Workday steps, protects parsed values, recovers after refresh, and never navigates", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const panel = await context.newPage();
+  await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
+  await saveFillProfile(panel);
+
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/workday.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+
+  await expect(panel.getByText("WORKDAY", { exact: true })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Workday application progress" })).toBeVisible();
+  await expect(panel.getByText("MY INFORMATION", { exact: true })).toBeVisible();
+  await expect(panel.getByText(/Step 1 of 4/)).toBeVisible();
+  await expect(panel.getByText(/never clicks Next or Submit/)).toBeVisible();
+  await expect(panel.getByText(/Next available/)).toBeVisible();
+  await expect(panel.getByLabel("Select Email Address")).toBeDisabled();
+  await expect(panel.getByText("Pre-filled · review manually", { exact: true })).toBeVisible();
+
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await expect(application.getByLabel("First Name")).toHaveValue("Priya");
+  await expect(application.getByLabel("Last Name")).toHaveValue("Sharma");
+  await expect(application.getByLabel("Phone Number")).toHaveValue("+919876543210");
+  await expect(application.getByLabel("Email Address")).toHaveValue("parsed@example.test");
+  await expect(application.getByRole("heading", { name: "My Information" })).toBeVisible();
+
+  const resumePath = fileURLToPath(
+    new URL("../../fixtures/resumes/synthetic-resume.pdf", import.meta.url),
+  );
+  await panel.getByLabel("Choose résumé for this application").setInputFiles(resumePath);
+  await panel.getByRole("button", { name: "Upload this approved résumé" }).click();
+  await expect(application.locator("#wd-resume-output")).toHaveText("synthetic-resume.pdf");
+
+  await application.getByRole("button", { name: "Next" }).click();
+  await expect(application.getByRole("heading", { name: "My Experience" })).toBeVisible();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText("MY EXPERIENCE", { exact: true })).toBeVisible();
+  await expect(panel.getByText(/Step 2 of 4/)).toBeVisible();
+  await expect(panel.getByText("Progress recovered from local storage")).toBeVisible();
+  await expect(panel.getByText("Review résumé-parsed values")).toBeVisible();
+  await expect(panel.getByLabel("Select Company")).toBeDisabled();
+
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await expect(application.getByLabel("Company")).toHaveValue("Parsed Resume Company");
+  await expect(application.getByLabel("Job Title")).toHaveValue("Software Engineer");
+  const skillsReview = panel
+    .locator(".custom-question")
+    .filter({ has: panel.getByText("Skills", { exact: true }) });
+  await expect(skillsReview.getByText(/requires manual completion/)).toBeVisible();
+
+  await application.reload();
+  await expect(application.getByRole("heading", { name: "My Experience" })).toBeVisible();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText("Progress recovered from local storage")).toBeVisible();
+  await expect(panel.getByText(/across 3 scans/)).toBeVisible();
+
+  await application.getByRole("button", { name: "Next" }).click();
+  await expect(application.getByRole("heading", { name: "Application Questions" })).toBeVisible();
+  await application.getByLabel("Have you supported production systems?").selectOption("yes");
+  await expect(application.getByLabel("Describe a relevant project")).toBeVisible();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  const answer = "Built resilient systems for distributed engineering teams.";
+  await panel.getByRole("textbox", { name: "Describe a relevant project" }).fill(answer);
+  await panel.getByRole("button", { name: "Fill reviewed custom answers" }).click();
+  await expect(application.getByLabel("Describe a relevant project")).toHaveValue(answer);
+
+  await application.getByRole("button", { name: "Next" }).click();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText("REVIEW", { exact: true })).toBeVisible();
+  await expect(panel.getByText(/Submit not available/)).toBeVisible();
+
+  await application.goto("http://127.0.0.1:4173/workday-auth.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText("AUTH", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Manual authentication boundary")).toBeVisible();
+  await expect(
+    panel.getByText(/Complete the Workday account or authentication step manually/),
+  ).toBeVisible();
+  await expect(panel.getByText("Password", { exact: true })).toHaveCount(0);
+
+  await application.goto("http://127.0.0.1:4173/workday-confirmation.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText(/local tracker was updated to APPLIED/)).toBeVisible();
+  await expect(panel.getByText(/WD-CONF-700/)).toBeVisible();
+  await panel.screenshot({
+    path: testInfo.outputPath("phase7-workday-progress.png"),
+    fullPage: true,
+  });
+});
+
 test("saves and reloads a versioned profile through chrome.storage.local", async ({
   context,
   extensionId,

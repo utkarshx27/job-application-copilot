@@ -10,7 +10,7 @@ A local-first, user-controlled Chrome extension for safely assisting with job ap
 
 ## Project status
 
-Phases 0 through 6 are complete. Phase 6 extends the deterministic application flow to Ashby and SmartRecruiters:
+Phases 0 through 6 are complete. Phase 7 now has a complete controlled Workday implementation; its separate 250-form public validation gate remains open:
 
 - Manifest V3 extension and React side panel.
 - Runtime-validated side panel, service worker, and content-script messaging.
@@ -54,8 +54,13 @@ Phases 0 through 6 are complete. Phase 6 extends the deterministic application f
 - Ashby and SmartRecruiters detection, normalized job extraction, field rules, résumé upload, and confirmation tracking.
 - Dynamic-question rescanning and safe discovery of ARIA combobox, listbox, checkbox, and radio controls.
 - Custom ATS widgets remain visible but manual-only; the extension never simulates arbitrary component clicks.
+- Workday tenant/site detection, normalized job extraction, authentication-boundary explanations, and confirmation tracking.
+- Read-only Workday SPA step modeling with persisted local progress and refresh recovery.
+- Privacy-preserving prefilled-state detection: résumé/account-parsed values are never captured and are protected from overwrite.
+- Deterministic first-record work-history and education mappings, manual-only skill widgets, and dynamic questionnaire rescanning.
+- No browser navigation command: Workday Back, Next, authentication, and Submit remain user actions.
 
-Ashby and SmartRecruiters follow the same review and safety boundaries as Greenhouse and Lever. Native supported controls can be filled after review; custom role-based widgets are detected, explained, and left for the user. Next is the dedicated Phase 7 Workday workstream. See the [Phase 6 architecture](./docs/architecture/phase-6-ashby-smartrecruiters.md), the [Phase 5 grounded AI architecture](./docs/architecture/phase-5-grounded-ai.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
+Workday follows the same reviewed-fill boundary as the other supported adapters, with additional protection for multi-page state and parsed values. The controlled implementation is ready; Phase 7 is not production-validated until the documented 250-form, multi-tenant/region pre-submit gate is completed. Next after that gate is Phase 8, the tracker and duplicate engine. See the [Phase 7 architecture](./docs/architecture/phase-7-workday.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
 
 ## Design principles
 
@@ -88,6 +93,7 @@ packages/
   ats-lever/                 Lever detector, extraction, and field rules
   ats-ashby/                 Ashby detector, extraction, and field rules
   ats-smartrecruiters/       SmartRecruiters detector, extraction, and field rules
+  ats-workday/               Workday detector, workflow model, and safe field rules
   ats-qa/                    Sanitization, replay metrics, and human-review contracts
   application-state/         Local application tracker transitions
   profile-core/              Truth Vault, versioning, migration, and import review
@@ -95,6 +101,7 @@ packages/
   shared/                    Site policy and shared utilities
 fixtures/ats/                Sanitized ATS regression fixtures
 qa/ats/                      Public-form QA URL template and manual-review workflow
+qa/workday/                  Workday multi-step pre-submit validation workflow
 evals/end-to-end/            Playwright extension tests
 docs/                        Architecture and engineering notes
 ```
@@ -118,6 +125,7 @@ npm run check:phase3
 npm run check:phase4
 npm run check:phase5
 npm run check:phase6
+npm run check:phase7
 ```
 
 Build the production extension:
@@ -135,7 +143,7 @@ Then:
 5. Open an employer or controlled application form.
 6. Open the extension side panel and choose **Scan and match visible form**.
 
-The controlled site includes `/ashby.html` and `/smartrecruiters.html` alongside the existing Greenhouse and Lever pages when `npm run serve --workspace @copilot/test-ats` is running.
+The controlled site includes `/ashby.html`, `/smartrecruiters.html`, `/workday.html`, `/workday-auth.html`, and `/workday-confirmation.html` alongside the existing Greenhouse and Lever pages when `npm run serve --workspace @copilot/test-ats` is running. The Workday fixture preserves its current step across refreshes so recovery can be tested locally.
 
 AI drafting is optional. In the Observe tab, enter an OpenAI model and API key and enable it for the current browser session. The extension asks for access only to the OpenAI API origin. For an eligible narrative question, choose **Draft with grounded AI**, inspect the draft and evidence IDs, choose **Use this draft in review**, edit it if needed, and finally choose **Fill reviewed custom answers**. No AI action navigates or submits the application.
 
@@ -157,6 +165,7 @@ npm run check:phase3     # Controlled Phase 3 gate
 npm run check:phase4     # Complete Phase 4 release gate
 npm run check:phase5     # Complete Phase 5 release gate
 npm run check:phase6     # Complete Phase 6 release gate
+npm run check:phase7     # Controlled Phase 7 gate; public Workday validation is separate
 ```
 
 The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
@@ -187,10 +196,12 @@ npm run ats:qa:replay
 - Question classification receives no candidate profile. Draft generation receives only selected verified professional facts and bounded job context.
 - AI output cannot issue browser commands and never fills automatically. Invalid, unsupported, sensitive, or over-limit drafts are withheld.
 - Role-based custom ATS widgets are scanned as manual-only controls and cannot be targeted by the native fill driver.
+- Existing values are represented only as an empty/prefilled state; their contents are not captured, and reviewed fill plans cannot overwrite them.
+- Workday authentication, Back, Next, and Submit remain manual. The runtime protocol exposes no navigation or submission command.
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase6` before opening a pull request.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase7` before opening a pull request.
 
 Good early contribution areas include:
 

@@ -49,6 +49,14 @@ function emitFrameworkEvents(control: SupportedControl): void {
   control.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
 }
 
+function controlHasExistingValue(control: SupportedControl): boolean {
+  if (control instanceof HTMLSelectElement) return Boolean(control.value);
+  if (control instanceof HTMLTextAreaElement) return Boolean(control.value.trim());
+  if (control.type === "checkbox" || control.type === "radio") return control.checked;
+  if (control.type === "file") return (control.files?.length ?? 0) > 0;
+  return Boolean(control.value.trim());
+}
+
 function applyOperation(control: SupportedControl, item: FillPlan["items"][number]): string | null {
   if (item.operation.kind === "check") {
     if (
@@ -118,6 +126,13 @@ export function applyFillPlan(untrustedPlan: FillPlan, targetDocument: Document 
     }
     if (control.getAttribute(USER_EDITED_ATTRIBUTE) === "true") {
       skipped.push({ fieldId: item.fieldId, reason: "A user edit is protecting this field." });
+      continue;
+    }
+    if (!control.hasAttribute(FILLED_ATTRIBUTE) && controlHasExistingValue(control)) {
+      skipped.push({
+        fieldId: item.fieldId,
+        reason: "Existing application or résumé-parsed data is protecting this field.",
+      });
       continue;
     }
     const error = applyOperation(control, item);

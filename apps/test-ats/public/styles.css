@@ -4,6 +4,35 @@
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
+.workday-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.workday-progress li {
+  padding: 0.65rem;
+  border: 1px solid #cfd8e3;
+  border-radius: 0.4rem;
+  background: #f5f7fa;
+  text-align: center;
+}
+
+.workday-progress li[aria-current="step"] {
+  border-color: #2867b2;
+  background: #eaf3ff;
+  font-weight: 700;
+}
+
+.workday-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
 * {
   box-sizing: border-box;
 }

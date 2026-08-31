@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="copilot-ats" content="workday" />
+    <meta name="copilot-company" content="Example Systems" />
+    <meta name="copilot-requisition-id" content="R12345" />
+    <meta name="copilot-workday-tenant" content="example" />
+    <meta name="copilot-workday-site" content="External" />
+    <meta name="copilot-workday-page" content="AUTH" />
+    <title>Sign In — Example Systems Workday fixture</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+      {
+        "@type": "JobPosting",
+        "title": "Platform Engineer",
+        "description": "Build resilient platforms for distributed teams.",
+        "identifier": { "value": "R12345" },
+        "hiringOrganization": { "name": "Example Systems" }
+      }
+    </script>
+  </head>
+  <body data-workday-application>
+    <main data-automation-id="applicationPage">
+      <p class="eyebrow">Controlled Workday authentication boundary</p>
+      <h1>Sign In</h1>
+      <p>Authentication must always be completed manually.</p>
+      <form>
+        <div class="field">
+          <label for="wd-auth-email">Email Address</label>
+          <input id="wd-auth-email" name="email" type="email" />
+        </div>
+        <div class="field">
+          <label for="wd-auth-password">Password</label>
+          <input id="wd-auth-password" name="password" type="password" />
+        </div>
+        <button type="button" disabled>Sign In disabled in Test ATS</button>
+      </form>
+    </main>
+  </body>
+</html>

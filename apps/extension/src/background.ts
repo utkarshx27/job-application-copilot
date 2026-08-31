@@ -12,7 +12,12 @@ import {
 } from "@copilot/ai-gateway";
 import { policyForUrl } from "@copilot/shared";
 import { analyzeForm, classifyField } from "@copilot/form-engine";
-import { recordApplying, recordConfirmation, recordResumeUpload } from "@copilot/application-state";
+import {
+  recordApplying,
+  recordConfirmation,
+  recordResumeUpload,
+  recordWorkdayWorkflow,
+} from "@copilot/application-state";
 import { FillPlanSchema, FillResultSchema, HighlightResultSchema } from "@copilot/form-schema";
 import { draftGroundedAnswer } from "@copilot/grounded-generation";
 import {
@@ -217,15 +222,15 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
       },
     ];
   });
-  const analysis = ApplicationPageAnalysisSchema.parse({
+  let analysis = ApplicationPageAnalysisSchema.parse({
     ...baseAnalysis,
     ...(applicationId ? { applicationId } : {}),
     ats: inspected.data.atsReport.detection,
     job,
     customQuestions,
     confirmation: inspected.data.atsReport.confirmation,
+    workflow: inspected.data.atsReport.workflow,
   });
-  analysesByTab.set(tab.id, analysis);
   if (analysis.applicationId && analysis.job) {
     let tracker = recordApplying(
       await getApplicationTracker(),
@@ -235,8 +240,18 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
     if (analysis.confirmation.confirmed) {
       tracker = recordConfirmation(tracker, analysis.applicationId, analysis.confirmation);
     }
+    if (analysis.workflow) {
+      tracker = recordWorkdayWorkflow(tracker, analysis.applicationId, analysis.workflow);
+    }
     await setApplicationTracker(tracker);
+    const progress = tracker.applications.find(
+      (application) => application.id === analysis.applicationId,
+    )?.workflowProgress;
+    if (progress) {
+      analysis = ApplicationPageAnalysisSchema.parse({ ...analysis, workflowProgress: progress });
+    }
   }
+  analysesByTab.set(tab.id, analysis);
   return { ok: true, data: analysis };
 }
 

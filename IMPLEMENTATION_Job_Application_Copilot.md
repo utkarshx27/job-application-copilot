@@ -2969,6 +2969,8 @@ Exit:
 
 ## Phase 7 — Workday
 
+**Status:** Controlled implementation complete as of 2026-08-31; public release validation remains open. The extension now provides Workday tenant/site detection, explicit authentication boundaries, a read-only SPA page model, privacy-preserving résumé reconciliation, deterministic first-record work/education rules, manual-only skill widgets, questionnaire rescanning, persisted progress recovery, confirmation tracking, and explained validation/session errors. Navigation and submission commands are deliberately absent. The controlled gate proves refresh recovery and that the extension never clicks Next or Submit. The separate 250-form, multi-tenant/region pre-submit validation requirement has not yet been claimed. See `docs/architecture/phase-7-workday.md` and `qa/workday/README.md`.
+
 Dedicated workstream.
 
 Deliver:

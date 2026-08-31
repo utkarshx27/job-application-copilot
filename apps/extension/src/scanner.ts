@@ -131,6 +131,22 @@ function controlOptions(
     }));
 }
 
+function nativeControlHasValue(control: InspectableControl): boolean {
+  if (control instanceof HTMLSelectElement)
+    return control.selectedIndex >= 0 && Boolean(control.value);
+  if (control instanceof HTMLTextAreaElement) return Boolean(control.value.trim());
+  if (!(control instanceof HTMLInputElement)) return false;
+  if (control.type === "checkbox" || control.type === "radio") return control.checked;
+  if (control.type === "file") return (control.files?.length ?? 0) > 0;
+  return Boolean(control.value.trim());
+}
+
+function valueState(control: InspectableControl): RawField["valueState"] {
+  if (control.getAttribute("data-job-copilot-user-edited") === "true") return "USER_EDITED";
+  if (control.getAttribute("data-job-copilot-filled") === "true") return "COPILOT_FILLED";
+  return nativeControlHasValue(control) ? "PREFILLED" : "EMPTY";
+}
+
 export function scanVisibleForm(targetDocument: Document = document): PageSnapshot {
   return inspectVisibleForm(targetDocument).snapshot;
 }
@@ -167,6 +183,8 @@ export function inspectVisibleForm(targetDocument: Document = document): {
         control.getAttribute("aria-disabled") === "true",
       readOnly: isSupportedControl(control) && "readOnly" in control && control.readOnly,
       autocomplete: text(control.getAttribute("autocomplete")),
+      automationId: text(control.getAttribute("data-automation-id")),
+      valueState: valueState(control),
       ...(!(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement) ||
       control.maxLength <= 0
         ? {}

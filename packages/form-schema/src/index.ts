@@ -34,6 +34,8 @@ export const RawFieldSchema = z.object({
   disabled: z.boolean(),
   readOnly: z.boolean(),
   autocomplete: z.string(),
+  automationId: z.string().optional(),
+  valueState: z.enum(["EMPTY", "PREFILLED", "COPILOT_FILLED", "USER_EDITED"]).optional(),
   maxLength: z.number().int().positive().max(20_000).optional(),
   groupLabel: z.string().default(""),
   optionValue: z.string().default(""),

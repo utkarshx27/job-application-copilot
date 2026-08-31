@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="copilot-ats" content="workday" />
+    <meta name="copilot-company" content="Example Systems" />
+    <meta name="copilot-requisition-id" content="R12345" />
+    <meta name="copilot-workday-tenant" content="example" />
+    <meta name="copilot-workday-site" content="External" />
+    <meta name="copilot-workday-page" content="CONFIRMATION" />
+    <title>Application received — Example Systems</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+      {
+        "@type": "JobPosting",
+        "title": "Platform Engineer",
+        "description": "Build resilient platforms for distributed teams.",
+        "identifier": { "value": "R12345" },
+        "hiringOrganization": { "name": "Example Systems" }
+      }
+    </script>
+  </head>
+  <body data-workday-application>
+    <main data-automation-id="applicationPage">
+      <section data-automation-id="applicationConfirmation" data-workday-confirmation="true">
+        <p class="eyebrow">Controlled Workday confirmation</p>
+        <h1>Thank you, your application was submitted</h1>
+        <p>Example Systems received your application.</p>
+        <strong data-confirmation-id>WD-CONF-700</strong>
+      </section>
+    </main>
+  </body>
+</html>

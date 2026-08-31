@@ -401,15 +401,20 @@ export function analyzeForm(
     const value = profileValue(profile, classified.canonicalQuestion);
     const operation =
       value === null ? undefined : operationFor(field, value, classified.canonicalQuestion);
-    const blockedReason = field.userEdited
-      ? "You edited this field after the last copilot fill."
-      : field.disabled || field.readOnly
-        ? "The field is disabled or read-only."
-        : value === null
-          ? "No verified profile value is available."
-          : operation
-            ? undefined
-            : "The verified value does not match an available control option.";
+    const blockedReason =
+      field.userEdited || field.valueState === "USER_EDITED"
+        ? "You edited this field after the last copilot fill."
+        : field.valueState === "PREFILLED"
+          ? "This field already contains application or résumé-parsed data. Review it manually before replacing it."
+          : field.valueState === "COPILOT_FILLED"
+            ? "This field was already filled by the copilot. Rescan after changing pages."
+            : field.disabled || field.readOnly
+              ? "The field is disabled or read-only."
+              : value === null
+                ? "No verified profile value is available."
+                : operation
+                  ? undefined
+                  : "The verified value does not match an available control option.";
     return FieldMappingSchema.parse({
       ...classified,
       ...(operation ? { operation } : {}),

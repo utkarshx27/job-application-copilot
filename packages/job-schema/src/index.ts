@@ -9,6 +9,7 @@ export const AtsIdSchema = z.enum([
   "LEVER",
   "ASHBY",
   "SMARTRECRUITERS",
+  "WORKDAY",
   "GENERIC",
   "UNKNOWN",
 ]);
@@ -47,11 +48,81 @@ export const ConfirmationEvidenceSchema = z.object({
   referenceId: z.string().min(1).optional(),
 });
 
+export const WorkdayPageTypeSchema = z.enum([
+  "JOB",
+  "AUTH",
+  "INTRO",
+  "MY_INFORMATION",
+  "MY_EXPERIENCE",
+  "APPLICATION_QUESTIONS",
+  "VOLUNTARY_DISCLOSURES",
+  "TERMS",
+  "REVIEW",
+  "CONFIRMATION",
+  "UNKNOWN",
+]);
+
+export const WorkdayAuthBoundarySchema = z.enum([
+  "NONE",
+  "SIGN_IN_REQUIRED",
+  "ACCOUNT_REQUIRED",
+  "VERIFICATION_REQUIRED",
+  "SESSION_EXPIRED",
+  "UNKNOWN",
+]);
+
+export const WorkdayWorkflowPageSchema = z.object({
+  schemaVersion: z.literal(1),
+  tenant: z.string().min(1).max(200),
+  site: z.string().min(1).max(200),
+  pageType: WorkdayPageTypeSchema,
+  pageKey: z.string().min(1).max(500),
+  fingerprint: z.string().regex(/^workday:[a-f0-9]{8}$/),
+  heading: z.string().max(500),
+  stepLabel: z.string().min(1).max(200).optional(),
+  stepIndex: z.number().int().positive().optional(),
+  stepCount: z.number().int().positive().optional(),
+  visibleSections: z.array(z.string().min(1).max(200)).max(30),
+  authBoundary: WorkdayAuthBoundarySchema,
+  prefilledFieldCount: z.number().int().nonnegative(),
+  resumeReconciliationRequired: z.boolean(),
+  navigation: z.object({
+    mode: z.literal("MANUAL_ONLY"),
+    backVisible: z.boolean(),
+    nextVisible: z.boolean(),
+    submitVisible: z.boolean(),
+    blockedReason: z.string().min(1).max(1_000).optional(),
+  }),
+  errorState: z
+    .object({
+      kind: z.enum(["VALIDATION", "SESSION_EXPIRED", "UNSUPPORTED"]),
+      message: z.string().min(1).max(1_000),
+      recoverable: z.boolean(),
+    })
+    .nullable(),
+});
+
+export const WorkdayWorkflowProgressSchema = z.object({
+  schemaVersion: z.literal(1),
+  recoveryKey: z.string().min(1).max(500),
+  currentPageKey: z.string().min(1).max(500),
+  currentPageType: WorkdayPageTypeSchema,
+  currentStepIndex: z.number().int().positive().optional(),
+  stepCount: z.number().int().positive().optional(),
+  observedPageKeys: z.array(z.string().min(1).max(500)).max(50),
+  observationCount: z.number().int().positive(),
+  recovered: z.boolean(),
+  revisitDetected: z.boolean(),
+  lastFingerprint: z.string().regex(/^workday:[a-f0-9]{8}$/),
+  lastObservedAt: z.iso.datetime({ offset: true }),
+});
+
 export const AtsPageReportSchema = z.object({
   reportVersion: z.literal(1),
   detection: AtsDetectionSchema,
   job: NormalizedJobSchema.nullable(),
   confirmation: ConfirmationEvidenceSchema,
+  workflow: WorkdayWorkflowPageSchema.nullable().default(null),
 });
 
 export const InspectedApplicationPageSchema = z.object({
@@ -75,6 +146,8 @@ export const ApplicationPageAnalysisSchema = FormAnalysisSchema.extend({
   job: NormalizedJobSchema.nullable(),
   customQuestions: z.array(CustomQuestionSchema).max(200),
   confirmation: ConfirmationEvidenceSchema,
+  workflow: WorkdayWorkflowPageSchema.nullable().default(null),
+  workflowProgress: WorkdayWorkflowProgressSchema.optional(),
 });
 
 export const ApprovedUploadFileSchema = z
@@ -158,6 +231,7 @@ export const ApplicationRecordSchema = z.object({
   ats: AtsIdSchema,
   job: NormalizedJobSchema,
   confirmation: ConfirmationEvidenceSchema.optional(),
+  workflowProgress: WorkdayWorkflowProgressSchema.optional(),
 });
 
 export const ApplicationTrackerSchema = z.object({
@@ -170,6 +244,10 @@ export type AtsId = z.infer<typeof AtsIdSchema>;
 export type AtsDetection = z.infer<typeof AtsDetectionSchema>;
 export type NormalizedJob = z.infer<typeof NormalizedJobSchema>;
 export type ConfirmationEvidence = z.infer<typeof ConfirmationEvidenceSchema>;
+export type WorkdayPageType = z.infer<typeof WorkdayPageTypeSchema>;
+export type WorkdayAuthBoundary = z.infer<typeof WorkdayAuthBoundarySchema>;
+export type WorkdayWorkflowPage = z.infer<typeof WorkdayWorkflowPageSchema>;
+export type WorkdayWorkflowProgress = z.infer<typeof WorkdayWorkflowProgressSchema>;
 export type AtsPageReport = z.infer<typeof AtsPageReportSchema>;
 export type InspectedApplicationPage = z.infer<typeof InspectedApplicationPageSchema>;
 export type CustomQuestion = z.infer<typeof CustomQuestionSchema>;
