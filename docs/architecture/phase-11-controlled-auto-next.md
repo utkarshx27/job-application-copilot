@@ -36,7 +36,7 @@ Readiness or execution stops for:
 - résumé reconciliation, a revisit/loop, absent or ambiguous Next, or any visible Submit control;
 - expired intent or an unverified transition.
 
-The final application submission remains a manual user action in every environment.
+Phase 11 does not submit. Phase 12 later introduced a separate synthetic Test ATS submission path; real application submission remains manual.
 
 ## Transition verification and metrics
 
@@ -52,4 +52,4 @@ The gate covers default-off behavior, dual opt-in, exact fixed-token commands, c
 npm run check:phase11
 ```
 
-Phase 12 remains a separate controlled-submission phase. Phase 11 provides no submission state or command.
+Phase 12 later added a separate fixed-token submission state machine for the exact local Test ATS review fixture. Phase 11 itself still provides no submission state or command, and real ATS submission remains disabled.

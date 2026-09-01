@@ -713,7 +713,10 @@ test("models Workday steps, protects parsed values, and keeps real navigation us
   await application.bringToFront();
   await panel.getByRole("button", { name: "Scan and match visible form" }).click();
   await expect(panel.getByText("REVIEW", { exact: true })).toBeVisible();
-  await expect(panel.getByText(/Submit not available/)).toBeVisible();
+  await expect(panel.getByText(/Submit available/)).toBeVisible();
+  await expect(
+    panel.getByRole("heading", { name: "Controlled Test ATS submission" }),
+  ).toBeVisible();
 
   await application.goto("http://127.0.0.1:4173/workday-auth.html");
   await application.bringToFront();
@@ -824,6 +827,156 @@ test("runs one cancelable controlled Next and never retries the same intent", as
 
   await panel.screenshot({
     path: testInfo.outputPath("phase11-controlled-next.png"),
+    fullPage: true,
+  });
+});
+
+test("requires final consent, submits the Test ATS once, and verifies confirmation", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  testInfo.setTimeout(45_000);
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await saveFillProfile(panel);
+
+  const application = await context.newPage();
+  await application.goto("http://127.0.0.1:4173/workday.html");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Observe" }).click();
+
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await application.getByRole("button", { name: "Next" }).click();
+
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await panel.getByRole("button", { name: "Fill selected fields" }).click();
+  await application.getByRole("button", { name: "Next" }).click();
+
+  await expect(application.getByRole("heading", { name: "Application Questions" })).toBeVisible();
+  await application.getByLabel("Have you supported production systems?").selectOption("yes");
+  await application.getByLabel("Describe a relevant project").fill("Built resilient systems.");
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await application.getByRole("button", { name: "Next" }).click();
+
+  await expect(application.getByRole("heading", { name: "Review", exact: true })).toBeVisible();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(
+    panel.getByRole("heading", { name: "Controlled Test ATS submission" }),
+  ).toBeVisible();
+  await expect(panel.getByText("Workflow: 4/4 steps observed")).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Prepare one Test ATS submission" }),
+  ).toBeDisabled();
+
+  await panel.getByLabel("Enable controlled Test ATS submission globally").check();
+  await panel.getByLabel("Enable submission for this application").check();
+  await application
+    .getByLabel("I reviewed the application and confirm the Test ATS information is accurate")
+    .check();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await expect(panel.getByText("Ready", { exact: true })).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Prepare one Test ATS submission" }),
+  ).toBeDisabled();
+
+  await panel
+    .getByLabel(
+      "I reviewed the final summary and authorize exactly one submission to the local Test ATS.",
+    )
+    .check();
+  await panel.getByRole("button", { name: "Prepare one Test ATS submission" }).click();
+  await expect(panel.getByText(/Test submission in 5 seconds/)).toBeVisible();
+  await panel.getByRole("button", { name: "Cancel Test ATS submission" }).click();
+  await expect(panel.getByText("Test ATS submission was canceled before dispatch.")).toBeVisible();
+  await expect
+    .poll(() =>
+      application.evaluate(() =>
+        Number(document.documentElement.getAttribute("data-controlled-submit-click-count")),
+      ),
+    )
+    .toBe(0);
+
+  await panel.getByRole("button", { name: "Prepare one Test ATS submission" }).click();
+  await application
+    .getByLabel("I reviewed the application and confirm the Test ATS information is accurate")
+    .uncheck();
+  await expect(panel.getByText(/review page changed after final submission approval/i)).toBeVisible(
+    { timeout: 9_000 },
+  );
+  await expect
+    .poll(() =>
+      application.evaluate(() =>
+        Number(document.documentElement.getAttribute("data-controlled-submit-click-count")),
+      ),
+    )
+    .toBe(0);
+  const staleIntents = await panel.evaluate<unknown>(async () => {
+    const stored: unknown = await chrome.storage.local.get("controlledSubmission");
+    return (stored as { controlledSubmission: { intents: Array<unknown> } }).controlledSubmission
+      .intents;
+  });
+  expect(staleIntents).toMatchObject([
+    { state: "ABORTED" },
+    { state: "FAILED", failureCode: "VALIDATION_ERROR" },
+  ]);
+  expect(staleIntents).not.toEqual(
+    expect.arrayContaining([expect.objectContaining({ submitDispatchedAt: expect.any(String) })]),
+  );
+  await application
+    .getByLabel("I reviewed the application and confirm the Test ATS information is accurate")
+    .check();
+  await application.bringToFront();
+  await panel.getByRole("button", { name: "Scan and match visible form" }).click();
+  await panel
+    .getByLabel(
+      "I reviewed the final summary and authorize exactly one submission to the local Test ATS.",
+    )
+    .check();
+
+  await panel.getByRole("button", { name: "Prepare one Test ATS submission" }).click();
+  await expect(
+    application.getByRole("heading", { name: "Thank you, your application was submitted" }),
+  ).toBeVisible({ timeout: 9_000 });
+  await expect(panel.getByText(/local tracker was updated to APPLIED/)).toBeVisible({
+    timeout: 9_000,
+  });
+  await expect(panel.getByText(/WD-CONF-700/)).toBeVisible();
+  await expect
+    .poll(() =>
+      application.evaluate(() =>
+        Number(document.documentElement.getAttribute("data-controlled-submit-click-count")),
+      ),
+    )
+    .toBe(1);
+
+  const replayResponse = await panel.evaluate<unknown>(async () => {
+    const stored: unknown = await chrome.storage.local.get("controlledSubmission");
+    const intents = (stored as { controlledSubmission: { intents: Array<{ id: string }> } })
+      .controlledSubmission.intents;
+    const latest = intents[intents.length - 1];
+    if (!latest) throw new Error("Expected a persisted submission intent.");
+    const response: unknown = await chrome.runtime.sendMessage({
+      type: "PANEL_SUBMISSION_EXECUTE",
+      intentId: latest.id,
+    });
+    return response;
+  });
+  expect(replayResponse).toMatchObject({ ok: false, error: { code: "SUBMISSION_FAILED" } });
+  await expect
+    .poll(() =>
+      application.evaluate(() =>
+        Number(document.documentElement.getAttribute("data-controlled-submit-click-count")),
+      ),
+    )
+    .toBe(1);
+
+  await panel.screenshot({
+    path: testInfo.outputPath("phase12-confirmed-submission.png"),
     fullPage: true,
   });
 });

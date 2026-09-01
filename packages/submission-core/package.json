@@ -1,0 +1,11 @@
+{
+  "name": "@copilot/submission-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@copilot/job-schema": "0.1.0",
+    "zod": "^4.1.5"
+  }
+}

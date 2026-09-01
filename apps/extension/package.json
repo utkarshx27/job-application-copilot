@@ -31,6 +31,7 @@
     "@copilot/grounded-generation": "*",
     "@copilot/job-schema": "*",
     "@copilot/navigation-core": "*",
+    "@copilot/submission-core": "*",
     "@copilot/profile-core": "*",
     "@copilot/question-ontology": "*",
     "@copilot/resume-parser": "*",

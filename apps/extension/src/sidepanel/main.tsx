@@ -37,6 +37,11 @@ import {
   AutoNextPanelStateSchema,
   type AutoNextPanelState,
 } from "@copilot/navigation-core";
+import {
+  SubmissionActionResultSchema,
+  SubmissionPanelStateSchema,
+  type SubmissionPanelState,
+} from "@copilot/submission-core";
 import { StrictMode, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -829,6 +834,154 @@ function ObservePanel() {
   const [navigationNotice, setNavigationNotice] = useState<Notice>(null);
   const [countdown, setCountdown] = useState<{ intentId: string; remaining: number } | null>(null);
   const executingIntent = useRef<string | null>(null);
+  const [submission, setSubmission] = useState<SubmissionPanelState | null>(null);
+  const [submissionConsent, setSubmissionConsent] = useState(false);
+  const [submissionNotice, setSubmissionNotice] = useState<Notice>(null);
+  const [submissionCountdown, setSubmissionCountdown] = useState<{
+    intentId: string;
+    remaining: number;
+  } | null>(null);
+  const executingSubmissionIntent = useRef<string | null>(null);
+
+  async function executePreparedSubmission(intentId: string) {
+    if (executingSubmissionIntent.current === intentId) return;
+    executingSubmissionIntent.current = intentId;
+    setActing(true);
+    setSubmissionNotice(null);
+    try {
+      const response = await sendPanelRequest({ type: "PANEL_SUBMISSION_EXECUTE", intentId });
+      if (!response.ok) throw new Error(response.error.message);
+      const result = SubmissionActionResultSchema.safeParse(response.data);
+      if (!result.success || result.data.intent.state !== "CONFIRMED") {
+        throw new Error("The Test ATS submission confirmation was invalid.");
+      }
+      setSubmissionNotice({
+        kind: "success",
+        message: `One Test ATS submission was confirmed${result.data.intent.confirmationReferenceId ? ` with reference ${result.data.intent.confirmationReferenceId}` : ""}.`,
+      });
+      setSubmissionConsent(false);
+      await scan();
+    } catch (error) {
+      setSubmissionNotice({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Controlled submission stopped without retrying.",
+      });
+    } finally {
+      setActing(false);
+      executingSubmissionIntent.current = null;
+    }
+  }
+
+  useEffect(() => {
+    if (!submissionCountdown) return;
+    if (submissionCountdown.remaining <= 0) {
+      const intentId = submissionCountdown.intentId;
+      setSubmissionCountdown(null);
+      void executePreparedSubmission(intentId);
+      return;
+    }
+    const timer = window.setTimeout(
+      () =>
+        setSubmissionCountdown((current) =>
+          current?.intentId === submissionCountdown.intentId
+            ? { ...current, remaining: current.remaining - 1 }
+            : current,
+        ),
+      1_000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [submissionCountdown]);
+
+  async function updateSubmissionSetting(
+    type: "PANEL_SUBMISSION_SET_ENABLED" | "PANEL_SUBMISSION_SET_APPLICATION",
+    enabled: boolean,
+  ) {
+    if (state.status !== "success") return;
+    if (submission) {
+      setSubmission({
+        ...submission,
+        ...(type === "PANEL_SUBMISSION_SET_ENABLED"
+          ? { enabled }
+          : { applicationOptedIn: enabled }),
+      });
+    }
+    setActing(true);
+    setSubmissionNotice(null);
+    try {
+      const response = await sendPanelRequest({
+        type,
+        analysisId: state.analysis.analysisId,
+        enabled,
+      });
+      if (!response.ok) throw new Error(response.error.message);
+      const parsed = SubmissionPanelStateSchema.safeParse(response.data);
+      if (!parsed.success) throw new Error("The submission setting response was invalid.");
+      setSubmission(parsed.data);
+      if (!enabled) {
+        setSubmissionCountdown(null);
+        setSubmissionConsent(false);
+      }
+    } catch (error) {
+      setSubmissionNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not update submission settings.",
+      });
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function prepareSubmissionCountdown() {
+    if (state.status !== "success" || !submissionConsent) return;
+    setActing(true);
+    setSubmissionNotice(null);
+    try {
+      const response = await sendPanelRequest({
+        type: "PANEL_SUBMISSION_PREPARE",
+        analysisId: state.analysis.analysisId,
+        explicitConsent: true,
+      });
+      if (!response.ok) throw new Error(response.error.message);
+      const result = SubmissionActionResultSchema.safeParse(response.data);
+      if (!result.success || !result.data.panelState) {
+        throw new Error("The prepared submission result was invalid.");
+      }
+      setSubmission(result.data.panelState);
+      setSubmissionCountdown({ intentId: result.data.intent.id, remaining: 5 });
+    } catch (error) {
+      setSubmissionNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "The application is not ready to submit.",
+      });
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function cancelSubmissionCountdown() {
+    if (!submissionCountdown) return;
+    const intentId = submissionCountdown.intentId;
+    setSubmissionCountdown(null);
+    try {
+      const response = await sendPanelRequest({ type: "PANEL_SUBMISSION_ABORT", intentId });
+      if (!response.ok) throw new Error(response.error.message);
+      const result = SubmissionActionResultSchema.safeParse(response.data);
+      if (!result.success) throw new Error("The submission cancellation result was invalid.");
+      if (result.data.panelState) setSubmission(result.data.panelState);
+      setSubmissionNotice({
+        kind: "success",
+        message: "Test ATS submission was canceled before dispatch.",
+      });
+    } catch (error) {
+      setSubmissionNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not cancel submission.",
+      });
+    }
+  }
 
   async function executePreparedNext(intentId: string) {
     if (executingIntent.current === intentId) return;
@@ -1081,7 +1234,6 @@ function ObservePanel() {
             .map((mapping) => mapping.fieldId),
         ),
       );
-      setState({ status: "success", analysis: analysis.data });
       if (analysis.data.workflow) {
         const navigationResponse = await sendPanelRequest({
           type: "PANEL_AUTO_NEXT_STATUS",
@@ -1091,9 +1243,20 @@ function ObservePanel() {
           ? AutoNextPanelStateSchema.safeParse(navigationResponse.data)
           : null;
         setAutoNext(navigationState?.success ? navigationState.data : null);
+        const submissionResponse = await sendPanelRequest({
+          type: "PANEL_SUBMISSION_STATUS",
+          analysisId: analysis.data.analysisId,
+        });
+        const submissionState = submissionResponse.ok
+          ? SubmissionPanelStateSchema.safeParse(submissionResponse.data)
+          : null;
+        setSubmission(submissionState?.success ? submissionState.data : null);
       } else {
         setAutoNext(null);
+        setSubmission(null);
       }
+      setState({ status: "success", analysis: analysis.data });
+      setSubmissionConsent(false);
       setCustomAnswers(
         Object.fromEntries(
           analysis.data.customQuestions.flatMap((question) => {
@@ -1415,9 +1578,12 @@ function ObservePanel() {
                   </p>
                 )}
                 <p className="help">
-                  {state.analysis.workflow.navigation.mode === "CONTROLLED_TEST_ONLY"
-                    ? "Controlled Next is available only on this local Test ATS fixture. It is off by default, clicks once after a cancelable countdown, and never clicks Submit."
-                    : "Navigation is manual-only on real Workday pages. Complete this page yourself, move forward once, then rescan. The copilot never clicks Next or Submit."}
+                  {state.analysis.workflow.pageType === "REVIEW" &&
+                  state.analysis.workflow.navigation.mode === "CONTROLLED_TEST_ONLY"
+                    ? "Controlled submission is available only on this local Test ATS review fixture. It requires separate opt-ins, an explicit final authorization, and one non-retryable Submit dispatch."
+                    : state.analysis.workflow.navigation.mode === "CONTROLLED_TEST_ONLY"
+                      ? "Controlled Next is available only on this local Test ATS fixture. It is off by default, clicks once after a cancelable countdown, and never clicks Submit."
+                      : "Navigation is manual-only on real Workday pages. Complete this page yourself, move forward once, then rescan. The copilot never clicks Next or Submit."}
                 </p>
                 <p className="help">
                   Page controls: Back{" "}
@@ -1475,85 +1641,196 @@ function ObservePanel() {
                     <span>{state.analysis.workflow.errorState.message}</span>
                   </div>
                 )}
-                {autoNext && state.analysis.workflow.navigation.mode === "CONTROLLED_TEST_ONLY" && (
-                  <div className="auto-next-controls" aria-labelledby="auto-next-heading">
-                    <div className="section-heading">
-                      <div>
-                        <h3 id="auto-next-heading">Experimental controlled Next</h3>
-                        <p className="help">Both switches must be on for this application.</p>
+                {autoNext &&
+                  state.analysis.workflow.pageType !== "REVIEW" &&
+                  state.analysis.workflow.navigation.mode === "CONTROLLED_TEST_ONLY" && (
+                    <div className="auto-next-controls" aria-labelledby="auto-next-heading">
+                      <div className="section-heading">
+                        <div>
+                          <h3 id="auto-next-heading">Experimental controlled Next</h3>
+                          <p className="help">Both switches must be on for this application.</p>
+                        </div>
+                        <span className="status">
+                          {autoNext.readiness.ready ? "Ready" : "Stopped"}
+                        </span>
                       </div>
-                      <span className="status">
-                        {autoNext.readiness.ready ? "Ready" : "Stopped"}
-                      </span>
-                    </div>
-                    <label className="check">
-                      <input
-                        type="checkbox"
-                        checked={autoNext.enabled}
-                        disabled={acting || Boolean(countdown)}
-                        onChange={(event) =>
-                          void updateAutoNextSetting(
-                            "PANEL_AUTO_NEXT_SET_ENABLED",
-                            event.target.checked,
-                          )
-                        }
-                      />
-                      Enable experimental auto-next globally
-                    </label>
-                    <label className="check">
-                      <input
-                        type="checkbox"
-                        checked={autoNext.applicationOptedIn}
-                        disabled={acting || !autoNext.enabled || Boolean(countdown)}
-                        onChange={(event) =>
-                          void updateAutoNextSetting(
-                            "PANEL_AUTO_NEXT_SET_APPLICATION",
-                            event.target.checked,
-                          )
-                        }
-                      />
-                      Enable for this application
-                    </label>
-                    <ul className="readiness-list" aria-label="Controlled Next readiness checks">
-                      {autoNext.readiness.checks.map((item) => (
-                        <li className={item.passed ? "passed" : "blocked"} key={item.code}>
-                          <span aria-hidden="true">{item.passed ? "✓" : "!"}</span>
-                          {item.message}
-                        </li>
-                      ))}
-                    </ul>
-                    {countdown ? (
-                      <div className="notice warning" role="status">
-                        <strong>Next in {countdown.remaining} seconds</strong>
-                        <span>You can cancel until the single click is dispatched.</span>
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={autoNext.enabled}
+                          disabled={acting || Boolean(countdown)}
+                          onChange={(event) =>
+                            void updateAutoNextSetting(
+                              "PANEL_AUTO_NEXT_SET_ENABLED",
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        Enable experimental auto-next globally
+                      </label>
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={autoNext.applicationOptedIn}
+                          disabled={acting || !autoNext.enabled || Boolean(countdown)}
+                          onChange={(event) =>
+                            void updateAutoNextSetting(
+                              "PANEL_AUTO_NEXT_SET_APPLICATION",
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        Enable for this application
+                      </label>
+                      <ul className="readiness-list" aria-label="Controlled Next readiness checks">
+                        {autoNext.readiness.checks.map((item) => (
+                          <li className={item.passed ? "passed" : "blocked"} key={item.code}>
+                            <span aria-hidden="true">{item.passed ? "✓" : "!"}</span>
+                            {item.message}
+                          </li>
+                        ))}
+                      </ul>
+                      {countdown ? (
+                        <div className="notice warning" role="status">
+                          <strong>Next in {countdown.remaining} seconds</strong>
+                          <span>You can cancel until the single click is dispatched.</span>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => void cancelAutoNextCountdown()}
+                          >
+                            Cancel controlled Next
+                          </button>
+                        </div>
+                      ) : (
                         <button
                           type="button"
-                          className="secondary"
-                          onClick={() => void cancelAutoNextCountdown()}
+                          className="primary"
+                          disabled={acting || !autoNext.readiness.ready}
+                          onClick={() => void prepareAutoNextCountdown()}
                         >
-                          Cancel controlled Next
+                          Prepare controlled Next
                         </button>
+                      )}
+                      {navigationNotice && (
+                        <div
+                          className={`notice ${navigationNotice.kind}`}
+                          role={navigationNotice.kind === "error" ? "alert" : "status"}
+                        >
+                          {navigationNotice.message}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                {submission &&
+                  state.analysis.workflow.pageType === "REVIEW" &&
+                  state.analysis.workflow.navigation.mode === "CONTROLLED_TEST_ONLY" && (
+                    <div className="submission-controls" aria-labelledby="submission-heading">
+                      <div className="section-heading">
+                        <div>
+                          <h3 id="submission-heading">Controlled Test ATS submission</h3>
+                          <p className="help">
+                            Final submission is irreversible inside this synthetic fixture. Real ATS
+                            submission remains disabled.
+                          </p>
+                        </div>
+                        <span className="status">
+                          {submission.readiness.ready ? "Ready" : "Stopped"}
+                        </span>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="primary"
-                        disabled={acting || !autoNext.readiness.ready}
-                        onClick={() => void prepareAutoNextCountdown()}
-                      >
-                        Prepare controlled Next
-                      </button>
-                    )}
-                    {navigationNotice && (
-                      <div
-                        className={`notice ${navigationNotice.kind}`}
-                        role={navigationNotice.kind === "error" ? "alert" : "status"}
-                      >
-                        {navigationNotice.message}
+                      <div className="submission-summary" aria-label="Final application summary">
+                        <strong>{state.analysis.job?.title ?? "Unknown role"}</strong>
+                        <span>{state.analysis.job?.company ?? "Unknown company"}</span>
+                        <span>Adapter: {state.analysis.ats.adapter}</span>
+                        <span>
+                          Workflow: {state.analysis.workflowProgress?.observedPageKeys.length ?? 0}/
+                          {state.analysis.workflow.stepCount ?? 0} steps observed
+                        </span>
                       </div>
-                    )}
-                  </div>
-                )}
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={submission.enabled}
+                          disabled={acting || Boolean(submissionCountdown)}
+                          onChange={(event) =>
+                            void updateSubmissionSetting(
+                              "PANEL_SUBMISSION_SET_ENABLED",
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        Enable controlled Test ATS submission globally
+                      </label>
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={submission.applicationOptedIn}
+                          disabled={acting || !submission.enabled || Boolean(submissionCountdown)}
+                          onChange={(event) =>
+                            void updateSubmissionSetting(
+                              "PANEL_SUBMISSION_SET_APPLICATION",
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        Enable submission for this application
+                      </label>
+                      <ul className="readiness-list" aria-label="Submission readiness checks">
+                        {submission.readiness.checks.map((item) => (
+                          <li className={item.passed ? "passed" : "blocked"} key={item.code}>
+                            <span aria-hidden="true">{item.passed ? "✓" : "!"}</span>
+                            {item.message}
+                          </li>
+                        ))}
+                      </ul>
+                      <label className="final-consent">
+                        <input
+                          type="checkbox"
+                          checked={submissionConsent}
+                          disabled={
+                            acting || !submission.readiness.ready || Boolean(submissionCountdown)
+                          }
+                          onChange={(event) => setSubmissionConsent(event.target.checked)}
+                        />
+                        I reviewed the final summary and authorize exactly one submission to the
+                        local Test ATS.
+                      </label>
+                      {submissionCountdown ? (
+                        <div className="notice warning" role="status">
+                          <strong>
+                            Test submission in {submissionCountdown.remaining} seconds
+                          </strong>
+                          <span>
+                            Cancel now to prevent the single irreversible Test ATS dispatch.
+                          </span>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => void cancelSubmissionCountdown()}
+                          >
+                            Cancel Test ATS submission
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="danger-submit"
+                          disabled={acting || !submission.readiness.ready || !submissionConsent}
+                          onClick={() => void prepareSubmissionCountdown()}
+                        >
+                          Prepare one Test ATS submission
+                        </button>
+                      )}
+                      {submissionNotice && (
+                        <div
+                          className={`notice ${submissionNotice.kind}`}
+                          role={submissionNotice.kind === "error" ? "alert" : "status"}
+                        >
+                          {submissionNotice.message}
+                        </div>
+                      )}
+                    </div>
+                  )}
               </section>
             )}
             {state.analysis.confirmation.confirmed && (

@@ -76,6 +76,51 @@ describe("browser command allowlist", () => {
     expect("selector" in prepared).toBe(false);
   });
 
+  it("allows only the fixed-token controlled Test ATS submission plan", () => {
+    const parsed = BrowserCommandSchema.parse({
+      type: "CLICK_CONTROLLED_TEST_SUBMIT",
+      plan: {
+        intentVersion: 1,
+        id: "submission-1",
+        intentId: "submission-1",
+        applicationId: "application-1",
+        analysisId: "analysis-1",
+        adapter: "WORKDAY",
+        adapterVersion: "1",
+        sourceUrl: "http://127.0.0.1:4173/workday.html",
+        sourcePageKey: "review",
+        sourceFingerprint: "workday:1234abcd",
+        sourceUserEditVersion: 1,
+        targetToken: "WORKDAY_TEST_ATS_SUBMIT",
+        expiresAt: new Date(Date.now() + 30_000).toISOString(),
+        selector: "button[type='submit']",
+      },
+    });
+    expect(parsed.type).toBe("CLICK_CONTROLLED_TEST_SUBMIT");
+    if (parsed.type !== "CLICK_CONTROLLED_TEST_SUBMIT") {
+      throw new Error("Expected controlled Test ATS submission.");
+    }
+    expect("selector" in parsed.plan).toBe(false);
+    expect(parsed.plan.targetToken).toBe("WORKDAY_TEST_ATS_SUBMIT");
+  });
+
+  it("requires literal explicit consent in submission preparation", () => {
+    expect(
+      PanelRequestSchema.safeParse({
+        type: "PANEL_SUBMISSION_PREPARE",
+        analysisId: "analysis-1",
+        explicitConsent: true,
+      }).success,
+    ).toBe(true);
+    expect(
+      PanelRequestSchema.safeParse({
+        type: "PANEL_SUBMISSION_PREPARE",
+        analysisId: "analysis-1",
+        explicitConsent: false,
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects unknown panel messages", () => {
     expect(PanelRequestSchema.safeParse({ type: "PANEL_SUBMIT_APPLICATION" }).success).toBe(false);
   });

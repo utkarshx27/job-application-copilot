@@ -32,6 +32,12 @@ import {
   ControlledNextPlanSchema,
 } from "@copilot/navigation-core";
 import {
+  ControlledSubmitClickResultSchema,
+  ControlledSubmitPlanSchema,
+  SubmissionActionResultSchema,
+  SubmissionPanelStateSchema,
+} from "@copilot/submission-core";
+import {
   SyncAccountStatusSchema,
   SyncBackupResultSchema,
   SyncDeletionResultSchema,
@@ -60,6 +66,7 @@ export const BrowserCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("READ_VALIDATION"), applicationId: z.string().min(1) }),
   z.object({ type: z.literal("READ_CONFIRMATION"), applicationId: z.string().min(1) }),
   z.object({ type: z.literal("CLICK_CONTROLLED_NEXT"), plan: ControlledNextPlanSchema }),
+  z.object({ type: z.literal("CLICK_CONTROLLED_TEST_SUBMIT"), plan: ControlledSubmitPlanSchema }),
 ]);
 
 export const PanelRequestSchema = z.discriminatedUnion("type", [
@@ -101,6 +108,24 @@ export const PanelRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PANEL_AUTO_NEXT_PREPARE"), analysisId: z.string().min(1) }),
   z.object({ type: z.literal("PANEL_AUTO_NEXT_EXECUTE"), intentId: z.string().min(1) }),
   z.object({ type: z.literal("PANEL_AUTO_NEXT_ABORT"), intentId: z.string().min(1) }),
+  z.object({ type: z.literal("PANEL_SUBMISSION_STATUS"), analysisId: z.string().min(1) }),
+  z.object({
+    type: z.literal("PANEL_SUBMISSION_SET_ENABLED"),
+    analysisId: z.string().min(1),
+    enabled: z.boolean(),
+  }),
+  z.object({
+    type: z.literal("PANEL_SUBMISSION_SET_APPLICATION"),
+    analysisId: z.string().min(1),
+    enabled: z.boolean(),
+  }),
+  z.object({
+    type: z.literal("PANEL_SUBMISSION_PREPARE"),
+    analysisId: z.string().min(1),
+    explicitConsent: z.literal(true),
+  }),
+  z.object({ type: z.literal("PANEL_SUBMISSION_EXECUTE"), intentId: z.string().min(1) }),
+  z.object({ type: z.literal("PANEL_SUBMISSION_ABORT"), intentId: z.string().min(1) }),
   z.object({
     type: z.literal("PANEL_AI_DRAFT"),
     analysisId: z.string().min(1),
@@ -153,6 +178,10 @@ export const ContentRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("CONTENT_APPLY_FILL"), plan: FillPlanSchema }),
   z.object({ type: z.literal("CONTENT_UPLOAD_APPROVED_FILE"), plan: ApprovedUploadPlanSchema }),
   z.object({ type: z.literal("CONTENT_EXECUTE_CONTROLLED_NEXT"), plan: ControlledNextPlanSchema }),
+  z.object({
+    type: z.literal("CONTENT_EXECUTE_CONTROLLED_SUBMIT"),
+    plan: ControlledSubmitPlanSchema,
+  }),
 ]);
 
 const RuntimeErrorSchema = z.object({
@@ -176,6 +205,8 @@ const RuntimeErrorSchema = z.object({
     "SYNC_FAILED",
     "NAVIGATION_BLOCKED",
     "NAVIGATION_FAILED",
+    "SUBMISSION_BLOCKED",
+    "SUBMISSION_FAILED",
   ]),
   message: z.string(),
 });
@@ -204,6 +235,9 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
       AutoNextPanelStateSchema,
       AutoNextActionResultSchema,
       ControlledNextClickResultSchema,
+      SubmissionPanelStateSchema,
+      SubmissionActionResultSchema,
+      ControlledSubmitClickResultSchema,
       GroundedDraftResultSchema,
       ProfileVaultSchema,
       z.object({ backupJson: z.string() }),

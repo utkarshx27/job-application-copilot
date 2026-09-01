@@ -66,6 +66,7 @@ type AuthContext = { account: StoredAccount; session: StoredSession };
 async function authenticate(
   request: FastifyRequest,
   store: SyncStore,
+  now: () => string,
 ): Promise<AuthContext | null> {
   const authorization = request.headers.authorization;
   if (!authorization?.startsWith("Bearer ")) return null;
@@ -73,7 +74,7 @@ async function authenticate(
   const tokenHash = hash(token);
   const state = await store.read();
   const session = state.sessions.find((candidate) => equalHash(candidate.tokenHash, tokenHash));
-  if (!session || Date.parse(session.expiresAt) <= Date.now()) return null;
+  if (!session || Date.parse(session.expiresAt) <= Date.parse(now())) return null;
   const account = state.accounts.find((candidate) => candidate.id === session.accountId);
   const device = account?.devices.find((candidate) => candidate.id === session.deviceId);
   if (!account || !device || device.revokedAt) return null;
@@ -195,12 +196,12 @@ export async function buildSyncServer(
 
   app.addHook("preHandler", async (request, reply) => {
     if (!request.url.startsWith("/v1/") || request.url.startsWith("/v1/auth/")) return;
-    const auth = await authenticate(request, store);
+    const auth = await authenticate(request, store, now);
     if (!auth) return reply.code(401).send({ error: "UNAUTHORIZED" });
   });
 
   async function authFor(request: FastifyRequest): Promise<AuthContext> {
-    const auth = await authenticate(request, store);
+    const auth = await authenticate(request, store, now);
     if (!auth) throw new Error("Authenticated route reached without a valid session.");
     return auth;
   }

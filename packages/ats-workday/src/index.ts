@@ -431,6 +431,14 @@ export const workdayAdapter: AtsAdapter = {
       next.getAttribute("type") !== "submit" &&
       next.getAttribute("data-submit") !== "true",
     );
+    const exactSubmit = Boolean(
+      controlledNavigation &&
+      pageType === "REVIEW" &&
+      submit?.matches("button[data-automation-id='submit']") &&
+      compactText(submit.textContent).toLocaleLowerCase() === "submit application" &&
+      submit.getAttribute("type") !== "submit" &&
+      submit.getAttribute("data-controlled-submit") === "true",
+    );
     const blockedReason =
       authBoundary !== "NONE"
         ? "Complete the Workday account or authentication step manually, then rescan."
@@ -468,6 +476,16 @@ export const workdayAdapter: AtsAdapter = {
                 "not-submit",
               ]
             : [],
+        submitConfidence: exactSubmit ? 0.999 : 0,
+        submitEvidence: exactSubmit
+          ? [
+              "controlled-origin:http://127.0.0.1:4173/workday.html",
+              "review-page",
+              "automation-id:submit",
+              "exact-text:Submit application",
+              "controlled-submit-marker",
+            ]
+          : [],
         ...(blockedReason ? { blockedReason } : {}),
       },
       errorState: workflowError(targetDocument, authBoundary),

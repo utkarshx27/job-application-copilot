@@ -5,6 +5,7 @@ import { scanVisibleForm } from "./scanner";
 import { uploadApprovedFile } from "./upload-driver";
 import { applyFillPlan, highlightFields, installUserEditTracking } from "./form-driver";
 import { executeControlledNext } from "./navigation-driver";
+import { executeControlledSubmit } from "./submission-driver";
 
 declare global {
   interface Window {
@@ -52,6 +53,11 @@ if (!window.__jobApplicationCopilotLoaded) {
           sendResponse({
             ok: true,
             data: executeControlledNext(request.data.plan),
+          } satisfies RuntimeResponse);
+        } else if (request.data.type === "CONTENT_EXECUTE_CONTROLLED_SUBMIT") {
+          sendResponse({
+            ok: true,
+            data: executeControlledSubmit(request.data.plan),
           } satisfies RuntimeResponse);
         }
       } catch (error) {

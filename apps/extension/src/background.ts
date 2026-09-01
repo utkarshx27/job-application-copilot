@@ -46,6 +46,18 @@ import {
   type NavigationIntent,
 } from "@copilot/navigation-core";
 import {
+  ControlledSubmitClickResultSchema,
+  SubmissionActionResultSchema,
+  controlledSubmitPlan,
+  prepareSubmissionIntent,
+  setApplicationSubmission,
+  setSubmissionEnabled,
+  submissionPanelState,
+  transitionSubmissionIntent,
+  type SubmissionIntent,
+  type SubmissionStore,
+} from "@copilot/submission-core";
+import {
   exportProfileBackup,
   importResumeDraft,
   importProfileBackup,
@@ -62,6 +74,7 @@ import {
 } from "@copilot/saved-response-engine";
 
 import { getProfileVault, setProfileVault } from "./profile-storage";
+import { getSubmissionStore, setSubmissionStore } from "./submission-storage";
 import { getApplicationTracker, setApplicationTracker } from "./application-storage";
 import { adapterForId } from "./ats-page";
 import {
@@ -699,6 +712,251 @@ async function executeAutoNext(intentId: string) {
   });
 }
 
+async function activeSubmissionContext(analysisId: string) {
+  const tab = await inspectableActiveTab();
+  if ("error" in tab) throw new Error(tab.error.message);
+  const analysis = analysesByTab.get(tab.id);
+  if (!analysis || analysis.analysisId !== analysisId) {
+    throw new Error("Scan the current Test ATS review step again before controlled submission.");
+  }
+  return { tab, analysis };
+}
+
+async function submissionStatus(analysisId: string) {
+  const { analysis } = await activeSubmissionContext(analysisId);
+  return submissionPanelState(analysis, await getSubmissionStore());
+}
+
+async function setSubmissionFeature(analysisId: string, enabled: boolean) {
+  const { analysis } = await activeSubmissionContext(analysisId);
+  let store = setSubmissionEnabled(await getSubmissionStore(), enabled);
+  if (!enabled) {
+    for (const intent of store.intents.filter((candidate) => candidate.state === "PREPARED")) {
+      store = transitionSubmissionIntent(store, intent.id, "ABORTED", {
+        message: "Controlled submission was disabled before dispatch.",
+      }).store;
+    }
+  }
+  await setSubmissionStore(store);
+  return submissionPanelState(analysis, store);
+}
+
+async function setApplicationSubmissionFeature(analysisId: string, enabled: boolean) {
+  const { analysis } = await activeSubmissionContext(analysisId);
+  if (!analysis.applicationId) throw new Error("The application does not have a stable identity.");
+  let store = setApplicationSubmission(await getSubmissionStore(), analysis.applicationId, enabled);
+  if (!enabled) {
+    for (const intent of store.intents.filter(
+      (candidate) =>
+        candidate.applicationId === analysis.applicationId && candidate.state === "PREPARED",
+    )) {
+      store = transitionSubmissionIntent(store, intent.id, "ABORTED", {
+        message: "Controlled submission was disabled for this application.",
+      }).store;
+    }
+  }
+  await setSubmissionStore(store);
+  return submissionPanelState(analysis, store);
+}
+
+async function prepareControlledSubmission(analysisId: string, explicitConsent: true) {
+  const { tab, analysis } = await activeSubmissionContext(analysisId);
+  const prepared = prepareSubmissionIntent(
+    await getSubmissionStore(),
+    analysis,
+    tab.id,
+    explicitConsent,
+  );
+  await setSubmissionStore(prepared.store);
+  return SubmissionActionResultSchema.parse({
+    intent: prepared.intent,
+    panelState: submissionPanelState(analysis, prepared.store),
+  });
+}
+
+async function abortControlledSubmission(intentId: string) {
+  const store = await getSubmissionStore();
+  const selected = store.intents.find((intent) => intent.id === intentId);
+  if (!selected || selected.state !== "PREPARED") {
+    throw new Error("Only a prepared, not-yet-dispatched submission can be canceled.");
+  }
+  const result = transitionSubmissionIntent(store, intentId, "ABORTED", {
+    message: "Canceled by the user during the final countdown.",
+  });
+  await setSubmissionStore(result.store);
+  const analysis = analysesByTab.get(selected.tabId);
+  return SubmissionActionResultSchema.parse({
+    intent: result.intent,
+    ...(analysis ? { panelState: submissionPanelState(analysis, result.store) } : {}),
+  });
+}
+
+async function waitForControlledConfirmation(tabId: number, intent: SubmissionIntent) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const response = await sendContentRequest(tabId, { type: "CONTENT_INSPECT_APPLICATION" });
+    if (response.ok) {
+      const inspected = InspectedApplicationPageSchema.safeParse(response.data);
+      if (inspected.success && inspected.data.atsReport.confirmation.confirmed) {
+        const observedApplicationId = inspected.data.atsReport.job
+          ? `application:${inspected.data.atsReport.job.id}`
+          : null;
+        return {
+          matches: observedApplicationId === intent.applicationId,
+          confirmation: inspected.data.atsReport.confirmation,
+        };
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
+}
+
+async function failPreparedSubmission(store: SubmissionStore, intentId: string, message: string) {
+  const failed = transitionSubmissionIntent(store, intentId, "FAILED", {
+    failureCode: "VALIDATION_ERROR",
+    message,
+  });
+  await setSubmissionStore(failed.store);
+  return failed.intent;
+}
+
+async function executeControlledSubmission(intentId: string) {
+  let store = await getSubmissionStore();
+  const selected = store.intents.find((intent) => intent.id === intentId);
+  if (!selected || selected.state !== "PREPARED") {
+    throw new Error("This submission intent is not prepared or was already dispatched.");
+  }
+  if (Date.parse(selected.expiresAt) <= Date.now()) {
+    const expired = transitionSubmissionIntent(store, intentId, "FAILED", {
+      failureCode: "INTENT_EXPIRED",
+      message: "The final submission approval expired before dispatch.",
+    });
+    await setSubmissionStore(expired.store);
+    throw new Error(expired.intent.message ?? "The final submission approval expired.");
+  }
+  if (!store.enabled || store.applicationOptIns[selected.applicationId] !== true) {
+    const failed = await failPreparedSubmission(
+      store,
+      intentId,
+      "Controlled submission was disabled after final approval.",
+    );
+    throw new Error(failed.message);
+  }
+  const tab = await inspectableActiveTab();
+  if ("error" in tab) {
+    const failed = await failPreparedSubmission(store, intentId, tab.error.message);
+    throw new Error(failed.message);
+  }
+  const analysis = analysesByTab.get(tab.id);
+  if (
+    tab.id !== selected.tabId ||
+    tab.url !== selected.sourceUrl ||
+    !analysis ||
+    analysis.analysisId !== selected.analysisId ||
+    !analysis.workflow ||
+    analysis.workflow.pageKey !== selected.sourcePageKey ||
+    analysis.workflow.fingerprint !== selected.sourceFingerprint ||
+    analysis.workflow.userEditVersion !== selected.sourceUserEditVersion
+  ) {
+    const failed = await failPreparedSubmission(
+      store,
+      intentId,
+      "The review page changed after final submission approval. Scan it again.",
+    );
+    throw new Error(failed.message);
+  }
+
+  const preflightResponse = await sendContentRequest(tab.id, {
+    type: "CONTENT_INSPECT_APPLICATION",
+  });
+  const preflight = preflightResponse.ok
+    ? InspectedApplicationPageSchema.safeParse(preflightResponse.data)
+    : null;
+  const currentWorkflow = preflight?.success ? preflight.data.atsReport.workflow : null;
+  const currentApplicationId =
+    preflight?.success && preflight.data.atsReport.job
+      ? `application:${preflight.data.atsReport.job.id}`
+      : null;
+  if (
+    !preflightResponse.ok ||
+    !preflight?.success ||
+    preflight.data.snapshot.url !== selected.sourceUrl ||
+    currentApplicationId !== selected.applicationId ||
+    !currentWorkflow ||
+    currentWorkflow.pageKey !== selected.sourcePageKey ||
+    currentWorkflow.fingerprint !== selected.sourceFingerprint ||
+    currentWorkflow.userEditVersion !== selected.sourceUserEditVersion
+  ) {
+    const failed = await failPreparedSubmission(
+      store,
+      intentId,
+      "The review page changed after final submission approval. Scan it again.",
+    );
+    throw new Error(failed.message);
+  }
+
+  const dispatched = transitionSubmissionIntent(store, intentId, "SUBMIT_DISPATCHED");
+  store = await setSubmissionStore(dispatched.store);
+  const clickResponse = await sendContentRequest(tab.id, {
+    type: "CONTENT_EXECUTE_CONTROLLED_SUBMIT",
+    plan: controlledSubmitPlan(dispatched.intent),
+  });
+  if (!clickResponse.ok) {
+    const failed = transitionSubmissionIntent(store, intentId, "FAILED", {
+      failureCode: "VALIDATION_ERROR",
+      message: clickResponse.error.message,
+    });
+    await setSubmissionStore(failed.store);
+    throw new Error(clickResponse.error.message);
+  }
+  ControlledSubmitClickResultSchema.parse(clickResponse.data);
+  const verifying = transitionSubmissionIntent(store, intentId, "VERIFYING");
+  store = await setSubmissionStore(verifying.store);
+  const observed = await waitForControlledConfirmation(tab.id, selected);
+  if (!observed) {
+    const failed = transitionSubmissionIntent(store, intentId, "FAILED", {
+      failureCode: "CONFIRMATION_TIMEOUT",
+      message:
+        "Submit was clicked once, but no verified confirmation appeared. The copilot will not retry.",
+    });
+    await setSubmissionStore(failed.store);
+    throw new Error(failed.intent.message ?? "Submission confirmation was not verified.");
+  }
+  if (!observed.matches) {
+    const failed = transitionSubmissionIntent(store, intentId, "FAILED", {
+      failureCode: "CONFIRMATION_MISMATCH",
+      message: "A confirmation appeared for a different application identity.",
+    });
+    await setSubmissionStore(failed.store);
+    throw new Error(failed.intent.message ?? "The confirmation identity did not match.");
+  }
+  const refreshed = await analyzeActiveTab();
+  const refreshedAnalysis =
+    refreshed.ok && ApplicationPageAnalysisSchema.safeParse(refreshed.data).success
+      ? ApplicationPageAnalysisSchema.parse(refreshed.data)
+      : null;
+  if (
+    !refreshedAnalysis ||
+    refreshedAnalysis.applicationId !== selected.applicationId ||
+    !refreshedAnalysis.confirmation.confirmed
+  ) {
+    const failed = transitionSubmissionIntent(store, intentId, "FAILED", {
+      failureCode: "CONFIRMATION_MISMATCH",
+      message: "The confirmation could not be bound to the tracked application.",
+    });
+    await setSubmissionStore(failed.store);
+    throw new Error(failed.intent.message ?? "The tracked confirmation did not match.");
+  }
+  const confirmed = transitionSubmissionIntent(store, intentId, "CONFIRMED", {
+    ...(observed.confirmation.referenceId
+      ? { confirmationReferenceId: observed.confirmation.referenceId }
+      : {}),
+    message: "One Test ATS submission was verified by confirmation evidence.",
+  });
+  await setSubmissionStore(confirmed.store);
+  return SubmissionActionResultSchema.parse({ intent: confirmed.intent });
+}
+
 async function handlePanelRequest(
   request: ReturnType<typeof PanelRequestSchema.parse>,
 ): Promise<RuntimeResponse> {
@@ -823,6 +1081,36 @@ async function handlePanelRequest(
     return { ok: true, data: await abortAutoNext(request.intentId) };
   }
 
+  if (request.type === "PANEL_SUBMISSION_STATUS") {
+    return { ok: true, data: await submissionStatus(request.analysisId) };
+  }
+
+  if (request.type === "PANEL_SUBMISSION_SET_ENABLED") {
+    return { ok: true, data: await setSubmissionFeature(request.analysisId, request.enabled) };
+  }
+
+  if (request.type === "PANEL_SUBMISSION_SET_APPLICATION") {
+    return {
+      ok: true,
+      data: await setApplicationSubmissionFeature(request.analysisId, request.enabled),
+    };
+  }
+
+  if (request.type === "PANEL_SUBMISSION_PREPARE") {
+    return {
+      ok: true,
+      data: await prepareControlledSubmission(request.analysisId, request.explicitConsent),
+    };
+  }
+
+  if (request.type === "PANEL_SUBMISSION_EXECUTE") {
+    return { ok: true, data: await executeControlledSubmission(request.intentId) };
+  }
+
+  if (request.type === "PANEL_SUBMISSION_ABORT") {
+    return { ok: true, data: await abortControlledSubmission(request.intentId) };
+  }
+
   if (request.type === "PANEL_AI_DRAFT") {
     return draftCustomAnswer(request.analysisId, request.fieldId, request.maxChars);
   }
@@ -897,6 +1185,7 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
     const isAiRequest = parsed.data.type.startsWith("PANEL_AI_");
     const isSyncRequest = parsed.data.type.startsWith("PANEL_SYNC_");
     const isNavigationRequest = parsed.data.type.startsWith("PANEL_AUTO_NEXT_");
+    const isSubmissionRequest = parsed.data.type.startsWith("PANEL_SUBMISSION_");
     const message = error instanceof Error ? error.message : "Unexpected extension failure.";
     sendResponse(
       failure(
@@ -908,7 +1197,9 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
               ? "SYNC_FAILED"
               : isNavigationRequest
                 ? "NAVIGATION_FAILED"
-                : "SCAN_FAILED",
+                : isSubmissionRequest
+                  ? "SUBMISSION_FAILED"
+                  : "SCAN_FAILED",
         message,
       ),
     );

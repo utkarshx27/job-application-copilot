@@ -299,6 +299,47 @@ input:disabled {
   padding-top: 16px;
   border-top: 1px solid #dfe4e0;
 }
+.submission-controls {
+  display: grid;
+  gap: 11px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid #d8a62a;
+}
+.submission-controls h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.submission-summary {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #d8d0b3;
+  border-radius: 9px;
+  background: #fffdf4;
+  font-size: 13px;
+}
+.final-consent {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid #d8a62a;
+  border-radius: 9px;
+  background: #fff8df;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.final-consent input {
+  width: 17px;
+  min-height: 17px;
+}
+.danger-submit {
+  color: white;
+  background: #9b3028;
+}
 .auto-next-controls h3 {
   margin: 0;
   font-size: 15px;

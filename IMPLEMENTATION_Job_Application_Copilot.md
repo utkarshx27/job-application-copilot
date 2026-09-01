@@ -3051,6 +3051,8 @@ Monitor:
 
 ## Phase 12 — Controlled submission
 
+**Controlled Test ATS implementation completed 2026-09-01.** Submission is a separate default-off capability restricted to the exact local Workday Test ATS review fixture. It requires complete observed workflow progress, an on-page review attestation, global and per-application opt-ins, explicit final side-panel authorization, and a cancelable five-second countdown. The worker persists dispatch before one fixed-token click, never retries, binds confirmation evidence to the application identity, and updates the tracker only after verification. Real ATS submission remains disabled. See `docs/architecture/phase-12-controlled-submission.md`.
+
 Only after:
 - submission state machine proven;
 - policy checks;

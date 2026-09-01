@@ -40,6 +40,8 @@ The bundled sync server is a controlled, self-hostable MVP. Do not expose the de
 
 ## Controlled navigation boundary
 
-Auto-next is limited to the exact local Workday Test ATS fixture, defaults off, and requires a second per-application opt-in. Real ATS pages remain manual-only. The extension persists dispatch before clicking, performs at most one click, verifies the transition, never retries, and has no Submit command. See [`docs/architecture/phase-11-controlled-auto-next.md`](./docs/architecture/phase-11-controlled-auto-next.md).
+Auto-next is limited to the exact local Workday Test ATS fixture, defaults off, and requires a second per-application opt-in. Real ATS pages remain manual-only. The extension persists dispatch before clicking, performs at most one click, verifies the transition, and never retries. See [`docs/architecture/phase-11-controlled-auto-next.md`](./docs/architecture/phase-11-controlled-auto-next.md).
+
+Controlled submission is a separate default-off capability restricted to the exact local Test ATS Review page. It requires an on-page attestation, global and application opt-ins, explicit final authorization, and confirmation identity verification. Real ATS submission is not enabled. See [`docs/architecture/phase-12-controlled-submission.md`](./docs/architecture/phase-12-controlled-submission.md).
 
 The project is pre-release. Security fixes are applied to the latest `main` branch until versioned releases begin.

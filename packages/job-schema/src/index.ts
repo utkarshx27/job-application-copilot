@@ -100,6 +100,8 @@ export const WorkdayWorkflowPageSchema = z.object({
     submitVisible: z.boolean(),
     nextConfidence: z.number().min(0).max(1).default(0),
     nextEvidence: z.array(z.string().min(1).max(500)).max(20).default([]),
+    submitConfidence: z.number().min(0).max(1).default(0),
+    submitEvidence: z.array(z.string().min(1).max(500)).max(20).default([]),
     blockedReason: z.string().min(1).max(1_000).optional(),
   }),
   errorState: z

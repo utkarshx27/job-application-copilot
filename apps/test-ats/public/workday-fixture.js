@@ -7,6 +7,7 @@ const progressSteps = Array.from(
 );
 const storageKey = "controlled-workday-step";
 const nextClickStorageKey = "controlled-workday-next-clicks";
+const submitClickStorageKey = "controlled-workday-submit-clicks";
 
 const steps = [
   {
@@ -123,7 +124,15 @@ const steps = [
       <section data-workday-section>
         <h1>Review</h1>
         <h2 data-automation-id="sectionHeading">Review Your Application</h2>
-        <p>Review every section before submitting. Submission is disabled in this fixture.</p>
+        <p>Review every section before authorizing the controlled Test ATS submission.</p>
+        <form novalidate>
+          <div class="field check-field">
+            <label for="wd-review-attestation">
+              <input id="wd-review-attestation" name="reviewAttestation" type="checkbox" required />
+              I reviewed the application and confirm the Test ATS information is accurate
+            </label>
+          </div>
+        </form>
       </section>`,
   },
 ];
@@ -165,7 +174,7 @@ function renderStep(index) {
     <div data-navigation-validation role="alert" hidden></div>
     <nav class="workday-navigation" aria-label="Workday fixture navigation">
       ${safeIndex > 0 ? '<button type="button" data-automation-id="bottom-navigation-back-button">Back</button>' : ""}
-      ${safeIndex < steps.length - 1 ? '<button type="button" data-automation-id="bottom-navigation-next-button">Next</button>' : '<button type="button" data-automation-id="submit" disabled>Submit disabled in Test ATS</button>'}
+      ${safeIndex < steps.length - 1 ? '<button type="button" data-automation-id="bottom-navigation-next-button">Next</button>' : '<button type="button" data-automation-id="submit" data-controlled-submit="true">Submit application</button>'}
     </nav>`;
   root
     .querySelector("[data-automation-id='bottom-navigation-back-button']")
@@ -190,6 +199,36 @@ function renderStep(index) {
         renderStep(safeIndex + 1);
       }
     });
+  root.querySelector("button[data-automation-id='submit']")?.addEventListener("click", () => {
+    const form = root.querySelector("form");
+    const alert = root.querySelector("[data-navigation-validation]");
+    if (form && !form.checkValidity()) {
+      if (alert) {
+        alert.hidden = false;
+        alert.textContent = "Confirm the review attestation before submitting.";
+      }
+      form.reportValidity();
+      return;
+    }
+    const clickCount = Number(sessionStorage.getItem(submitClickStorageKey) ?? "0") + 1;
+    sessionStorage.setItem(submitClickStorageKey, String(clickCount));
+    document.documentElement.setAttribute("data-controlled-submit-click-count", String(clickCount));
+    if (new URLSearchParams(location.search).get("submission") === "stuck") return;
+    history.pushState({}, "", "/workday-confirmation.html");
+    stepMeta?.setAttribute("content", "CONFIRMATION");
+    document.title = "Application received — Example Systems";
+    progressSteps.forEach((item) => {
+      item.removeAttribute("aria-current");
+      item.removeAttribute("data-active");
+    });
+    root.innerHTML = `
+      <section data-automation-id="applicationConfirmation" data-workday-confirmation="true">
+        <p class="eyebrow">Controlled Workday confirmation</p>
+        <h1>Thank you, your application was submitted</h1>
+        <p>Example Systems received your Test ATS application.</p>
+        <strong data-confirmation-id>WD-CONF-700</strong>
+      </section>`;
+  });
   attachDynamicBehavior();
 }
 
@@ -197,5 +236,9 @@ const restoredStep = Number(sessionStorage.getItem(storageKey) ?? "0");
 document.documentElement.setAttribute(
   "data-controlled-next-click-count",
   sessionStorage.getItem(nextClickStorageKey) ?? "0",
+);
+document.documentElement.setAttribute(
+  "data-controlled-submit-click-count",
+  sessionStorage.getItem(submitClickStorageKey) ?? "0",
 );
 renderStep(Number.isInteger(restoredStep) ? restoredStep : 0);
