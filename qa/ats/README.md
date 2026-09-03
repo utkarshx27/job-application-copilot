@@ -1,6 +1,6 @@
 # Greenhouse and Lever pre-submit QA
 
-This directory contains the instructions and input template for the Phase 3 public-form gate. Public capture is deliberately read-only: it uses a fresh browser context, never clicks or types, blocks every non-GET/HEAD request, and stores no cookies, local storage, session storage, text-field values, uploads, or raw page HTML.
+This directory contains the Greenhouse/Lever public-form regression workflow and input template. Public capture is deliberately read-only: it uses a fresh browser context, never clicks or types, blocks every non-GET/HEAD request, and stores no cookies, local storage, session storage, text-field values, uploads, or raw page HTML.
 
 ## 1. Discover current public URLs
 
@@ -21,7 +21,7 @@ To provide a hand-curated list instead, copy `urls.example.json` to `urls.local.
 ]
 ```
 
-The `adapter` is the ATS provider, not the employer name. This Phase 3 public-form gate accepts `GREENHOUSE` and `LEVER`; company names such as `ACCENTURE` are invalid. The adapter may be omitted for standard `greenhouse.io` and `lever.co` hosts. Set it explicitly only when a custom employer domain is genuinely backed by Greenhouse or Lever. Ashby and SmartRecruiters are covered by the separate Phase 6 controlled canaries. Workday uses the multi-step Phase 7 workflow in [`qa/workday/README.md`](../workday/README.md); it is not accepted by this Greenhouse/Lever capture command. Use distinct application pages and respect each site's terms and access policies.
+The `adapter` is the ATS provider, not the employer name. This workflow accepts `GREENHOUSE` and `LEVER`; company names such as `ACCENTURE` are invalid. The adapter may be omitted for standard `greenhouse.io` and `lever.co` hosts. Set it explicitly only when a custom employer domain is genuinely backed by Greenhouse or Lever. Ashby and SmartRecruiters use controlled canary fixtures. Workday uses the separate multi-step workflow in [`qa/workday/README.md`](../workday/README.md); it is not accepted by this Greenhouse/Lever capture command. Use distinct application pages and respect each site's terms and access policies.
 
 ## 2. Capture sanitized metadata
 
@@ -98,7 +98,7 @@ npm run ats:qa:replay -- --captures path/to/captures --reviews path/to/reviews -
 
 The command exits nonzero when the gate is not satisfied.
 
-When upgrading a Phase 3 review set to the Phase 4 ontology, reconcile only the previously combined current/future sponsorship decisions before replay:
+When replaying a review set created before current and future sponsorship were separated, reconcile only the previously combined sponsorship decisions:
 
 ```bash
 npm run ats:qa:reconcile-work-auth -- --confirm-distinction
@@ -107,9 +107,9 @@ npm run ats:qa:replay -- --enforce
 
 This narrowly guarded migration changes a field from mapped to manual only when its reviewed target was current sponsorship but its captured question explicitly combines both current and future timing. It writes an audit summary and does not alter page signoff.
 
-## Phase 3 completion record
+## Completed validation record
 
-The final 2026-08-30 release run covered 100 Greenhouse and 100 Lever forms. A person confirmed all four page checks for every fixture. After the Phase 4 combined-sponsorship safety correction, enforced replay passes with 200/200 fully reviewed forms, 8,079/8,079 correct reviewed mappings, 1,667/1,667 successful eligible autofills, and zero severe wrong-field incidents.
+The 2026-08-30 release run covered 100 Greenhouse and 100 Lever forms. A person confirmed all four page checks for every fixture. After the combined-sponsorship safety correction, enforced replay passed with 200/200 fully reviewed forms, 8,079/8,079 correct reviewed mappings, 1,667/1,667 successful eligible autofills, and zero severe wrong-field incidents. Keep this workflow available for adapter regressions and future release checks.
 
 ## Controlled dry run
 

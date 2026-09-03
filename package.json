@@ -45,19 +45,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --build",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
-    "check:phase0": "npm run check && npm run test:e2e",
-    "check:phase1": "npm run check && npm run test:e2e",
-    "check:phase2": "npm run check && npm run test:e2e",
-    "check:phase3": "npm run check && npm run test:e2e",
-    "check:phase4": "npm run check && npm run test:e2e",
-    "check:phase5": "npm run check && npm run test:e2e",
-    "check:phase6": "npm run check && npm run test:e2e",
-    "check:phase7": "npm run check && npm run test:e2e",
-    "check:phase8": "npm run check && npm run test:e2e",
-    "check:phase9": "npm run check && npm run test:e2e",
-    "check:phase10": "npm run check && npm run test:e2e",
-    "check:phase11": "npm run check && npm run test:e2e",
-    "check:phase12": "npm run check && npm run test:e2e"
+    "verify": "npm run check && npm run test:e2e"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",

@@ -4,7 +4,7 @@ import {
   type ApprovedUploadPlan,
 } from "@copilot/job-schema";
 
-import { inspectVisibleForm } from "./scanner";
+import { inspectVisibleForm, isInputControl } from "./scanner";
 
 function bytesFromBase64(value: string): Uint8Array {
   const binary = atob(value);
@@ -31,7 +31,7 @@ export async function uploadApprovedFile(
     });
   }
   const control = inspectVisibleForm(targetDocument).controlsByFieldId.get(plan.fieldId);
-  if (!(control instanceof HTMLInputElement) || control.type !== "file" || control.disabled) {
+  if (!isInputControl(control) || control.type !== "file" || control.disabled) {
     return UploadResultSchema.parse({
       analysisId: plan.analysisId,
       fieldId: plan.fieldId,
@@ -57,12 +57,13 @@ export async function uploadApprovedFile(
       reason: "The approved résumé hash did not match the supplied bytes.",
     });
   }
-  const file = new File([buffer], plan.file.fileName, { type: plan.file.mimeType });
-  const transfer = new DataTransfer();
+  const ownerWindow = control.ownerDocument.defaultView ?? window;
+  const file = new ownerWindow.File([buffer], plan.file.fileName, { type: plan.file.mimeType });
+  const transfer = new ownerWindow.DataTransfer();
   transfer.items.add(file);
   control.files = transfer.files;
-  control.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
-  control.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+  control.dispatchEvent(new ownerWindow.Event("input", { bubbles: true, composed: true }));
+  control.dispatchEvent(new ownerWindow.Event("change", { bubbles: true, composed: true }));
   return UploadResultSchema.parse({
     analysisId: plan.analysisId,
     fieldId: plan.fieldId,

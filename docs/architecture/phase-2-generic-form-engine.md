@@ -10,7 +10,7 @@ The generic engine classifies fields into canonical questions using deterministi
 - **R1:** normalized accessible labels, ARIA text, placeholders, and fieldset legends.
 - **R2/Unmapped:** ambiguous or unmatched fields; these are never selected automatically.
 
-Every mapping carries its canonical question, confidence, evidence tier, fillability, and any blocking reason. The controlled R0/R1 semantic matrix currently measures 15 correct predictions from 15 predictions: **100% precision**, above the Phase 2 exit threshold of 99.5%.
+Every mapping carries its canonical question, confidence, evidence tier, fillability, and any blocking reason. The controlled R0/R1 semantic matrix currently measures 17 correct predictions from 17 predictions: **100% precision**, above the original 99.5% exit threshold.
 
 ## Review and trust boundary
 
@@ -48,12 +48,14 @@ The content script tracks input/change events separately from its own guarded ev
 - A rescan discovers the newly visible field.
 - Real React controlled inputs update component state.
 - Real Vue controlled inputs update reactive state.
+- Same-origin embedded documents and open web-component roots are included in scanning, highlighting, user-edit protection, and reviewed filling.
+- Internal listboxes controlled by a parent combobox are not duplicated as separate application fields.
 - Required, select, radio, checkbox, textarea, hidden, password, and dynamic controls are covered across unit and Chromium tests.
 
 ## Verification
 
 ```bash
-npm run check:phase2
+npm run verify
 ```
 
 The gate runs formatting, lint, TypeScript, all unit/schema tests, production builds, the R0/R1 precision assertion, and unpacked-extension Chromium tests.
@@ -65,4 +67,4 @@ The gate runs formatting, lint, TypeScript, all unit/schema tests, production bu
 - No submission.
 - No AI-based mapping.
 - No filling for unknown facts or consent/open-text fields without verified reusable answers.
-- Precision is measured on the committed controlled fixture matrix; broader live-site coverage belongs to later ATS phases.
+- Precision is measured on the committed controlled fixture matrix; broader live-site confidence comes from adapter-specific fixtures and read-only QA.

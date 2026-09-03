@@ -16,12 +16,34 @@ const SUPPORTED_INPUT_TYPES = new Set([
 export type SupportedControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 export type InspectableControl = HTMLElement;
 
-export function isSupportedControl(control: InspectableControl): control is SupportedControl {
-  return (
-    control instanceof HTMLInputElement ||
-    control instanceof HTMLSelectElement ||
-    control instanceof HTMLTextAreaElement
-  );
+function tagName(value: EventTarget | null | undefined): string {
+  return typeof (value as { tagName?: unknown } | null)?.tagName === "string"
+    ? (value as unknown as { tagName: string }).tagName.toLocaleUpperCase()
+    : "";
+}
+
+export function isInputControl(
+  control: EventTarget | null | undefined,
+): control is HTMLInputElement {
+  return tagName(control) === "INPUT";
+}
+
+export function isSelectControl(
+  control: EventTarget | null | undefined,
+): control is HTMLSelectElement {
+  return tagName(control) === "SELECT";
+}
+
+export function isTextAreaControl(
+  control: EventTarget | null | undefined,
+): control is HTMLTextAreaElement {
+  return tagName(control) === "TEXTAREA";
+}
+
+export function isSupportedControl(
+  control: EventTarget | null | undefined,
+): control is SupportedControl {
+  return isInputControl(control) || isSelectControl(control) || isTextAreaControl(control);
 }
 
 function text(value: string | null | undefined): string {
@@ -29,14 +51,66 @@ function text(value: string | null | undefined): string {
 }
 
 export function isInspectable(control: InspectableControl): boolean {
-  if (control instanceof HTMLInputElement) {
+  if (isInputControl(control)) {
     if (control.type === "password" || control.type === "hidden") return false;
     if (!SUPPORTED_INPUT_TYPES.has(control.type)) return false;
   }
 
   if (control.hidden || control.closest("[hidden], [aria-hidden='true']")) return false;
-  const style = window.getComputedStyle(control);
+  const style = (control.ownerDocument.defaultView ?? window).getComputedStyle(control);
   return style.display !== "none" && style.visibility !== "hidden";
+}
+
+function tree(targetDocument: Document): {
+  roots: Array<Document | ShadowRoot>;
+  documents: Document[];
+} {
+  const roots: Array<Document | ShadowRoot> = [];
+  const documents: Document[] = [];
+  const visitedRoots = new Set<Document | ShadowRoot>();
+  const visitedDocuments = new Set<Document>();
+
+  const visitRoot = (root: Document | ShadowRoot) => {
+    if (visitedRoots.has(root)) return;
+    visitedRoots.add(root);
+    roots.push(root);
+
+    for (const element of root.querySelectorAll<HTMLElement>("*")) {
+      if (element.shadowRoot) visitRoot(element.shadowRoot);
+    }
+
+    for (const frame of root.querySelectorAll<HTMLIFrameElement | HTMLFrameElement>(
+      "iframe, frame",
+    )) {
+      try {
+        if (frame.contentDocument) visitDocument(frame.contentDocument);
+      } catch {
+        // Cross-origin frames stay outside the extension's site-scoped access boundary.
+      }
+    }
+  };
+
+  const visitDocument = (target: Document) => {
+    if (visitedDocuments.has(target)) return;
+    visitedDocuments.add(target);
+    documents.push(target);
+    visitRoot(target);
+  };
+
+  visitDocument(targetDocument);
+  return { roots, documents };
+}
+
+export function reachableDocuments(targetDocument: Document = document): Document[] {
+  return tree(targetDocument).documents;
+}
+
+function elementById(control: InspectableControl, id: string): HTMLElement | null {
+  const root = control.getRootNode() as Document | ShadowRoot;
+  const rootWithLookup = root as DocumentOrShadowRoot & {
+    getElementById?: (elementId: string) => HTMLElement | null;
+  };
+  return rootWithLookup.getElementById?.(id) ?? control.ownerDocument.getElementById(id);
 }
 
 function referencedText(control: InspectableControl, attribute: string): string {
@@ -44,7 +118,7 @@ function referencedText(control: InspectableControl, attribute: string): string 
     control
       .getAttribute(attribute)
       ?.split(/\s+/)
-      .map((id) => document.getElementById(id)?.textContent ?? "")
+      .map((id) => elementById(control, id)?.textContent ?? "")
       .join(" "),
   );
 }
@@ -82,10 +156,9 @@ function groupLabel(control: InspectableControl): string {
 
 function controlKind(control: InspectableControl): RawField["controlKind"] {
   if (control.getAttribute("role") === "combobox") return "other";
-  if (control instanceof HTMLTextAreaElement) return "textarea";
-  if (control instanceof HTMLSelectElement)
-    return control.multiple ? "select-multiple" : "select-one";
-  if (control instanceof HTMLInputElement)
+  if (isTextAreaControl(control)) return "textarea";
+  if (isSelectControl(control)) return control.multiple ? "select-multiple" : "select-one";
+  if (isInputControl(control))
     return SUPPORTED_INPUT_TYPES.has(control.type)
       ? (control.type as RawField["controlKind"])
       : "other";
@@ -107,7 +180,7 @@ function controlOptions(
   control: InspectableControl,
   targetDocument: Document,
 ): RawField["options"] {
-  if (control instanceof HTMLSelectElement)
+  if (isSelectControl(control))
     return Array.from(control.options).map((option) => ({
       value: option.value,
       text: text(option.textContent),
@@ -117,7 +190,9 @@ function controlOptions(
   if (role !== "combobox" && role !== "listbox") return [];
   const controlledId = text(control.getAttribute("aria-controls"));
   const optionContainer =
-    role === "listbox" ? control : targetDocument.getElementById(controlledId);
+    role === "listbox"
+      ? control
+      : (elementById(control, controlledId) ?? targetDocument.getElementById(controlledId));
   if (!optionContainer) return [];
   return Array.from(optionContainer.querySelectorAll<HTMLElement>("[role='option']"))
     .filter(isInspectable)
@@ -132,10 +207,9 @@ function controlOptions(
 }
 
 function nativeControlHasValue(control: InspectableControl): boolean {
-  if (control instanceof HTMLSelectElement)
-    return control.selectedIndex >= 0 && Boolean(control.value);
-  if (control instanceof HTMLTextAreaElement) return Boolean(control.value.trim());
-  if (!(control instanceof HTMLInputElement)) return false;
+  if (isSelectControl(control)) return control.selectedIndex >= 0 && Boolean(control.value);
+  if (isTextAreaControl(control)) return Boolean(control.value.trim());
+  if (!isInputControl(control)) return false;
   if (control.type === "checkbox" || control.type === "radio") return control.checked;
   if (control.type === "file") return (control.files?.length ?? 0) > 0;
   return Boolean(control.value.trim());
@@ -155,11 +229,25 @@ export function inspectVisibleForm(targetDocument: Document = document): {
   snapshot: PageSnapshot;
   controlsByFieldId: Map<string, InspectableControl>;
 } {
-  const controls = Array.from(
-    targetDocument.querySelectorAll<InspectableControl>(
-      "input, select, textarea, [role='combobox'], [role='listbox'], [role='checkbox'], [role='radio']",
-    ),
-  ).filter(isInspectable);
+  const candidates = tree(targetDocument).roots.flatMap((root) =>
+    Array.from(
+      root.querySelectorAll<InspectableControl>(
+        "input, select, textarea, [role='combobox'], [role='listbox'], [role='checkbox'], [role='radio']",
+      ),
+    ).filter(isInspectable),
+  );
+  const controlledListboxes = new Set(
+    candidates.flatMap((control) => {
+      if (control.getAttribute("role") !== "combobox") return [];
+      const controlledId = text(control.getAttribute("aria-controls"));
+      const controlled = controlledId ? elementById(control, controlledId) : null;
+      return controlled?.getAttribute("role") === "listbox" ? [controlled] : [];
+    }),
+  );
+  const controls = candidates.filter((control) => {
+    const listbox = control.closest("[role='listbox']");
+    return !listbox || !controlledListboxes.has(listbox as HTMLElement);
+  });
   const fieldIdOccurrences = new Map<string, number>();
   const controlsByFieldId = new Map<string, InspectableControl>();
 
@@ -185,19 +273,17 @@ export function inspectVisibleForm(targetDocument: Document = document): {
       autocomplete: text(control.getAttribute("autocomplete")),
       automationId: text(control.getAttribute("data-automation-id")),
       valueState: valueState(control),
-      ...(!(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement) ||
-      control.maxLength <= 0
+      ...(!(isInputControl(control) || isTextAreaControl(control)) || control.maxLength <= 0
         ? {}
         : { maxLength: Math.min(control.maxLength, 20_000) }),
       groupLabel: groupLabel(control),
       optionValue:
-        control instanceof HTMLInputElement && ["radio", "checkbox"].includes(control.type)
+        isInputControl(control) && ["radio", "checkbox"].includes(control.type)
           ? control.value
           : "",
-      checked:
-        control instanceof HTMLInputElement
-          ? control.checked
-          : control.getAttribute("aria-checked") === "true",
+      checked: isInputControl(control)
+        ? control.checked
+        : control.getAttribute("aria-checked") === "true",
       userEdited: control.getAttribute("data-job-copilot-user-edited") === "true",
       options: controlOptions(control, targetDocument),
     };

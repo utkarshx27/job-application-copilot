@@ -46,6 +46,7 @@ import { StrictMode, useEffect, useRef, useState, type ChangeEvent } from "react
 import { createRoot } from "react-dom/client";
 
 import { readApprovedResumeFile, readResumeFile } from "../resume-file";
+import { ensureActiveSiteAccess } from "../site-access";
 
 type Tab = "profile" | "observe" | "applications" | "sync";
 type Notice = { kind: "success" | "error"; message: string } | null;
@@ -1209,9 +1210,19 @@ function ObservePanel() {
   }
 
   async function scan() {
-    setState({ status: "loading" });
     setActionNotice(null);
     try {
+      const siteAccess = await ensureActiveSiteAccess(
+        () => chrome.tabs.query({ active: true, lastFocusedWindow: true }),
+        (originPattern) => chrome.permissions.contains({ origins: [originPattern] }),
+        (originPattern) => chrome.permissions.request({ origins: [originPattern] }),
+      );
+      if (!siteAccess.granted) {
+        setState({ status: "error", message: siteAccess.message });
+        return;
+      }
+
+      setState({ status: "loading" });
       const response = await sendPanelRequest({ type: "PANEL_ANALYZE_ACTIVE_TAB" });
       if (!response.ok) {
         setState({ status: "error", message: response.error.message });

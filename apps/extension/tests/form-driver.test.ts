@@ -142,4 +142,33 @@ describe("reviewed form driver", () => {
     expect(result.filledFieldIds).toEqual([]);
     expect(result.skipped[0]?.reason).toContain("manual completion");
   });
+
+  it("fills and highlights a reviewed field inside a same-origin application frame", () => {
+    const frame = document.createElement("iframe");
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    frameDocument.body.innerHTML = `<input id="embedded-email" type="email" aria-label="Email" />`;
+
+    const result = applyFillPlan(
+      {
+        analysisId: "analysis-embedded",
+        items: [
+          {
+            fieldId: "embedded-email",
+            canonicalQuestion: "CONTACT.email",
+            operation: { kind: "text", value: "candidate@example.test" },
+          },
+        ],
+      },
+      document,
+    );
+    const embeddedEmail = frameDocument.getElementById("embedded-email") as HTMLInputElement;
+
+    expect(result.filledFieldIds).toEqual(["embedded-email"]);
+    expect(embeddedEmail.value).toBe("candidate@example.test");
+    expect(highlightFields(["embedded-email"], document).highlightedFieldIds).toEqual([
+      "embedded-email",
+    ]);
+    expect(embeddedEmail.getAttribute("data-job-copilot-highlight")).toBe("true");
+  });
 });

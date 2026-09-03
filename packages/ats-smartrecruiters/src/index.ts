@@ -81,9 +81,16 @@ export const smartRecruitersAdapter: AtsAdapter = {
     if (!detection.supported) return null;
     const url = new URL(targetDocument.location.href);
     const json = jsonLdJob(targetDocument);
+    const titleParts = compactText(targetDocument.title).split(/\s+(?:-|–|—|\|)\s+/);
     const title =
       compactText(json?.title) ||
-      selectorText(targetDocument, ["[data-testid='job-title']", "[data-test='job-title']", "h1"]);
+      selectorText(targetDocument, [
+        "[data-testid='job-title']",
+        "[data-test='job-title']",
+        "[class*='job-title' i]",
+        "h1",
+      ]) ||
+      titleParts[0];
     const company =
       compactText(json?.hiringOrganization?.name) ||
       metaContent(targetDocument, "copilot-company") ||
@@ -92,7 +99,8 @@ export const smartRecruitersAdapter: AtsAdapter = {
         "[data-company-name]",
         ".company-title",
       ]) ||
-      metaContent(targetDocument, "og:site_name");
+      metaContent(targetDocument, "og:site_name") ||
+      titleParts[1];
     if (!title || !company) return null;
     const externalRequisitionId = postingId(targetDocument, url);
     const description =
@@ -167,6 +175,14 @@ export const smartRecruitersAdapter: AtsAdapter = {
   },
 
   classifyField(field) {
+    const label = compactText(
+      [field.accessibleName, field.labelText, field.ariaLabel, field.placeholder].join(" "),
+    ).toLocaleLowerCase();
+    if (/^(country code|phone country code)\b/.test(label))
+      return atsFieldRule(field, "SMARTRECRUITERS", "CONTACT.phone", label);
+    if (/^city\b/.test(label)) return atsFieldRule(field, "SMARTRECRUITERS", "ADDRESS.city", label);
+    if (/\binterest\b.*\bworking\b.*\bthere\b/.test(label))
+      return atsFieldRule(field, "SMARTRECRUITERS", "ESSAY.why_company", label);
     const machine = `${field.name} ${field.domId}`.toLocaleLowerCase();
     const match = FIELD_RULES.find(([pattern]) => pattern.test(machine));
     return match ? atsFieldRule(field, "SMARTRECRUITERS", match[1], machine) : null;

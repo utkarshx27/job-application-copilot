@@ -54,7 +54,7 @@ The committed PDF and DOCX fixtures contain fictional `.test` data and are gener
 ## Verification
 
 ```bash
-npm run check:phase1
+npm run verify
 ```
 
 The profile remains local unless the user explicitly exports a JSON backup. Exported JSON is intentionally portable and is not encrypted; the UI warns users to store it securely.

@@ -58,7 +58,7 @@ The committed Test ATS includes:
 Run:
 
 ```bash
-npm run check:phase3
+npm run verify
 ```
 
 ## Completed release gate

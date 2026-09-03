@@ -19,7 +19,7 @@ These external pages remain untrusted. The extension does not call either platfo
 ## Package and runtime boundaries
 
 - `ats-ashby` owns Ashby host/DOM detection, JSON-LD-first extraction, stable system-path rules, and confirmation evidence.
-- `ats-smartrecruiters` owns SmartRecruiters host/DOM detection, route/requisition identity, JSON-LD-first extraction, stable machine-field rules, and confirmation evidence.
+- `ats-smartrecruiters` owns SmartRecruiters host/DOM detection, route/requisition identity, JSON-LD-first extraction with document-title fallback, stable machine/label rules, and confirmation evidence.
 - `ats-core` exposes the shared four-adapter interface and selects only detections above the existing confidence threshold.
 - `job-schema` allowlists `ASHBY` and `SMARTRECRUITERS` as runtime ATS identifiers.
 - The extension router registers both adapters; the background worker still recomputes all mappings and reviewed plans from a fresh scan.
@@ -33,11 +33,11 @@ Adapter-specific R0 rules are limited to stable machine identifiers:
 - Ashby `_systemfield_*` identity, contact, résumé, links, current employment, and education paths.
 - SmartRecruiters identity, contact, résumé, links, current employment, and education machine names.
 
-All other controls fall through to the generic deterministic classifier. Ambiguous screening, consent, location-preference, and narrative questions remain in explicit review. Work-authorization timing and sensitive-question policies are unchanged.
+The live OneClick label rules also distinguish City, the phone country-code widget, and a company-interest narrative when machine IDs are generic. All other controls fall through to the generic deterministic classifier. Ambiguous uploads, social links without verified profile fields, screening, consent, and location-preference questions remain in explicit review. Work-authorization timing and sensitive-question policies are unchanged.
 
 ## Rich custom controls
 
-The scanner now discovers visible ARIA `combobox`, `listbox`, `checkbox`, and `radio` widgets in addition to native form controls. It captures accessible names, required/disabled state, checked state, and visible role options. An input carrying `role="combobox"` is classified as `other`, even though it is technically an HTML input.
+The scanner discovers visible ARIA `combobox`, `listbox`, `checkbox`, and `radio` widgets in addition to native form controls. It traverses same-origin embedded forms and open web-component roots, captures accessible names and state, and removes listbox internals already represented by their owning combobox. An input carrying `role="combobox"` is classified as `other`, even though it is technically an HTML input.
 
 Every role-based widget is manual-only. It appears in the review queue with an explanation, receives no fill operation, and is rejected again by the content-script driver if a forged plan attempts to target it. This avoids unsafe synthetic clicks and framework-state corruption.
 
@@ -63,9 +63,9 @@ The committed sanitized canaries contain no applicant values or session data. To
 
 This controlled gate is a regression baseline, not permission to submit real applications. Public-page maintenance checks must remain read-only and pre-submit.
 
-Run the Phase 6 release gate and the existing 200-form Greenhouse/Lever regression:
+Run the complete repository gate and the existing 200-form Greenhouse/Lever regression:
 
 ```bash
-npm run check:phase6
+npm run verify
 npm run ats:qa:replay -- --enforce
 ```

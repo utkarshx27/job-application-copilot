@@ -45,7 +45,7 @@ CSV uses a fixed version 1 column contract. Every imported row is independently 
 Run the complete Phase 8 gate:
 
 ```bash
-npm run check:phase8
+npm run verify
 ```
 
 The gate includes formatting, lint, type checking, unit/schema tests, production builds, and unpacked-extension Chromium tests. Chromium coverage scans a controlled Greenhouse page twice, verifies the duplicate warning, edits tracker status, switches to the table, downloads CSV, imports a validated row, and captures the tracker UI.

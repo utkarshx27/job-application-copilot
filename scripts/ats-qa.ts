@@ -80,7 +80,7 @@ function parseUrlList(input: string): UrlEntry[] {
     const adapter = record.adapter.trim().toLocaleUpperCase();
     if (adapter !== "GREENHOUSE" && adapter !== "LEVER")
       throw new Error(
-        `URL entry ${index + 1} has adapter "${record.adapter}". The adapter is the ATS provider, not the employer name; Phase 3 accepts only "GREENHOUSE" or "LEVER".`,
+        `URL entry ${index + 1} has adapter "${record.adapter}". The adapter is the ATS provider, not the employer name; this workflow accepts only "GREENHOUSE" or "LEVER".`,
       );
     return { ...record, adapter };
   });
@@ -90,11 +90,11 @@ function parseUrlList(input: string): UrlEntry[] {
 function rejectKnownUnsupportedAts(url: URL): void {
   if (/(^|\.)ashbyhq\.com$/i.test(url.hostname))
     throw new Error(
-      `${url.hostname} is an Ashby site. This Phase 3 QA command supports only Greenhouse and Lever forms.`,
+      `${url.hostname} is an Ashby site. This QA command supports only Greenhouse and Lever forms.`,
     );
   if (/(^|\.)myworkdayjobs\.com$/i.test(url.hostname))
     throw new Error(
-      `${url.hostname} is a Workday site. This Phase 3 QA command supports only Greenhouse and Lever forms.`,
+      `${url.hostname} is a Workday site. This QA command supports only Greenhouse and Lever forms.`,
     );
 }
 
@@ -816,7 +816,7 @@ async function reconcileWorkAuthCommand(options: CliOptions): Promise<void> {
         severityIfWrong: fieldReview.severityIfWrong,
         ...(fieldReview.reviewContext ? { reviewContext: fieldReview.reviewContext } : {}),
         notes:
-          "Phase 4 safety correction: combined current/future sponsorship cannot reuse either answer independently.",
+          "Safety correction: combined current/future sponsorship cannot reuse either answer independently.",
       };
     });
     const corrected = AtsQaReviewSchema.parse({ ...current, fields });

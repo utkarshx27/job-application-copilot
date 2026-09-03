@@ -57,7 +57,7 @@ The submission store contains intent identifiers, adapter/page fingerprints, tim
 The controlled gate covers default-off behavior, dual opt-in, literal explicit consent, countdown cancellation, stale-edit rejection, fixed-token schema enforcement, persisted-before-click ordering, confirmation identity binding, duplicate-execute rejection, tracker confirmation, and a real MV3 Chromium flow.
 
 ```bash
-npm run check:phase12
+npm run verify
 ```
 
 Production submission requires a new threat review, policy approval, staging validation, real-form canaries, rollback controls, and an explicit release decision. It is not authorized by this implementation.

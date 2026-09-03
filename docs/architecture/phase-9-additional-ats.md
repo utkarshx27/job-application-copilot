@@ -54,7 +54,7 @@ Each adapter has a sanitized metadata fixture and unit tests covering detection,
 Run the complete Phase 9 gate:
 
 ```bash
-npm run check:phase9
+npm run verify
 ```
 
 The gate does not claim broad public-site production validation. Branded/custom-domain pages and platform releases should be added as sanitized fixtures before widening selectors.

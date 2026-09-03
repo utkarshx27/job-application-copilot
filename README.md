@@ -3,272 +3,272 @@
 [![CI](https://github.com/utkarshx27/job-application-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/utkarshx27/job-application-copilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-A local-first, user-controlled Chrome extension for safely assisting with job application forms. The project is designed around verified candidate facts, deterministic ATS adapters, explicit review, and a strict separation between autofill and submission.
+A local-first, user-controlled Chrome extension that helps complete job application forms from a verified candidate profile. It scans the visible form, explains deterministic matches, and fills only fields the user selects.
 
 > [!IMPORTANT]
-> This project is an early-stage copilot. It can manage a local candidate profile and fill explicitly reviewed, high-confidence fields, but it does not navigate through or submit job applications.
+> The MVP is implemented and open for continued community development. On real application sites, the extension never clicks Next or Submit. Always review the completed form and submit it yourself.
 
-## Project status
+## What it can do
 
-Phases 0 through 6 and Phases 8 through 10 are complete as controlled implementations. Phase 7 has a complete controlled Workday implementation; its separate 250-form public validation gate remains open:
+### Profile and résumé
 
-- Manifest V3 extension and React side panel.
-- Runtime-validated side panel, service worker, and content-script messaging.
-- Candidate truth, form, fixture, command, and site-policy schemas.
-- Accessible visible-form scanner.
-- Password and hidden-control exclusion.
-- Controlled Test ATS and sanitized regression fixture.
-- Unit, schema, and real Chromium extension tests.
-- GitHub Actions release gate.
-- Versioned local candidate Truth Vault backed by `chrome.storage.local`.
-- Manual profile editor with explicit sensitivity handling.
-- Validated JSON backup, restore, and stored-profile migration.
-- Local PDF and DOCX résumé extraction with SHA-256 source records.
-- Reviewable document-derived facts, conflict resolution, and user verification.
-- Sanitized résumé fixtures and Chromium coverage for both file formats.
-- Deterministic R0/R1 semantic field mapping with calibrated confidence.
-- Review UI with per-field selection, reasons, confidence, and highlight mode.
-- Service-worker-revalidated fill plans with no page-supplied values.
-- React-safe and Vue-safe text, select, radio, checkbox, and textarea drivers.
-- User-edit detection that prevents later copilot overwrites.
-- Dynamic-form rescanning and controlled React/Vue Test ATS fixtures.
-- Greenhouse and Lever detection with adapter-specific field rules.
-- Normalized job extraction, requisition identity, and local job snapshots.
-- Explicit custom-question review for unmatched text and native select controls.
-- Hash-verified, short-lived approval for one selected PDF/DOCX résumé upload.
-- Confirmation-page detection and local APPLYING/APPLIED tracker transitions.
-- Sanitized Greenhouse/Lever fixtures and controlled Chromium flows.
-- Read-only public-form QA capture with isolated browser sessions and blocked mutating requests.
-- Sanitized metadata replay, separate human ground truth, prioritized review queues, and gate metrics.
-- Versioned canonical question ontology with aliases, keyword rules, and local semantic matching.
-- Explicit risk policies that separate current authorization, current sponsorship, and future sponsorship.
-- Company, country, role, application, and global saved-response scopes with context enforcement.
-- Teach-once custom-answer controls that default to not saving and always require review before fill.
-- Answer expiry, stale-response prompts, and a hard ban on sensitive-answer inference or reuse.
-- Provider-neutral, schema-validated AI tasks with bounded retries, timeouts, and content-free audits.
-- Optional OpenAI Responses adapter with strict structured output, no tools, and `store: false`.
-- Session-only API configuration that is excluded from profiles, backups, page fields, and audit records.
-- Deterministic-first narrative classification and minimized professional evidence selection.
-- Unsupported-claim, sensitive-data, prompt-injection, and hard character-limit blockers.
-- Evidence-visible draft review with separate use-draft and reviewed-fill actions.
-- Ashby and SmartRecruiters detection, normalized job extraction, field rules, résumé upload, and confirmation tracking.
-- Dynamic-question rescanning and safe discovery of ARIA combobox, listbox, checkbox, and radio controls.
-- Custom ATS widgets remain visible but manual-only; the extension never simulates arbitrary component clicks.
-- Workday tenant/site detection, normalized job extraction, authentication-boundary explanations, and confirmation tracking.
-- Read-only Workday SPA step modeling with persisted local progress and refresh recovery.
-- Privacy-preserving prefilled-state detection: résumé/account-parsed values are never captured and are protected from overwrite.
-- Deterministic first-record work-history and education mappings, manual-only skill widgets, and dynamic questionnaire rescanning.
-- Controlled Test ATS auto-next with default-off global and per-application opt-ins, a cancelable countdown, persisted one-shot intents, exact Workday Next evidence, and verified transitions.
-- Controlled Test ATS submission with a separate state machine, final summary, on-page attestation, dual opt-in, explicit authorization, cancelable countdown, one dispatch, and verified confirmation.
-- Real ATS navigation and submission remain disabled; the submission command is valid only for the exact local Workday Test ATS review fixture.
-- Version 2 local tracker with automatic preservation and migration of version 1 application history.
-- Canonical ATS requisition/URL job identities and append-only, changed-only job snapshots.
-- Evidence-backed duplicate warnings for existing records, requisitions, URLs, and matching job details.
-- Editable lifecycle statuses, summary counts, filters, and accessible board/table tracker views.
-- Validated CSV import/export with per-row errors and spreadsheet-formula neutralization.
-- Deterministic iCIMS, Taleo, Workable, BambooHR, Jobvite, and Comeet adapters.
-- JSON-LD-first job extraction with platform-specific host, DOM, and requisition-route evidence.
-- Sanitized metadata fixtures and real Chromium reviewed-fill/résumé-upload coverage for all six Phase 9 ATS platforms.
-- Opt-in encrypted sync for the validated profile vault and application tracker while local-only mode remains the default.
-- Separate passphrase-derived authentication and AES-256-GCM keys; the server stores ciphertext and cannot read synchronized records.
-- Session-only unlock keys, optimistic revision conflicts, device listing/revocation, encrypted backup, and account-wide cloud deletion.
-- Self-hostable Fastify sync service with atomic JSON persistence for controlled/local deployments.
-- Runtime-requested optional host access and a real Chromium create-account, backup, and session-lock test.
+- Store a versioned candidate profile locally in `chrome.storage.local`.
+- Import PDF and DOCX résumés locally without uploading the raw file to a server.
+- Review document-derived facts, resolve conflicts, and explicitly verify them.
+- Export and restore schema-validated JSON profile backups.
+- Preserve user edits and refuse to overwrite existing or résumé-parsed page values.
 
-Phase 12 is complete for the controlled local Workday Test ATS only. Real Workday and every other real ATS remain manual for navigation and submission. Production submission requires a separate security, policy, staging, and canary release decision. See the [Phase 12 architecture](./docs/architecture/phase-12-controlled-submission.md), [Phase 11 architecture](./docs/architecture/phase-11-controlled-auto-next.md), [Workday QA workflow](./qa/workday/README.md), and the full [implementation blueprint](./IMPLEMENTATION_Job_Application_Copilot.md).
+### Form assistance
 
-## Design principles
+- Detect visible native controls, same-origin embedded forms, and open web-component roots.
+- Exclude password, hidden, disabled, and unsupported sensitive controls.
+- Map common identity, contact, address, links, work, education, and authorization fields.
+- Show the mapping, confidence, reason, and fillability for every detected control.
+- Highlight selected fields before filling them.
+- Fill reviewed text, textarea, select, radio, and checkbox controls with framework-safe events.
+- Rescan dynamic forms and preserve manual changes.
+- Keep unfamiliar custom widgets and ambiguous fields manual.
 
-- **Truthful by construction:** generated content cannot redefine candidate facts.
-- **Local first:** basic profile and autofill functionality must not require cloud storage.
-- **User controlled:** review and real-world submission remain user actions; the synthetic Test ATS requires multiple explicit approvals.
-- **Deterministic before AI:** known fields use tested rules; AI is reserved for appropriate open-text assistance.
-- **Unknown is not No:** ambiguous or missing facts must be reviewed, never silently converted.
-- **Pages are untrusted:** browser commands are allowlisted and webpage text is treated as data.
-- **Graceful fallback:** unsupported sites should still offer useful copy assistance.
+### Answers and optional AI drafting
 
-## Repository structure
+- Review unmatched questions and enter an answer without saving it.
+- Optionally save reusable answers with application, company, country, role, or global scope.
+- Expire saved answers according to the question’s risk policy.
+- Keep work authorization, legal, consent, and voluntary-disclosure questions under stricter review.
+- Optionally create grounded drafts for supported narrative questions using the OpenAI Responses API.
+- Keep the API key in Chrome session storage only.
+- Require separate **Use this draft** and **Fill reviewed custom answers** actions; AI text never fills automatically.
 
-```text
-apps/
-  extension/                 Manifest V3 extension and side panel
-  sync-server/               Optional encrypted sync API and storage
-  test-ats/                  Controlled synthetic application site
-packages/
-  browser-command-schema/    Runtime and browser command allowlists
-  candidate-schema/          Candidate truth model
-  form-schema/               Form snapshot and fixture contracts
-  form-engine/               Semantic mapping, confidence, and reviewed fill planning
-  ai-gateway/                Provider-neutral structured AI tasks and adapters
-  grounded-generation/       Evidence selection, policy, claims, and draft validation
-  question-ontology/         Versioned questions, risk, aliases, and deterministic classification
-  saved-response-engine/     Scoped matching, freshness, and teach-once response policy
-  job-schema/                Job, ATS, upload, confirmation, and tracker contracts
-  ats-core/                  Shared adapter interfaces and bounded page parsing
-  ats-greenhouse/            Greenhouse detector, extraction, and field rules
-  ats-lever/                 Lever detector, extraction, and field rules
-  ats-ashby/                 Ashby detector, extraction, and field rules
-  ats-smartrecruiters/       SmartRecruiters detector, extraction, and field rules
-  ats-workday/               Workday detector, workflow model, and safe field rules
-  ats-icims/                 iCIMS detector, extraction, and field rules
-  ats-taleo/                 Oracle Taleo detector, extraction, and field rules
-  ats-workable/              Workable detector, extraction, and field rules
-  ats-bamboohr/              BambooHR detector, extraction, and field rules
-  ats-jobvite/               Jobvite detector, extraction, and field rules
-  ats-comeet/                Comeet detector, extraction, and field rules
-  ats-qa/                    Sanitization, replay metrics, and human-review contracts
-  application-state/         Local application tracker transitions
-  profile-core/              Truth Vault, versioning, migration, and import review
-  resume-parser/             Conservative local résumé text parser
-  sync-core/                 Encryption, sync schemas, revisions, and conflict merging
-  navigation-core/           Controlled Next readiness, persisted intents, and metrics
-  submission-core/           Test ATS submission policy, one-shot intents, and metrics
-  shared/                    Site policy and shared utilities
-fixtures/ats/                Sanitized ATS regression fixtures
-qa/ats/                      Public-form QA URL template and manual-review workflow
-qa/workday/                  Workday multi-step pre-submit validation workflow
-evals/end-to-end/            Playwright extension tests
-docs/                        Architecture and engineering notes
-```
+### Applications and sync
 
-## Prerequisites
+- Track applications locally with editable statuses, board/table views, and summary counts.
+- Detect likely duplicates from requisition identity, normalized URLs, and job details.
+- Import and export tracker CSV safely.
+- Optionally synchronize the encrypted profile and tracker through the included self-hostable sync service.
+- Support encrypted backups, session locking, device listing/revocation, and cloud-account deletion.
+
+## Supported application systems
+
+| Application system   | Detection and safe native-field fill | Résumé upload               | Notes                                                      |
+| -------------------- | ------------------------------------ | --------------------------- | ---------------------------------------------------------- |
+| Greenhouse           | Yes                                  | Reviewed upload             | Public read-only QA set available                          |
+| Lever                | Yes                                  | Reviewed upload             | Public read-only QA set available                          |
+| Ashby                | Yes                                  | Reviewed upload             | Custom widgets remain manual                               |
+| SmartRecruiters      | Yes                                  | Reviewed when identifiable  | Supports same-origin embedded forms                        |
+| Workday              | Yes                                  | Reviewed upload             | Multi-step state is observed; real navigation stays manual |
+| iCIMS                | Yes                                  | Reviewed upload             | Unknown widgets remain manual                              |
+| Oracle Taleo         | Yes                                  | Reviewed upload             | Unknown widgets remain manual                              |
+| Workable             | Yes                                  | Reviewed upload             | Unknown widgets remain manual                              |
+| BambooHR             | Yes                                  | Reviewed upload             | Unknown widgets remain manual                              |
+| Jobvite              | Yes                                  | Reviewed upload             | Unknown widgets remain manual                              |
+| Comeet               | Yes                                  | Reviewed upload             | Unknown widgets remain manual                              |
+| Other employer forms | Generic deterministic matching       | Only when safely identified | Site-specific controls may require manual completion       |
+
+LinkedIn and other job boards can be used to discover a role, but the extension does not automate activity on those websites. Open the employer or ATS application page before scanning.
+
+## Install from source
+
+### Requirements
 
 - Node.js 22 or newer
 - npm 11 or newer
-- Chrome or another Chromium browser for manual extension loading
+- Chrome or another Chromium browser
 
-## Getting started
+Clone, install, verify, and build:
 
 ```bash
 git clone https://github.com/utkarshx27/job-application-copilot.git
 cd job-application-copilot
 npm install
 npx playwright install chromium
-npm run check:phase1
-npm run check:phase2
-npm run check:phase3
-npm run check:phase4
-npm run check:phase5
-npm run check:phase6
-npm run check:phase7
-npm run check:phase8
-npm run check:phase9
-npm run check:phase10
-npm run check:phase11
-npm run check:phase12
-```
-
-Build the production extension:
-
-```bash
+npm run verify
 npm run build
 ```
 
-Run the optional local sync server in a separate terminal:
+Load the extension:
+
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Select **Load unpacked**.
+4. Select `apps/extension/dist`.
+5. Pin **Job Application Copilot** if desired.
+
+After pulling new code, run `npm run build`, reload the extension on `chrome://extensions`, and refresh any open application page.
+
+## How to use it
+
+### 1. Create and verify your profile
+
+1. Open the extension side panel and select **Profile**.
+2. Import a PDF/DOCX résumé or enter your details manually.
+3. Review every imported fact and resolve any conflicts.
+4. Select **Save and verify profile**.
+5. Export a JSON backup if desired and store it securely; profile exports contain personal data and are not encrypted.
+
+### 2. Scan an application
+
+1. Open the employer or ATS application form in the active browser tab.
+2. Open the extension side panel and select **Observe**.
+3. Select **Scan and match visible form**.
+4. On the first scan for a website, approve Chrome’s site-scoped permission request.
+5. Review the detected ATS, job metadata, field mappings, confidence, and blocking reasons.
+
+The extension requests access only for the active website. It does not request permanent content access to every site at once.
+
+### 3. Review and fill
+
+1. Leave selected only the fields you want the extension to fill.
+2. Optionally select **Highlight selected** and inspect the highlighted controls on the page.
+3. Select **Fill selected fields**.
+4. Complete manual custom widgets, ambiguous uploads, sensitive questions, and unsupported fields yourself.
+5. Rescan after revealing a new section or moving to another step.
+6. Review the entire application and submit it manually.
+
+The extension will not overwrite fields that already contain user-entered, account-imported, or résumé-parsed values.
+
+### 4. Review custom questions
+
+For an unmatched text question, enter a reviewed answer in the side panel. Saving is off by default. If you choose to save it, select the narrowest appropriate scope and review the suggestion again on future applications.
+
+Role-based comboboxes, listboxes, and other custom ATS controls are shown for awareness but remain manual because safely operating arbitrary widgets requires adapter-specific behavior.
+
+### 5. Upload a résumé
+
+When an upload field is identified as a résumé control:
+
+1. Select the exact PDF or DOCX file in the side panel.
+2. Review its name and approval details.
+3. Use the dedicated upload action.
+4. Confirm on the application page that the ATS retained the correct file.
+
+Ambiguous controls labelled only “Choose a file” are intentionally not guessed.
+
+### 6. Use optional grounded AI drafts
+
+1. In **Observe**, enter an OpenAI model available to your account and a valid API key.
+2. Select **Enable for this session** and approve access to `api.openai.com`.
+3. For an eligible narrative field, select **Draft with grounded AI**.
+4. Inspect the draft and its evidence.
+5. Select **Use this draft in review**, edit it if needed, and then select **Fill reviewed custom answers**.
+
+Never commit or share an API key. The extension keeps it in `chrome.storage.session`, excludes it from profile backups and audit records, and clears it with the browser session.
+
+### 7. Track applications
+
+Open **Applications** to view the local board or table, update statuses, inspect duplicate warnings, and import/export CSV. Tracker exports contain application history and should be stored securely.
+
+### 8. Use optional encrypted sync
+
+Start the included local sync service in a separate terminal:
 
 ```bash
 npm run dev --workspace @copilot/sync-server
 ```
 
-Then open the extension's **Sync** tab and use `http://127.0.0.1:8787`. The server persists encrypted records under `.tmp/sync-server/state.json` by default. This local JSON repository is for controlled/self-hosted development; review the [Phase 10 production-hardening requirements](./docs/architecture/phase-10-optional-cloud-sync.md) before exposing it to the internet.
+Open **Sync**, use `http://127.0.0.1:8787`, create or sign into an account, and unlock the session. Local-only mode remains the default. The bundled JSON-backed service is intended for controlled/self-hosted development; complete the production-hardening requirements in the [sync architecture record](./docs/architecture/phase-10-optional-cloud-sync.md) before exposing it publicly.
 
-Then:
+## Troubleshooting
 
-1. Open `chrome://extensions`.
-2. Enable **Developer mode**.
-3. Choose **Load unpacked**.
-4. Select `apps/extension/dist`.
-5. Open an employer or controlled application form.
-6. Open the extension side panel and choose **Scan and match visible form**.
+- **No inspectable active tab:** make the application page the active tab, close/reopen the side panel, and scan again.
+- **Chrome denied page access:** reload the current extension build, refresh the application page, scan again, and approve access for that hostname.
+- **Zero fields:** wait for the form to finish rendering and rescan. Cross-origin frames, closed component roots, and unsupported custom widgets may remain manual.
+- **A mapped field is not fillable:** add and verify the corresponding profile value, or complete the control manually if it is a custom widget.
+- **An existing field was skipped:** the copilot protects values already entered by you or populated by the ATS.
+- **Changes are not visible:** run `npm run build`, reload the unpacked extension, refresh the application tab, and reopen the side panel.
 
-The controlled site includes `/ashby.html`, `/smartrecruiters.html`, `/workday.html`, `/icims.html`, `/taleo.html`, `/workable.html`, `/bamboohr.html`, `/jobvite.html`, and `/comeet.html` alongside the existing Greenhouse and Lever pages when `npm run serve --workspace @copilot/test-ats` is running. The Workday fixture preserves its current step across refreshes. On that exact local fixture only, the Observe tab can enable experimental auto-next. On Review, controlled submission additionally requires all steps to have been scanned, the page attestation, separate submission flags, final summary authorization, and a five-second cancellation window.
+## Development
 
-AI drafting is optional. In the Observe tab, enter an OpenAI model and API key and enable it for the current browser session. The extension asks for access only to the OpenAI API origin. For an eligible narrative question, choose **Draft with grounded AI**, inspect the draft and evidence IDs, choose **Use this draft in review**, edit it if needed, and finally choose **Fill reviewed custom answers**. No AI action navigates or submits the application.
-
-For automatic rebuilds during extension development:
+Start an automatic extension rebuild:
 
 ```bash
 npm run dev --workspace @copilot/extension
 ```
 
-## Testing
+Run the controlled Test ATS in another terminal:
 
 ```bash
-npm test                 # Unit and schema tests
-npm run test:e2e         # Unpacked-extension tests in bundled Chromium
-npm run check:phase0     # Complete Phase 0 release gate
-npm run check:phase1     # Complete Phase 1 release gate
-npm run check:phase2     # Complete Phase 2 release gate
-npm run check:phase3     # Controlled Phase 3 gate
-npm run check:phase4     # Complete Phase 4 release gate
-npm run check:phase5     # Complete Phase 5 release gate
-npm run check:phase6     # Complete Phase 6 release gate
-npm run check:phase7     # Controlled Phase 7 gate; public Workday validation is separate
-npm run check:phase8     # Complete Phase 8 tracker and duplicate-engine gate
-npm run check:phase9     # Controlled Phase 9 additional-ATS gate
-npm run check:phase10    # Controlled Phase 10 encrypted-sync gate
-npm run check:phase11    # Controlled Phase 11 one-shot auto-next gate
-npm run check:phase12    # Controlled Phase 12 Test ATS submission gate
+npm run serve --workspace @copilot/test-ats
 ```
 
-The E2E build receives access only to `http://127.0.0.1/*`. That test-only permission is generated into `apps/extension/dist-e2e` and is never included in the production manifest.
+The Test ATS includes controlled Greenhouse, Lever, Ashby, SmartRecruiters, Workday, iCIMS, Taleo, Workable, BambooHR, Jobvite, and Comeet fixtures. One-shot navigation and submission experiments are restricted to the exact local Workday fixture and are never enabled on real ATS pages.
 
-The Phase 3 public-form gate is driven by the read-only commands below. See [the QA workflow](./qa/ats/README.md) for the exact manual checks and privacy rules.
+### Verification
 
 ```bash
-npm run ats:qa:capture -- --input qa/ats/urls.local.json
-npm run ats:qa:init-review
-npm run ats:qa:replay
+npm run format:check  # Formatting
+npm run lint          # Static analysis
+npm run typecheck     # TypeScript project references
+npm test              # Unit and schema tests
+npm run test:e2e      # Unpacked-extension Chromium tests
+npm run build         # Production builds
+npm run verify        # Complete contributor and CI gate
 ```
 
-## Safety and privacy
+The browser-test build receives access only to `http://127.0.0.1/*`. That permission is generated in `apps/extension/dist-e2e` and is not included as a required production host permission.
 
-- The extension does not submit applications.
-- Fields are filled only after explicit side-panel review. Navigation and submission remain manual on real sites. The exact local Workday Test ATS alone exposes separately enabled one-shot Next and submission test paths.
-- Résumé upload requires selecting the exact file and pressing a separate approval button; raw files are not retained.
-- LinkedIn is manual-only and is not scanned.
-- Password and hidden fields are excluded from discovery.
-- Government IDs, banking details, credentials, and arbitrary file access are outside the command protocol.
-- Real candidate information must never be committed in fixtures or test data.
-- Résumé files are parsed locally, limited to 5 MB, and are not retained as raw files.
-- JSON exports are not encrypted and must be stored securely by the user.
-- Tests against real employer sites must stop before submission.
-- Public QA capture never types, clicks, uploads, submits, or retains browser session data.
-- Saved answers remain local, default to not being stored, expire by question policy, and are never reused for R4 sensitive questions.
-- AI provider keys are stored only in `chrome.storage.session`; they are never added to profile data, backups, page fields, or audit records.
-- Question classification receives no candidate profile. Draft generation receives only selected verified professional facts and bounded job context.
-- AI output cannot issue browser commands and never fills automatically. Invalid, unsupported, sensitive, or over-limit drafts are withheld.
-- Role-based custom ATS widgets are scanned as manual-only controls and cannot be targeted by the native fill driver.
-- Existing values are represented only as an empty/prefilled state; their contents are not captured, and reviewed fill plans cannot overwrite them.
-- Real Workday authentication, Back, Next, and Submit remain manual. Fixed-token Next and Submit plans are restricted to the exact local Test ATS fixture, with separate persisted state machines and no generic selector command.
-- Duplicate detection is advisory and local; it never merges applications or blocks user actions.
-- Tracker CSV exports can contain application history and should be stored securely.
-- Phase 9 custom ATS widgets, unknown questions, salary, references, consent, and disclosures remain manual or explicitly reviewed.
-- Cloud sync is optional. The passphrase and readable profile/tracker records are not sent to the server, and unlock material is session-only.
-- Signing into an existing sync account restores its cloud profile/tracker on that browser; export local data first if it must be preserved.
-- The included JSON-backed sync server is a controlled MVP, not an internet-scale identity or disaster-recovery service.
+Public ATS checks must remain read-only and stop before submission. See the [Greenhouse/Lever QA workflow](./qa/ats/README.md) and [Workday QA workflow](./qa/workday/README.md).
+
+## Repository structure
+
+```text
+apps/
+  extension/                 Chrome extension and side panel
+  sync-server/               Optional encrypted sync service
+  test-ats/                  Controlled synthetic application site
+packages/
+  candidate-schema/          Candidate truth model
+  profile-core/              Local versioned profile vault
+  form-schema/               Form snapshot and fill contracts
+  form-engine/               Deterministic matching and fill planning
+  question-ontology/         Canonical questions and risk policies
+  saved-response-engine/     Scoped reusable answers
+  ai-gateway/                Provider-neutral structured AI tasks
+  grounded-generation/       Evidence selection and draft validation
+  ats-*/                     ATS adapters and shared parsing
+  application-state/         Tracker and duplicate handling
+  sync-core/                 Client-side encryption and sync protocol
+  navigation-core/           Controlled Test ATS navigation state
+  submission-core/           Controlled Test ATS submission state
+fixtures/                    Synthetic and sanitized fixtures
+evals/end-to-end/            Chromium extension tests
+qa/                          Read-only public validation workflows
+docs/architecture/           Historical design and implementation records
+```
+
+The original implementation blueprint is retained as a technical reference. The MVP milestone list is complete; ongoing work is tracked through the [living development backlog](./docs/DEVELOPMENT.md), issues, and pull requests.
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run check:phase12` before opening a pull request.
+Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run verify` before opening a pull request.
 
-Good early contribution areas include:
+Useful contribution areas include:
 
-- Candidate schema and migration tests.
-- Accessibility improvements.
-- Generic form scanner fixtures.
-- Security and prompt-injection regression cases.
-- Documentation and developer experience.
+- Maintaining and expanding ATS adapters with sanitized fixtures.
+- Improving accessibility and internationalization.
+- Adding conservative profile fields and schema migrations.
+- Improving custom-widget support without arbitrary page automation.
+- Extending privacy, prompt-injection, and wrong-field regression tests.
+- Hardening the optional sync deployment.
+- Improving documentation and developer experience.
 
-Please do not submit real applications, personal résumés, authentication data, or unsanitized employer pages as test fixtures.
+Do not commit real résumés, candidate data, authentication/session material, API keys, or unsanitized employer pages.
 
-## Security
+## Safety and privacy
 
-Do not report sensitive vulnerabilities in public issues. Follow [SECURITY.md](./SECURITY.md) to submit a private GitHub security advisory.
+- Real application navigation and submission are always manual.
+- No CAPTCHA, bot-detection, rate-limit, or access-control bypass is implemented.
+- Passwords, government IDs, banking data, and payment fields are outside the fill protocol.
+- Résumés are parsed locally, limited to 5 MB, and not retained as raw files.
+- Public QA capture never types, clicks, uploads, submits, or retains browser sessions.
+- Question classification receives no candidate profile.
+- AI output cannot issue browser commands and never fills automatically.
+- Cloud sync is optional and client-side encrypted; readable profile/tracker records and the passphrase are not sent to the server.
+
+See [SECURITY.md](./SECURITY.md) for private vulnerability reporting and security-sensitive areas.
 
 ## Disclaimer
 
-This project is not affiliated with Greenhouse, Lever, Ashby, SmartRecruiters, Workday, iCIMS, Oracle Taleo, Workable, BambooHR, Jobvite, Comeet, LinkedIn, or any other ATS or job platform. Users and contributors are responsible for complying with applicable site terms, laws, and employer policies.
+This project is not affiliated with Greenhouse, Lever, Ashby, SmartRecruiters, Workday, iCIMS, Oracle Taleo, Workable, BambooHR, Jobvite, Comeet, LinkedIn, OpenAI, or any other ATS, job platform, or AI provider. Users and contributors are responsible for complying with applicable site terms, laws, employer policies, and API terms.
 
 ## License
 

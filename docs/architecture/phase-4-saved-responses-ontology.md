@@ -52,5 +52,5 @@ The controlled ontology suite contains 16 work-authorization variants: 10 precis
 Run the complete release gate:
 
 ```bash
-npm run check:phase4
+npm run verify
 ```

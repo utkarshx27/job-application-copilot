@@ -68,6 +68,7 @@ const AUTOCOMPLETE_RULES: Record<string, CanonicalQuestion> = {
   email: "CONTACT.email",
   tel: "CONTACT.phone",
   "tel-national": "CONTACT.phone",
+  "address-level2": "ADDRESS.city",
   country: "ADDRESS.country",
   "country-name": "ADDRESS.country",
 };
@@ -91,6 +92,7 @@ function exactMachineRule(field: RawField): RuleResult | null {
     [/\b(full name|fullname|legal name|legalname)\b/, "IDENTITY.legal_name.full"],
     [/\b(e mail|email|email address)\b/, "CONTACT.email"],
     [/\b(phone|phone number|mobile|mobile number|telephone)\b/, "CONTACT.phone"],
+    [/\b(city|address city)\b/, "ADDRESS.city"],
     [/\b(country|country code|country name)\b/, "ADDRESS.country"],
     [/\b(portfolio|portfolio url|personal website|website)\b/, "LINKS.portfolio"],
     [/\b(github|github url)\b/, "LINKS.github"],
@@ -161,6 +163,7 @@ function semanticLabelRule(field: RawField): RuleResult | null {
       0.975,
     ],
     [/\bvisa (type|status)\b/, "WORK_AUTH.visa_type", 0.98],
+    [/\bcity\b/, "ADDRESS.city", 0.98],
     [/\bcountry\b/, "ADDRESS.country", 0.97],
     [/\bportfolio\b|\bpersonal (site|website)\b/, "LINKS.portfolio", 0.98],
     [/\bgithub\b/, "LINKS.github", 0.99],
@@ -183,6 +186,11 @@ function semanticLabelRule(field: RawField): RuleResult | null {
     [/\bskills?\b/, "PROFILE.skills", 0.95],
     [/\b(resume|r[ée]sum[ée]|cv)\b/, "APPLICATION.resume", 0.99],
     [/\bcover letter\b/, "APPLICATION.cover_letter", 0.98],
+    [
+      /\b(interest|interested).*\b(working|work|join).*\b(company|there)\b|\bcompany.*\binterest\b/,
+      "ESSAY.why_company",
+      0.97,
+    ],
     [/\b(accept|agree).*\b(terms|privacy policy)\b/, "CONSENT.terms", 0.95],
   ];
   const match = rules.find(([pattern]) => pattern.test(text));
@@ -260,6 +268,8 @@ function profileValue(profile: CandidateProfile, canonical: CanonicalQuestion): 
       return profile.contact.emails[0]?.value?.address ?? null;
     case "CONTACT.phone":
       return profile.contact.phones[0]?.value?.e164 ?? null;
+    case "ADDRESS.city":
+      return profile.contact.addresses[0]?.value?.city ?? null;
     case "ADDRESS.country":
       return profile.contact.addresses[0]?.value?.countryCode ?? null;
     case "LINKS.portfolio":

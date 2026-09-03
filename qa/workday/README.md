@@ -1,10 +1,10 @@
 # Workday pre-submit validation
 
-The controlled Phase 7 implementation is automated. The roadmap's separate real-world gate requires at least 250 Workday application flows across multiple tenants and regions. It is not satisfied by repeatedly scanning one company or by counting job-description pages that never enter the application wizard.
+The controlled Workday implementation is automated. Production confidence still requires at least 250 pre-submit Workday application flows across multiple tenants and regions. It is not satisfied by repeatedly scanning one company or by counting job-description pages that never enter the application wizard.
 
 ## What automation verifies
 
-`npm run check:phase7` verifies the sanitized multi-step fixture, including tenant detection, field mapping, parsed-value protection, dynamic questions, refresh recovery, authentication explanations, confirmation tracking, and the absence of Next/Submit commands.
+`npm run verify` verifies the sanitized multi-step fixture, including tenant detection, field mapping, parsed-value protection, dynamic questions, refresh recovery, authentication explanations, confirmation tracking, and the real-site navigation/submission boundary.
 
 ## What a person must verify on public Workday flows
 
@@ -34,7 +34,7 @@ For each distinct application, stop before submission and record only sanitized 
 
 Keep the 250-flow evidence outside git until it is sanitized. The final aggregate record may contain counts by tenant/region/page type, mapping decisions, recovery/error outcomes, and zero-incident assertions. It must not contain candidate data or session material.
 
-Phase 7 can be marked production-validated only when:
+Workday can be marked production-validated only when:
 
 - at least 250 distinct pre-submit flows cover multiple tenants and regions;
 - no navigation loop or repeated Next action occurs;

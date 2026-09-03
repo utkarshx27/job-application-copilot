@@ -1,6 +1,6 @@
 # Job Application Copilot — IMPLEMENTATION.md
 
-> **Status:** Implementation blueprint v1.0  
+> **Status:** MVP implementation complete; maintained technical reference
 > **Date:** 2026-08-26  
 > **Primary target:** Chrome / Chromium extension (Manifest V3) + optional web dashboard + optional secure sync backend  
 > **Product posture:** Autofill-first, user-controlled, truthful-by-construction, adapter-driven, local-first by default  
@@ -196,15 +196,15 @@ Use for:
 - Can move through supported multi-step forms only after explicit user start.
 - Final submit remains user action.
 
-## 3.4 Controlled Submission — future
+## 3.4 Controlled submission — Test ATS only
 
-Only enable after:
+The implementation exists only on the exact local Test ATS review flow. Real ATS submission remains manual. Any proposal to expand this boundary requires:
 - adapter passes production submission verification suite;
 - site policy supports the workflow;
 - user explicitly enables it;
 - no high-risk or unresolved questions exist;
-- submission idempotency is active;
-- review mode requirements are satisfied.
+- submission idempotency to remain active;
+- review mode requirements to remain satisfied.
 
 ---
 
@@ -2813,9 +2813,11 @@ Product should clearly show current mode.
 
 ---
 
-# 85. Implementation phases
+# 85. Completed MVP milestone record
 
-## Phase 0 — Engineering foundation
+The original numbered implementation sequence is closed. The entries below are retained only as a historical delivery record and to preserve links to detailed architecture notes. New development is intentionally open-ended and belongs in [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md), GitHub issues, and pull requests.
+
+## Completed: engineering foundation
 
 Deliverables:
 - monorepo;
@@ -2837,7 +2839,7 @@ Exit:
 
 ---
 
-## Phase 1 — Truth vault + profile
+## Completed: Truth Vault and profile
 
 **Status:** Complete as of 2026-08-27. See `docs/architecture/phase-1-truth-vault.md`.
 
@@ -2863,7 +2865,7 @@ Exit:
 
 ---
 
-## Phase 2 — Generic form engine
+## Completed: generic form engine
 
 **Status:** Complete as of 2026-08-28. See `docs/architecture/phase-2-generic-form-engine.md`.
 
@@ -2893,9 +2895,9 @@ Exit:
 
 ---
 
-## Phase 3 — Greenhouse + Lever
+## Completed: Greenhouse and Lever
 
-**Status:** Complete as of 2026-08-30. The release set contains 100 Greenhouse + 100 Lever forms, all 200 page reviews and all 8,079 field decisions are complete, and the Phase 4-adjusted enforced replay passes with 100% mapping accuracy, 100% supported-field fill success (1,667/1,667), and zero severe wrong-field incidents. The adjusted denominator excludes 198 controls across 99 fixtures whose combined current/future sponsorship wording is now correctly manual-only. See `docs/architecture/phase-3-greenhouse-lever.md` and `qa/ats/README.md`.
+**Status:** Complete as of 2026-08-30. The release set contains 100 Greenhouse + 100 Lever forms, all 200 page reviews and all 8,079 field decisions are complete, and the sponsorship-adjusted enforced replay passes with 100% mapping accuracy, 100% supported-field fill success (1,667/1,667), and zero severe wrong-field incidents. The adjusted denominator excludes 198 controls across 99 fixtures whose combined current/future sponsorship wording is now correctly manual-only. See `docs/architecture/phase-3-greenhouse-lever.md` and `qa/ats/README.md`.
 
 Deliver:
 - ATS detectors;
@@ -2915,7 +2917,7 @@ Exit:
 
 ---
 
-## Phase 4 — Saved responses + ontology
+## Completed: saved responses and ontology
 
 **Status:** Complete as of 2026-08-30. The versioned ontology, deterministic alias/keyword/local-semantic classifier, scoped saved-response engine, teach-once review UX, and freshness policy are implemented. The controlled work-authorization distinction suite is 100% correct-or-review, and R4 sensitive questions are classified for manual handling without answer inference, suggestion, or teach-once storage. See `docs/architecture/phase-4-saved-responses-ontology.md`.
 
@@ -2934,7 +2936,7 @@ Exit:
 
 ---
 
-## Phase 5 — AI layer
+## Completed: optional grounded AI layer
 
 **Status:** Complete as of 2026-08-30. The provider-neutral structured-output gateway, deterministic-first question routing, minimized-evidence generator, claim and character-limit verifier, session-only provider configuration, review-first evidence UI, provider-independent fixture, hallucination blocker suite, and prompt-injection tests are implemented. Generated text never fills a page until the user separately selects the draft and invokes reviewed fill. See `docs/architecture/phase-5-grounded-ai.md`.
 
@@ -2952,7 +2954,7 @@ Exit:
 
 ---
 
-## Phase 6 — Ashby + SmartRecruiters
+## Completed: Ashby and SmartRecruiters
 
 **Status:** Complete as of 2026-08-30. Ashby and SmartRecruiters now use the shared adapter contract for deterministic detection, normalized job extraction, field rules, explicit résumé upload, custom-question review, confirmation tracking, and safe failure behavior. Sanitized controlled canaries cover both ATS platforms, including dynamic questions and ARIA custom controls that are detected and routed to manual completion rather than operated. See `docs/architecture/phase-6-ashby-smartrecruiters.md`.
 
@@ -2967,7 +2969,7 @@ Exit:
 
 ---
 
-## Phase 7 — Workday
+## Completed: controlled Workday implementation
 
 **Status:** Controlled implementation complete as of 2026-08-31; public release validation remains open. The extension now provides Workday tenant/site detection, explicit authentication boundaries, a read-only SPA page model, privacy-preserving résumé reconciliation, deterministic first-record work/education rules, manual-only skill widgets, questionnaire rescanning, persisted progress recovery, confirmation tracking, and explained validation/session errors. Navigation and submission commands are deliberately absent. The controlled gate proves refresh recovery and that the extension never clicks Next or Submit. The separate 250-form, multi-tenant/region pre-submit validation requirement has not yet been claimed. See `docs/architecture/phase-7-workday.md` and `qa/workday/README.md`.
 
@@ -2996,7 +2998,7 @@ Exit:
 
 ---
 
-## Phase 8 — Tracker + duplicate engine
+## Completed: tracker and duplicate engine
 
 Deliver:
 - canonical job;
@@ -3010,7 +3012,7 @@ Exit:
 
 ---
 
-## Phase 9 — Additional ATS
+## Completed: additional ATS adapters
 
 iCIMS, Taleo, Workable, BambooHR, Jobvite, Comeet.
 
@@ -3018,7 +3020,7 @@ Use same adapter contract and test gates.
 
 ---
 
-## Phase 10 — Optional cloud sync
+## Completed: optional encrypted sync
 
 **Controlled implementation completed 2026-08-31.** The extension now provides opt-in, client-side encrypted profile/tracker sync, session-only unlock keys, device listing and revocation, encrypted backup, local disable, and account deletion against the self-hostable sync service. Local mode remains the default. See `docs/architecture/phase-10-optional-cloud-sync.md` for the trust boundary, validation scope, and remaining production-hardening work.
 
@@ -3034,7 +3036,7 @@ Local mode remains supported.
 
 ---
 
-## Phase 11 — Controlled auto-next
+## Completed: controlled Test ATS auto-next
 
 **Controlled Test ATS implementation completed 2026-08-31.** The extension now provides a persisted one-shot navigation intent state machine, global and per-application opt-ins, a cancelable three-second countdown, exact adapter-owned Workday Next evidence, pre-click validation and stale-page checks, post-click transition verification, content-free outcome metrics, and no retry after dispatch. The capability is restricted to the local Workday Test ATS fixture. Real Workday auto-next remains disabled pending the separate 250-form validation gate. Submit remains absent from the command protocol. See `docs/architecture/phase-11-controlled-auto-next.md`.
 
@@ -3049,7 +3051,7 @@ Monitor:
 
 ---
 
-## Phase 12 — Controlled submission
+## Completed: controlled Test ATS submission
 
 **Controlled Test ATS implementation completed 2026-09-01.** Submission is a separate default-off capability restricted to the exact local Workday Test ATS review fixture. It requires complete observed workflow progress, an on-page review attestation, global and per-application opt-ins, explicit final side-panel authorization, and a cancelable five-second countdown. The worker persists dispatch before one fixed-token click, never retries, binds confirmation evidence to the application identity, and updates the tracker only after verification. Real ATS submission remains disabled. See `docs/architecture/phase-12-controlled-submission.md`.
 
@@ -3064,7 +3066,9 @@ Do not include LinkedIn automation.
 
 ---
 
-# 86. Engineering backlog / epics
+# 86. Historical engineering epics
+
+These epics describe the implemented MVP decomposition. Use the living development backlog for new contribution proposals.
 
 ## EPIC EXT-001 Extension shell
 

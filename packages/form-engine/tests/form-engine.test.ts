@@ -83,6 +83,7 @@ describe("generic semantic form engine", () => {
       [field("full", { labelText: "Legal name" }), "IDENTITY.legal_name.full"],
       [field("email", { controlKind: "email", autocomplete: "email" }), "CONTACT.email"],
       [field("phone", { controlKind: "tel", labelText: "Mobile number" }), "CONTACT.phone"],
+      [field("city", { autocomplete: "address-level2" }), "ADDRESS.city"],
       [field("country", { controlKind: "select-one", name: "country" }), "ADDRESS.country"],
       [field("portfolio", { name: "portfolio_url" }), "LINKS.portfolio"],
       [field("github", { ariaLabel: "GitHub profile" }), "LINKS.github"],
@@ -102,6 +103,13 @@ describe("generic semantic form engine", () => {
         "APPLICATION.cover_letter",
       ],
       [
+        field("interest", {
+          controlKind: "textarea",
+          labelText: "Let the company know about your interest working there",
+        }),
+        "ESSAY.why_company",
+      ],
+      [
         field("consent", { controlKind: "checkbox", labelText: "I agree to the privacy terms" }),
         "CONSENT.terms",
       ],
@@ -111,7 +119,7 @@ describe("generic semantic form engine", () => {
       matrix.map(([candidate, canonical]) => [candidate.fieldId, canonical]),
     );
     const result = precisionForExpected(mappings, expected);
-    expect(result).toEqual({ correct: 15, predicted: 15, precision: 1 });
+    expect(result).toEqual({ correct: 17, predicted: 17, precision: 1 });
     expect(result.precision).toBeGreaterThanOrEqual(0.995);
   });
 

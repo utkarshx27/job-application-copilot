@@ -68,7 +68,7 @@ The sanitized fixture and Chromium flow cover:
 Run the controlled release gate and the unchanged Greenhouse/Lever regression:
 
 ```bash
-npm run check:phase7
+npm run verify
 npm run ats:qa:replay -- --enforce
 ```
 

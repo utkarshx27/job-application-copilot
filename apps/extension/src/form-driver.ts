@@ -5,7 +5,15 @@ import {
   type FillPlan,
 } from "@copilot/form-schema";
 
-import { inspectVisibleForm, type SupportedControl } from "./scanner";
+import {
+  inspectVisibleForm,
+  isInputControl,
+  isSelectControl,
+  isSupportedControl,
+  isTextAreaControl,
+  reachableDocuments,
+  type SupportedControl,
+} from "./scanner";
 
 const USER_EDITED_ATTRIBUTE = "data-job-copilot-user-edited";
 const FILLED_ATTRIBUTE = "data-job-copilot-filled";
@@ -15,30 +23,24 @@ const USER_EDIT_VERSION_ATTRIBUTE = "data-job-copilot-user-edit-version";
 const trackedDocuments = new WeakSet<Document>();
 const automatedControls = new WeakSet<SupportedControl>();
 
-function isSupportedControl(value: EventTarget | null): value is SupportedControl {
-  return (
-    value instanceof HTMLInputElement ||
-    value instanceof HTMLSelectElement ||
-    value instanceof HTMLTextAreaElement
-  );
-}
-
 export function installUserEditTracking(targetDocument: Document = document): void {
-  if (trackedDocuments.has(targetDocument)) return;
-  const markEdited = (event: Event) => {
-    if (!isSupportedControl(event.target) || automatedControls.has(event.target)) return;
-    event.target.setAttribute(USER_EDITED_ATTRIBUTE, "true");
-    event.target.removeAttribute(FILLED_ATTRIBUTE);
-    const root = event.target.ownerDocument.documentElement;
-    const current = Number(root.getAttribute(USER_EDIT_VERSION_ATTRIBUTE) ?? "0");
-    root.setAttribute(
-      USER_EDIT_VERSION_ATTRIBUTE,
-      String(Number.isFinite(current) ? current + 1 : 1),
-    );
-  };
-  targetDocument.addEventListener("input", markEdited, true);
-  targetDocument.addEventListener("change", markEdited, true);
-  trackedDocuments.add(targetDocument);
+  for (const reachableDocument of reachableDocuments(targetDocument)) {
+    if (trackedDocuments.has(reachableDocument)) continue;
+    const markEdited = (event: Event) => {
+      if (!isSupportedControl(event.target) || automatedControls.has(event.target)) return;
+      event.target.setAttribute(USER_EDITED_ATTRIBUTE, "true");
+      event.target.removeAttribute(FILLED_ATTRIBUTE);
+      const root = event.target.ownerDocument.documentElement;
+      const current = Number(root.getAttribute(USER_EDIT_VERSION_ATTRIBUTE) ?? "0");
+      root.setAttribute(
+        USER_EDIT_VERSION_ATTRIBUTE,
+        String(Number.isFinite(current) ? current + 1 : 1),
+      );
+    };
+    reachableDocument.addEventListener("input", markEdited, true);
+    reachableDocument.addEventListener("change", markEdited, true);
+    trackedDocuments.add(reachableDocument);
+  }
 }
 
 function nativeSetter(
@@ -52,13 +54,14 @@ function nativeSetter(
 }
 
 function emitFrameworkEvents(control: SupportedControl): void {
-  control.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
-  control.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+  const EventConstructor = control.ownerDocument.defaultView?.Event ?? Event;
+  control.dispatchEvent(new EventConstructor("input", { bubbles: true, composed: true }));
+  control.dispatchEvent(new EventConstructor("change", { bubbles: true, composed: true }));
 }
 
 function controlHasExistingValue(control: SupportedControl): boolean {
-  if (control instanceof HTMLSelectElement) return Boolean(control.value);
-  if (control instanceof HTMLTextAreaElement) return Boolean(control.value.trim());
+  if (isSelectControl(control)) return Boolean(control.value);
+  if (isTextAreaControl(control)) return Boolean(control.value.trim());
   if (control.type === "checkbox" || control.type === "radio") return control.checked;
   if (control.type === "file") return (control.files?.length ?? 0) > 0;
   return Boolean(control.value.trim());
@@ -66,15 +69,12 @@ function controlHasExistingValue(control: SupportedControl): boolean {
 
 function applyOperation(control: SupportedControl, item: FillPlan["items"][number]): string | null {
   if (item.operation.kind === "check") {
-    if (
-      !(control instanceof HTMLInputElement) ||
-      (control.type !== "checkbox" && control.type !== "radio")
-    ) {
+    if (!isInputControl(control) || (control.type !== "checkbox" && control.type !== "radio")) {
       return "The reviewed check operation no longer matches this control.";
     }
     nativeSetter(control, "checked", item.operation.checked);
   } else if (item.operation.kind === "select") {
-    if (!(control instanceof HTMLSelectElement)) {
+    if (!isSelectControl(control)) {
       return "The reviewed select operation no longer matches this control.";
     }
     const selectedValue = item.operation.value;
@@ -85,8 +85,8 @@ function applyOperation(control: SupportedControl, item: FillPlan["items"][numbe
     nativeSetter(control, "value", selectedValue);
   } else {
     if (
-      control instanceof HTMLSelectElement ||
-      (control instanceof HTMLInputElement && ["checkbox", "radio", "file"].includes(control.type))
+      isSelectControl(control) ||
+      (isInputControl(control) && ["checkbox", "radio", "file"].includes(control.type))
     ) {
       return "The reviewed text operation no longer matches this control.";
     }
@@ -150,14 +150,15 @@ export function applyFillPlan(untrustedPlan: FillPlan, targetDocument: Document 
 }
 
 export function highlightFields(fieldIds: string[], targetDocument: Document = document) {
-  targetDocument.querySelectorAll(`[${HIGHLIGHT_ATTRIBUTE}]`).forEach((element) => {
-    element.removeAttribute(HIGHLIGHT_ATTRIBUTE);
-  });
-  if (!targetDocument.getElementById(STYLE_ID)) {
-    const style = targetDocument.createElement("style");
+  for (const reachableDocument of reachableDocuments(targetDocument)) {
+    reachableDocument.querySelectorAll(`[${HIGHLIGHT_ATTRIBUTE}]`).forEach((element) => {
+      element.removeAttribute(HIGHLIGHT_ATTRIBUTE);
+    });
+    if (reachableDocument.getElementById(STYLE_ID)) continue;
+    const style = reachableDocument.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `[${HIGHLIGHT_ATTRIBUTE}="true"] { outline: 3px solid #2f8f55 !important; outline-offset: 3px !important; background-color: #effbf2 !important; }`;
-    (targetDocument.head ?? targetDocument.documentElement).append(style);
+    (reachableDocument.head ?? reachableDocument.documentElement).append(style);
   }
   const { controlsByFieldId } = inspectVisibleForm(targetDocument);
   const highlightedFieldIds: string[] = [];

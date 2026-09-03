@@ -8,6 +8,7 @@ export const CanonicalQuestionSchema = z.enum([
   "IDENTITY.legal_name.family",
   "CONTACT.email",
   "CONTACT.phone",
+  "ADDRESS.city",
   "ADDRESS.country",
   "LINKS.portfolio",
   "LINKS.github",

@@ -49,7 +49,7 @@ Stored metrics contain counts only: prepared intents, verified advances, validat
 The gate covers default-off behavior, dual opt-in, exact fixed-token commands, countdown cancellation, required-field and manual-edit stops, one-click transition verification, duplicate execute rejection, absence of Submit capability, and a real MV3 Chromium path.
 
 ```bash
-npm run check:phase11
+npm run verify
 ```
 
 Phase 12 later added a separate fixed-token submission state machine for the exact local Test ATS review fixture. Phase 11 itself still provides no submission state or command, and real ATS submission remains disabled.

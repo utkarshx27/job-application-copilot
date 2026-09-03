@@ -70,6 +70,6 @@ The Chromium flow uses the deterministic fixture provider and proves three disti
 Run the complete release gate:
 
 ```bash
-npm run check:phase5
+npm run verify
 npm run ats:qa:replay -- --enforce
 ```

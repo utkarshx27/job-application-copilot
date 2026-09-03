@@ -69,9 +69,48 @@ describe("SmartRecruiters adapter", () => {
       smartRecruitersAdapter.classifyField(rawField("resumeFile", "Resume", "file"))
         ?.canonicalQuestion,
     ).toBe("APPLICATION.resume");
+    expect(
+      smartRecruitersAdapter.classifyField(rawField("generic-city", "City", "text"))
+        ?.canonicalQuestion,
+    ).toBe("ADDRESS.city");
+    expect(
+      smartRecruitersAdapter.classifyField(rawField("generic-code", "Country code", "other"))
+        ?.canonicalQuestion,
+    ).toBe("CONTACT.phone");
+    expect(
+      smartRecruitersAdapter.classifyField(
+        rawField(
+          "generic-interest",
+          "Let the company know about your interest working there",
+          "textarea",
+        ),
+      )?.canonicalQuestion,
+    ).toBe("ESSAY.why_company");
     expect(smartRecruitersAdapter.detectConfirmation(document)).toMatchObject({
       confirmed: true,
       referenceId: "SR-CONF-400",
+    });
+  });
+
+  it("extracts live OneClick metadata from the document title when structured metadata is absent", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/oneclick-ui/company/SopraSteria1/publication/2b4517e2-7678-4f44-a069-775330b416dc",
+    );
+    document.title = "GEN AI Engineer - Sopra Steria";
+    document.head.querySelectorAll("meta").forEach((element) => element.remove());
+    document.head.insertAdjacentHTML(
+      "beforeend",
+      '<meta name="copilot-ats" content="smartrecruiters">',
+    );
+    document.body.innerHTML = "<main><h2>Easy Apply</h2></main>";
+
+    const detection = smartRecruitersAdapter.detect(document);
+    expect(smartRecruitersAdapter.extractJob(document, detection)).toMatchObject({
+      title: "GEN AI Engineer",
+      company: "Sopra Steria",
+      externalRequisitionId: "2b4517e2-7678-4f44-a069-775330b416dc",
     });
   });
 

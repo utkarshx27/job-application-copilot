@@ -31,8 +31,10 @@ if (!window.__jobApplicationCopilotLoaded) {
     void (async () => {
       try {
         if (request.data.type === "CONTENT_SCAN_PAGE") {
+          installUserEditTracking();
           sendResponse({ ok: true, data: scanVisibleForm() } satisfies RuntimeResponse);
         } else if (request.data.type === "CONTENT_INSPECT_APPLICATION") {
+          installUserEditTracking();
           sendResponse({ ok: true, data: inspectApplicationPage() } satisfies RuntimeResponse);
         } else if (request.data.type === "CONTENT_HIGHLIGHT_FIELDS") {
           sendResponse({

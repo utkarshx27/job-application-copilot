@@ -5,6 +5,7 @@ import {
   type RuntimeResponse,
 } from "@copilot/browser-command-schema";
 import {
+  AiGenerativeQuestionSchema,
   createFixtureProvider,
   createOpenAiProvider,
   type AiProvider,
@@ -74,6 +75,7 @@ import {
 } from "@copilot/saved-response-engine";
 
 import { getProfileVault, setProfileVault } from "./profile-storage";
+import { resolveActiveTab } from "./active-tab";
 import { getSubmissionStore, setSubmissionStore } from "./submission-storage";
 import { getApplicationTracker, setApplicationTracker } from "./application-storage";
 import { adapterForId } from "./ats-page";
@@ -115,8 +117,23 @@ async function storeProfile(untrustedVault: unknown) {
 async function inspectableActiveTab(): Promise<
   { id: number; url: string } | Extract<RuntimeResponse, { ok: false }>
 > {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id || !tab.url) return failure("NO_ACTIVE_TAB", "No inspectable active tab was found.");
+  let tab;
+  try {
+    tab = await resolveActiveTab(
+      () => chrome.tabs.query({ active: true, lastFocusedWindow: true }),
+      async (tabId) => {
+        const [probe] = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: () => globalThis.location.href,
+        });
+        return typeof probe?.result === "string" ? probe.result : undefined;
+      },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Chrome denied access to this tab.";
+    return failure("INJECTION_FAILED", message);
+  }
+  if (!tab) return failure("NO_ACTIVE_TAB", "No inspectable active tab was found.");
 
   let policy;
   try {
@@ -219,7 +236,9 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
     const field = baseAnalysis.snapshot.fields.find(
       (candidate) => candidate.fieldId === mapping.fieldId,
     );
-    const draftableMappedField = mapping.canonicalQuestion === "APPLICATION.cover_letter";
+    const draftableMappedField = AiGenerativeQuestionSchema.safeParse(
+      mapping.canonicalQuestion,
+    ).success;
     const manualCustomControl = field?.controlKind === "other";
     if (
       !draftableMappedField &&

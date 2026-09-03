@@ -135,6 +135,39 @@ describe("scanVisibleForm", () => {
         { value: "remote", text: "Remote", disabled: true },
       ],
     });
-    expect(fields[1]).toMatchObject({ controlKind: "other" });
+    expect(fields).toHaveLength(1);
+  });
+
+  it("discovers controls in same-origin embedded application frames", () => {
+    const frame = document.createElement("iframe");
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument;
+    expect(frameDocument).not.toBeNull();
+    frameDocument!.body.innerHTML = `
+      <label for="embedded-first-name">First name</label>
+      <input id="embedded-first-name" name="firstName" required />`;
+
+    expect(scanVisibleForm().fields).toEqual([
+      expect.objectContaining({
+        fieldId: "embedded-first-name",
+        accessibleName: "First name",
+        controlKind: "text",
+      }),
+    ]);
+  });
+
+  it("discovers controls in open component roots", () => {
+    const host = document.createElement("job-application-field");
+    document.body.append(host);
+    host.attachShadow({ mode: "open" }).innerHTML = `
+      <input id="component-email" name="email" type="email" aria-label="Email" />`;
+
+    expect(scanVisibleForm().fields).toEqual([
+      expect.objectContaining({
+        fieldId: "component-email",
+        accessibleName: "Email",
+        controlKind: "email",
+      }),
+    ]);
   });
 });
