@@ -241,6 +241,8 @@ The original implementation blueprint is retained as a technical reference. The 
 
 Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run verify` before opening a pull request.
 
+The [application-agent implementation plan](./docs/agent/README.md) describes the next product direction: simpler onboarding, job discovery, company evidence, assisted multi-step applications, and learning from corrections. Its first implementation is a separate [read-only local agent lab](./docs/agent/AGENT_LAB.md) with durable run state, pause/resume, recovery, and duplicate-command protection. The broader agent capabilities remain planned, not part of the current release. Contributor work packages and acceptance criteria stay open in the plan.
+
 Useful contribution areas include:
 
 - Maintaining and expanding ATS adapters with sanitized fixtures.

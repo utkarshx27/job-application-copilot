@@ -1,4 +1,5 @@
 import { AiConfigStatusSchema, AiSessionConfigSchema } from "@copilot/ai-gateway";
+import { AgentLabStatusSchema } from "@copilot/agent-core";
 import {
   FillPlanSchema,
   FillResultSchema,
@@ -70,6 +71,12 @@ export const BrowserCommandSchema = z.discriminatedUnion("type", [
 ]);
 
 export const PanelRequestSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("PANEL_AGENT_STATUS") }).strict(),
+  z.object({ type: z.literal("PANEL_AGENT_SET_ENABLED"), enabled: z.boolean() }).strict(),
+  z.object({ type: z.literal("PANEL_AGENT_START") }).strict(),
+  z.object({ type: z.literal("PANEL_AGENT_CHECKPOINT"), runId: z.uuid() }).strict(),
+  z.object({ type: z.literal("PANEL_AGENT_PAUSE"), runId: z.uuid() }).strict(),
+  z.object({ type: z.literal("PANEL_AGENT_CANCEL"), runId: z.uuid() }).strict(),
   z.object({ type: z.literal("PANEL_PING") }),
   z.object({ type: z.literal("PANEL_SCAN_ACTIVE_TAB") }),
   z.object({ type: z.literal("PANEL_ANALYZE_ACTIVE_TAB") }),
@@ -207,6 +214,7 @@ const RuntimeErrorSchema = z.object({
     "NAVIGATION_FAILED",
     "SUBMISSION_BLOCKED",
     "SUBMISSION_FAILED",
+    "AGENT_FAILED",
   ]),
   message: z.string(),
 });
@@ -215,6 +223,7 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
   z.object({
     ok: z.literal(true),
     data: z.union([
+      AgentLabStatusSchema,
       z.object({ pong: z.literal(true) }),
       PageSnapshotSchema,
       ApplicationPageAnalysisSchema,

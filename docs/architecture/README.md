@@ -4,6 +4,8 @@ These documents record how the current MVP was designed and implemented. Their n
 
 For current installation, usage, features, and verification commands, use the repository [README](../../README.md). For new work, use the [living development backlog](../DEVELOPMENT.md) and GitHub issues.
 
+The [application-agent architecture](../agent/ARCHITECTURE.md) describes the successor controller, discovery, company research, and correction-memory system. The [read-only agent foundation](../agent/AGENT_LAB.md) is now implemented experimentally; the [plan index](../agent/README.md) distinguishes that slice from future capabilities and the MVP records below.
+
 ## Records by component
 
 - [Engineering foundation](./phase-0-foundation.md)

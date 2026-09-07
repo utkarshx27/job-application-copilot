@@ -4,6 +4,10 @@ The MVP milestone plan is complete. This document stays open for maintainers and
 
 GitHub issues and pull requests are the source of truth for assigned work. Before starting a large change, open an issue and link it from the relevant section below.
 
+## Experimental application agent
+
+The [application-agent plan](./agent/README.md) defines the successor experience, with [implementation work packages](./agent/IMPLEMENTATION.md), browser architecture, source integration, model research, and correction-learning evaluations. AG-01's durable foundation is implemented in a separate, opt-in [read-only research lab](./agent/AGENT_LAB.md). AG-02–AG-13 remain planned; the current extension's release and security guarantees still apply.
+
 ## Current priorities
 
 ### ATS compatibility

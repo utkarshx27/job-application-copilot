@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/agent-core" },
     { "path": "./packages/ai-gateway" },
     { "path": "./packages/candidate-schema" },
     { "path": "./packages/form-schema" },

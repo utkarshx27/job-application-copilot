@@ -6,11 +6,12 @@ const root = import.meta.dirname;
 const watch = process.argv.includes("--watch");
 const cleanOnly = process.argv.includes("--clean");
 const e2e = process.argv.includes("--e2e");
-const outdir = resolve(root, e2e ? "dist-e2e" : "dist");
+const research = process.argv.includes("--research");
+const outdir = resolve(root, e2e ? "dist-e2e" : research ? "dist-research" : "dist");
 
 if (cleanOnly) {
   await Promise.all(
-    ["dist", "dist-e2e"].map((directory) =>
+    ["dist", "dist-e2e", "dist-research"].map((directory) =>
       rm(resolve(root, directory), { recursive: true, force: true }),
     ),
   );
@@ -21,7 +22,8 @@ await rm(outdir, { recursive: true, force: true });
 await mkdir(outdir, { recursive: true });
 
 const manifest = JSON.parse(await readFile(resolve(root, "manifest.json"), "utf8"));
-if (e2e) manifest.host_permissions = ["http://127.0.0.1/*"];
+if (e2e || research) manifest.host_permissions = ["http://127.0.0.1/*"];
+if (research) manifest.name += " (Research)";
 
 await Promise.all([
   writeFile(resolve(outdir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`),
@@ -42,6 +44,7 @@ await Promise.all([
 ]);
 
 const shared = {
+  define: { __AGENT_LAB_BUILD__: JSON.stringify(e2e || research) },
   bundle: true,
   minify: !watch,
   sourcemap: watch,

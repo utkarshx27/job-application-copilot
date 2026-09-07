@@ -8,6 +8,7 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
+    "@copilot/agent-core": "*",
     "@copilot/ai-gateway": "*",
     "@copilot/form-schema": "*",
     "@copilot/grounded-generation": "*",

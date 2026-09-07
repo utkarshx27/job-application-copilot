@@ -48,6 +48,9 @@ import { createRoot } from "react-dom/client";
 import { readApprovedResumeFile, readResumeFile } from "../resume-file";
 import { ensureActiveSiteAccess } from "../site-access";
 
+import { AgentLab } from "./agent-lab";
+import { AGENT_LAB_AVAILABLE } from "../agent-config";
+
 type Tab = "profile" | "observe" | "applications" | "sync";
 type Notice = { kind: "success" | "error"; message: string } | null;
 type ScanState =
@@ -2889,6 +2892,12 @@ function App() {
       {tab === "observe" && <ObservePanel />}
       {tab === "applications" && <ApplicationsPanel />}
       {tab === "sync" && <SyncPanel />}
+      {AGENT_LAB_AVAILABLE && (
+        <details className="agent-lab-toggle">
+          <summary>Experimental agent lab</summary>
+          <AgentLab />
+        </details>
+      )}
       <footer>Local by default. Cloud sync runs only when you enable and unlock it.</footer>
     </main>
   );

@@ -6,11 +6,13 @@
   "scripts": {
     "build": "node build.mjs",
     "build:e2e": "node build.mjs --e2e",
+    "build:research": "node build.mjs --research",
     "clean": "node build.mjs --clean",
     "dev": "node build.mjs --watch",
     "typecheck": "tsc --build"
   },
   "dependencies": {
+    "@copilot/agent-core": "*",
     "@copilot/ai-gateway": "*",
     "@copilot/application-state": "*",
     "@copilot/ats-core": "*",

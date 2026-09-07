@@ -54,6 +54,7 @@
     "docx": "^9.7.1",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.8",
+    "fake-indexeddb": "^6.2.5",
     "globals": "^16.3.0",
     "jsdom": "^26.1.0",
     "pdf-lib": "^1.17.1",

@@ -98,6 +98,24 @@ import {
   runOptionalSync,
 } from "./sync-client";
 import { getAutoNextStore, setAutoNextStore } from "./navigation-storage";
+import { AgentLabController, observeAgentTab, agentLabErrorMessage } from "./agent-controller";
+import { AgentRepository } from "./agent-storage";
+import { AGENT_LAB_AVAILABLE } from "./agent-config";
+
+const agentLab = new AgentLabController(
+  new AgentRepository(),
+  {
+    activeTab: async () => {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      if (tab?.id === undefined || !tab.url)
+        throw new Error("Open the local Workday fixture in the active tab.");
+      return { id: tab.id, url: tab.url };
+    },
+    observe: observeAgentTab,
+    profileRevision: async () => (await getProfileVault()).currentProfile.profileVersion,
+  },
+  AGENT_LAB_AVAILABLE,
+);
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 const analysesByTab = new Map<number, ApplicationPageAnalysis>();
@@ -1192,6 +1210,33 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
   if (!parsed.success) {
     sendResponse(failure("BAD_MESSAGE", "Rejected a message outside the extension protocol."));
     return false;
+  }
+
+  if (parsed.data.type.startsWith("PANEL_AGENT_")) {
+    if (sender.url !== chrome.runtime.getURL("sidepanel.html")) {
+      sendResponse(failure("BAD_MESSAGE", "Agent lab requests require the extension panel."));
+      return false;
+    }
+    const request = parsed.data;
+    const result =
+      request.type === "PANEL_AGENT_STATUS"
+        ? agentLab.status()
+        : request.type === "PANEL_AGENT_SET_ENABLED"
+          ? agentLab.setEnabled(request.enabled)
+          : request.type === "PANEL_AGENT_START"
+            ? agentLab.start()
+            : request.type === "PANEL_AGENT_CHECKPOINT"
+              ? agentLab.checkpoint(request.runId)
+              : request.type === "PANEL_AGENT_PAUSE"
+                ? agentLab.pause(request.runId)
+                : request.type === "PANEL_AGENT_CANCEL"
+                  ? agentLab.cancel(request.runId)
+                  : Promise.reject(new Error("Unknown agent lab command."));
+    void result.then(
+      (data) => sendResponse({ ok: true, data } satisfies RuntimeResponse),
+      (error: unknown) => sendResponse(failure("AGENT_FAILED", agentLabErrorMessage(error))),
+    );
+    return true;
   }
 
   if (parsed.data.type === "PANEL_PING") {

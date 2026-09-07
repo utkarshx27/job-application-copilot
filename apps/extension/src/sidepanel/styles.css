@@ -400,6 +400,30 @@ input:disabled {
   margin: 0;
 }
 .empty,
+.agent-lab-toggle {
+  margin-top: 24px;
+  padding: 14px;
+  border: 1px solid #d7ded8;
+  border-radius: 10px;
+}
+.agent-lab,
+.agent-run {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.agent-lab code {
+  overflow-wrap: anywhere;
+}
+.agent-run {
+  padding: 12px;
+  border: 1px solid #d7ded8;
+  border-radius: 10px;
+  background: white;
+}
+.agent-run button {
+  margin-bottom: 8px;
+}
 footer {
   color: #69736c;
   font-size: 13px;
