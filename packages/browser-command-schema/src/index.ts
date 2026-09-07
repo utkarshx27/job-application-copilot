@@ -21,6 +21,7 @@ import {
 } from "@copilot/job-schema";
 import {
   ProfileDraftSchema,
+  CareerSetupDraftSchema,
   ProfileSourceSchema,
   ProfileVaultSchema,
   ResumeDraftSchema,
@@ -71,6 +72,14 @@ export const BrowserCommandSchema = z.discriminatedUnion("type", [
 ]);
 
 export const PanelRequestSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("PANEL_PROFILE_SETUP_SAVE"), draft: CareerSetupDraftSchema }).strict(),
+  z
+    .object({
+      type: z.literal("PANEL_PROFILE_IMPORT_NARRATIVE"),
+      text: z.string().trim().min(1).max(20_000),
+      expectedProfileVersion: z.number().int().positive(),
+    })
+    .strict(),
   z.object({ type: z.literal("PANEL_AGENT_STATUS") }).strict(),
   z.object({ type: z.literal("PANEL_AGENT_SET_ENABLED"), enabled: z.boolean() }).strict(),
   z.object({ type: z.literal("PANEL_AGENT_START") }).strict(),

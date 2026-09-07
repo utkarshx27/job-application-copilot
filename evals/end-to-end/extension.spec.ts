@@ -33,6 +33,7 @@ async function saveFillProfile(panel: Page, includeSponsorship = false) {
 test("loads the MV3 worker and side panel", async ({ context, extensionId }) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
 
   await expect(panel.getByRole("heading", { name: "Job Application Copilot" })).toBeVisible();
   await expect(panel.getByText("Local first · User controlled")).toBeVisible();
@@ -49,6 +50,7 @@ test("opts into encrypted sync, backs up ciphertext, and locks the session", asy
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
   await panel.getByRole("button", { name: "Sync", exact: true }).click();
 
@@ -88,6 +90,7 @@ test("scans the active Test ATS through the complete extension message path", as
 }) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await panel.getByRole("button", { name: "Observe" }).click();
 
   const application = await context.newPage();
@@ -134,6 +137,7 @@ test("highlights, fills, reveals dynamic fields, and protects user edits", async
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel, true);
 
   const application = await context.newPage();
@@ -177,6 +181,7 @@ test("updates real React and Vue controlled state with reviewed fills", async ({
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
 
   const frameworks = await context.newPage();
@@ -207,6 +212,7 @@ test("detects Greenhouse, fills reviewed answers, uploads one approved résumé,
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
 
   const application = await context.newPage();
@@ -285,6 +291,7 @@ test("warns about duplicates and manages the local tracker board, table, and CSV
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   const application = await context.newPage();
   await application.goto("http://127.0.0.1:4173/greenhouse.html");
   await application.bringToFront();
@@ -336,6 +343,7 @@ test("teaches a company-scoped custom answer once and suggests it for review", a
 }) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   const application = await context.newPage();
   await application.goto("http://127.0.0.1:4173/greenhouse.html");
   await application.bringToFront();
@@ -370,6 +378,7 @@ test("keeps a grounded AI draft off the page until both review actions", async (
 }) => {
   const panel = await context.newPage();
   await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
   const configured: unknown = await panel.evaluate(() =>
     chrome.runtime.sendMessage({
@@ -416,6 +425,7 @@ test("detects and fills a sanitized Lever application", async ({
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
 
   const application = await context.newPage();
@@ -465,6 +475,7 @@ test("detects Ashby, keeps custom components manual, rescans dynamics, and track
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
 
   const application = await context.newPage();
@@ -531,6 +542,7 @@ test("detects SmartRecruiters, fills safe fields, rescans screening dynamics, an
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
 
   const application = await context.newPage();
@@ -600,6 +612,7 @@ for (const fixture of [
   }, testInfo) => {
     const panel = await context.newPage();
     await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+    await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
     await saveFillProfile(panel);
     const application = await context.newPage();
     await application.goto(`http://127.0.0.1:4173/${fixture.slug}.html`);
@@ -642,6 +655,7 @@ test("models Workday steps, protects parsed values, and keeps real navigation us
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
 
   const application = await context.newPage();
@@ -745,6 +759,7 @@ test("runs one cancelable controlled Next and never retries the same intent", as
 }, testInfo) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
 
   const application = await context.newPage();
@@ -838,6 +853,7 @@ test("requires final consent, submits the Test ATS once, and verifies confirmati
   testInfo.setTimeout(45_000);
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await saveFillProfile(panel);
 
   const application = await context.newPage();
@@ -987,6 +1003,7 @@ test("saves and reloads a versioned profile through chrome.storage.local", async
 }) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
 
   await panel.getByLabel("Full legal name").fill("Arun");
   await panel.getByLabel("Given name").fill("Arun");
@@ -1001,6 +1018,7 @@ test("saves and reloads a versioned profile through chrome.storage.local", async
 
   await expect(panel.getByText("Profile version 2 saved locally.")).toBeVisible();
   await panel.reload();
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await expect(panel.getByLabel("Full legal name")).toHaveValue("Arun");
   await expect(panel.getByLabel("Family name optional")).toHaveValue("");
   await expect(panel.getByLabel("Employer")).toHaveValue("Example Labs");
@@ -1014,6 +1032,7 @@ for (const fileName of ["synthetic-resume.docx", "synthetic-resume.pdf"]) {
   }) => {
     const panel = await context.newPage();
     await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+    await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
     const resumePath = fileURLToPath(
       new URL(`../../fixtures/resumes/${fileName}`, import.meta.url),
     );
@@ -1040,6 +1059,7 @@ test("rejects malformed JSON without replacing the local profile", async ({
 }) => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await panel.getByRole("button", { name: "Edit full profile", exact: true }).click();
   await panel.getByLabel("Import JSON").setInputFiles({
     name: "malformed.json",
     mimeType: "application/json",

@@ -1,5 +1,6 @@
 import { createEmptyTracker } from "@copilot/application-state";
-import { createEmptyVault, saveProfileDraft } from "@copilot/profile-core";
+import { createEmptyVault, saveProfileDraft, saveCareerSetup } from "@copilot/profile-core";
+import { emptyCareerPreferences } from "@copilot/candidate-schema";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -16,6 +17,37 @@ const second = "2026-08-30T11:00:00.000Z";
 const third = "2026-08-30T12:00:00.000Z";
 
 describe("encrypted sync protocol", () => {
+  it("preserves version 2 setup in encrypted sync and refuses a legacy overwrite", async () => {
+    const original = createEmptyVault(first);
+    const vault = saveCareerSetup(
+      original,
+      {
+        expectedProfileVersion: 1,
+        identity: { full: "Ada Lovelace", given: "Ada", family: "Lovelace" },
+        email: "ada@example.test",
+        phone: "",
+        preferences: emptyCareerPreferences(),
+        backgroundNotes: "Interested in Rust",
+        reviewed: true,
+      },
+      second,
+    );
+    const secrets = await deriveSyncSecrets("correct horse battery staple", createSyncKdf());
+    const envelope = await encryptSyncDataset(
+      "PROFILE_VAULT",
+      vault,
+      secrets.encryptionKey,
+      "device-1",
+      second,
+    );
+    expect(await decryptSyncDataset(envelope, secrets.encryptionKey)).toEqual(vault);
+    expect(mergeProfileVaults(original, vault).currentProfile.careerSetup).toEqual(
+      vault.currentProfile.careerSetup,
+    );
+    expect(() => mergeProfileVaults({ ...original, updatedAt: third }, vault)).toThrow(
+      "legacy profile cannot replace career setup",
+    );
+  });
   it("derives separated secrets and round-trips authenticated ciphertext", async () => {
     const kdf = createSyncKdf();
     const secrets = await deriveSyncSecrets("correct horse battery staple", kdf);

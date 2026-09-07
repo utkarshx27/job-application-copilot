@@ -1,6 +1,6 @@
 # Application agent implementation plan
 
-Status: **Implementation started: AG-01 durable foundation and a read-only local agent lab. AG-02–AG-13 remain planned.** The complete end-to-end agent is not available yet. See [lab usage and implementation evidence](./AGENT_LAB.md).
+Status: **AG-01, AG-02, and AG-03 implemented. AG-04–AG-13 remain planned.** The extension now has compact onboarding and a synthetic portal/outcome harness alongside the durable agent foundation. The full agent workflow is still in development. See [setup and portal usage](./SETUP_AND_PORTALS.md) and [foundation evidence](./AGENT_LAB.md).
 
 Prepared: 2026-09-06. Repository baseline: `351a034`.
 
@@ -37,7 +37,7 @@ One-click completion is conditional: all required answers must be known, the con
 
 The current extension already provides local profiles, document parsing, deterministic matching, reviewed answers, grounded drafts, ATS adapters, upload assistance, a tracker, duplicate handling, and optional encrypted sync.
 
-The experimental foundation now has typed run state, transactional persistence, leases, checkpoint recovery, and a local read-only controller. Missing capabilities include a simple onboarding flow, discovery connectors, explainable job ranking, company evidence, a browser-mutating application controller, generalized custom-control interaction, local/non-OpenAI providers, correction memory, and a benchmark for end-to-end application correctness.
+The experimental foundation has typed run state, transactional persistence, leases, checkpoint recovery, and a local read-only controller. Compact onboarding, structured career preferences, and a resettable synthetic portal/outcome harness are also implemented. Missing capabilities include live discovery connectors, explainable job ranking, sourced company research, a browser-mutating agent controller, production custom-control fallback, local/non-OpenAI providers, correction memory, and the larger held-out application benchmark. The local test driver demonstrates fallback strategies and is separate from the extension's runtime executor.
 
 The present code explicitly blocks LinkedIn automation and limits automatic Next/Submit to an exact local Workday fixture. Its model tasks cannot control the browser. This proposal does not change those guarantees. See [current security policy](../../SECURITY.md) and [architecture records](../architecture/README.md).
 
@@ -59,7 +59,7 @@ The first delivery should demonstrate this complete path:
 
 It must also demonstrate a missing-answer pause, a changed question, an interrupted browser worker, and an uncertain submission result. A success-only demo is insufficient.
 
-The first implementation delivers the **AG-01 foundation** in [IMPLEMENTATION.md](./IMPLEMENTATION.md). Continue with **AG-02 onboarding** and **AG-03 emulations**. The first useful end-to-end product slice ends at **AG-09**; live connector assessment, local model packaging, and offline training have their own dependencies.
+The implementation delivers **AG-01 foundation**, **AG-02 onboarding**, and **AG-03 emulations** in [IMPLEMENTATION.md](./IMPLEMENTATION.md). Continue with **AG-04 model routing** and **AG-05 execution**. The first full agent product slice ends at **AG-09**; live connector assessment, local model packaging, and offline training have their own dependencies.
 
 ## Decisions and open measurements
 

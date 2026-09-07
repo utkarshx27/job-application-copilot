@@ -1,5 +1,6 @@
 import {
   CandidateProfileSchema,
+  CareerPreferencesSchema,
   SavedResponseSchema,
   type CandidateProfile,
   type FactStatus,
@@ -12,7 +13,7 @@ const ISODateTimeSchema = z.iso.datetime({ offset: true });
 
 export const ProfileSourceSchema = z.object({
   id: z.string().min(1),
-  kind: z.enum(["MANUAL", "RESUME_PDF", "RESUME_DOCX", "JSON_IMPORT"]),
+  kind: z.enum(["MANUAL", "RESUME_PDF", "RESUME_DOCX", "JSON_IMPORT", "NARRATIVE"]),
   displayName: z.string().min(1),
   sha256: z
     .string()
@@ -30,23 +31,37 @@ export const ProfileConflictSchema = z.object({
   createdAt: ISODateTimeSchema,
 });
 
-export const ProfileVaultSchema = z.object({
-  vaultSchemaVersion: z.literal(1),
-  id: z.string().min(1),
-  createdAt: ISODateTimeSchema,
-  updatedAt: ISODateTimeSchema,
-  currentProfile: CandidateProfileSchema,
-  history: z.array(CandidateProfileSchema),
-  sources: z.array(ProfileSourceSchema),
-  conflicts: z.array(ProfileConflictSchema),
-});
+export const ProfileVaultSchema = z
+  .object({
+    vaultSchemaVersion: z.union([z.literal(1), z.literal(2)]),
+    id: z.string().min(1),
+    createdAt: ISODateTimeSchema,
+    updatedAt: ISODateTimeSchema,
+    currentProfile: CandidateProfileSchema,
+    history: z.array(CandidateProfileSchema),
+    sources: z.array(ProfileSourceSchema),
+    conflicts: z.array(ProfileConflictSchema),
+  })
+  .refine(
+    (vault) =>
+      vault.vaultSchemaVersion === 2 ||
+      (vault.currentProfile.schemaVersion === 1 &&
+        vault.history.every((profile) => profile.schemaVersion === 1) &&
+        vault.sources.every((source) => source.kind !== "NARRATIVE")),
+    "Version 2 data requires vault version 2",
+  );
 
-export const ProfileBackupSchema = z.object({
-  format: z.literal("job-application-copilot-profile"),
-  backupVersion: z.literal(1),
-  exportedAt: ISODateTimeSchema,
-  vault: ProfileVaultSchema,
-});
+export const ProfileBackupSchema = z
+  .object({
+    format: z.literal("job-application-copilot-profile"),
+    backupVersion: z.union([z.literal(1), z.literal(2)]),
+    exportedAt: ISODateTimeSchema,
+    vault: ProfileVaultSchema,
+  })
+  .refine(
+    (backup) => backup.backupVersion >= backup.vault.vaultSchemaVersion,
+    "Backup version cannot omit the vault's compatibility requirement",
+  );
 
 const WorkDraftSchema = z.object({
   id: z.string().min(1),
@@ -123,6 +138,120 @@ export type ProfileDraft = z.infer<typeof ProfileDraftSchema>;
 export type ProfileSource = z.infer<typeof ProfileSourceSchema>;
 export type ProfileConflict = z.infer<typeof ProfileConflictSchema>;
 export type ResumeDraft = z.infer<typeof ResumeDraftSchema>;
+
+export const CareerSetupDraftSchema = z
+  .object({
+    expectedProfileVersion: z.number().int().positive(),
+    identity: z
+      .object({
+        full: z.string().trim().min(1),
+        given: z.string().trim().min(1),
+        family: z.string().trim(),
+      })
+      .strict(),
+    email: z.email(),
+    phone: z.union([z.literal(""), z.string().regex(/^\+[1-9]\d{6,14}$/)]),
+    preferences: CareerPreferencesSchema,
+    backgroundNotes: z.string().max(20_000),
+    reviewed: z.literal(true),
+  })
+  .strict();
+export type CareerSetupDraft = z.infer<typeof CareerSetupDraftSchema>;
+
+export function saveCareerSetup(
+  vaultInput: ProfileVault,
+  input: CareerSetupDraft,
+  now = new Date().toISOString(),
+): ProfileVault {
+  const vault = ProfileVaultSchema.parse(vaultInput);
+  const draft = CareerSetupDraftSchema.parse(input);
+  const previous = vault.currentProfile;
+  if (draft.expectedProfileVersion !== previous.profileVersion)
+    throw new Error("Your profile changed in another view. Reload setup before saving.");
+  if (vault.conflicts.length)
+    throw new Error("Resolve your import conflicts in the full profile before saving setup.");
+  const version = previous.profileVersion + 1;
+  const sourceId = id("setup");
+  const currentProfile = CandidateProfileSchema.parse({
+    ...previous,
+    schemaVersion: 2,
+    profileVersion: version,
+    updatedAt: now,
+    identity: {
+      ...previous.identity,
+      legalName: fact({
+        path: "identity.legalName",
+        value: { ...draft.identity, family: draft.identity.family || null },
+        sensitivity: "PERSONAL",
+        now,
+        version,
+        sourceId,
+      }),
+    },
+    contact: {
+      ...previous.contact,
+      emails: [
+        fact({
+          path: "contact.emails.0",
+          value: { address: draft.email, kind: "PERSONAL", primary: true },
+          sensitivity: "PERSONAL",
+          now,
+          version,
+          sourceId,
+        }),
+        ...previous.contact.emails.slice(1),
+      ],
+      phones: draft.phone
+        ? [
+            fact({
+              path: "contact.phones.0",
+              value: { e164: draft.phone, kind: "MOBILE", primary: true },
+              sensitivity: "PERSONAL",
+              now,
+              version,
+              sourceId,
+            }),
+            ...previous.contact.phones.slice(1),
+          ]
+        : previous.contact.phones.slice(1),
+    },
+    careerSetup: {
+      setupVersion: 1,
+      preferences: draft.preferences,
+      backgroundNotes: draft.backgroundNotes,
+      notesUse: "CONTEXT_ONLY",
+      reviewedAt: now,
+      sourceIds: [sourceId],
+    },
+  });
+  return ProfileVaultSchema.parse({
+    ...vault,
+    vaultSchemaVersion: 2,
+    updatedAt: now,
+    currentProfile,
+    history: [...vault.history, previous],
+    sources: [
+      ...vault.sources,
+      { id: sourceId, kind: "MANUAL", displayName: "Reviewed career setup", importedAt: now },
+    ],
+  });
+}
+
+export function careerReadiness(vault: ProfileVault): { ready: boolean; missing: string[] } {
+  const profile = vault.currentProfile;
+  const preferences = profile.careerSetup?.preferences;
+  const missing: string[] = [];
+  if (profile.identity.legalName.status !== "VERIFIED_USER") missing.push("Review your name");
+  if (!profile.contact.emails.some((email) => email.status === "VERIFIED_USER" && email.value))
+    missing.push("Add and review your email");
+  if (!preferences?.targetRoles.length) missing.push("Choose at least one target role");
+  if (!preferences?.targetLocations.length && !preferences?.workArrangements.includes("REMOTE"))
+    missing.push("Choose a target location or remote work");
+  if (!preferences?.workArrangements.length) missing.push("Choose your work arrangements");
+  if (countFactsByStatus(profile, "VERIFIED_DOCUMENT")) missing.push("Review imported facts");
+  if (vault.conflicts.length) missing.push("Resolve conflicting imported details");
+  return { ready: missing.length === 0, missing };
+}
 
 type FactOptions = {
   path: string;
@@ -534,7 +663,7 @@ export function saveProfileResponses(
 export function exportProfileBackup(vault: ProfileVault, now = new Date().toISOString()): string {
   const backup = ProfileBackupSchema.parse({
     format: "job-application-copilot-profile",
-    backupVersion: 1,
+    backupVersion: vault.vaultSchemaVersion,
     exportedAt: now,
     vault,
   });
@@ -548,7 +677,7 @@ export function migrateStoredProfile(input: unknown, now = new Date().toISOStrin
   const directProfile = CandidateProfileSchema.safeParse(input);
   if (directProfile.success) {
     return ProfileVaultSchema.parse({
-      vaultSchemaVersion: 1,
+      vaultSchemaVersion: directProfile.data.schemaVersion,
       id: id("vault"),
       createdAt: directProfile.data.createdAt,
       updatedAt: now,
@@ -582,7 +711,7 @@ export function importProfileBackup(input: string, now = new Date().toISOString(
   const legacy = LegacyBackupSchema.safeParse(untrusted);
   if (legacy.success) {
     return ProfileVaultSchema.parse({
-      vaultSchemaVersion: 1,
+      vaultSchemaVersion: legacy.data.profile.schemaVersion,
       id: id("vault"),
       createdAt: legacy.data.profile.createdAt,
       updatedAt: now,
@@ -688,7 +817,11 @@ export function importResumeDraft(
   ) {
     throw new Error("Review the pending résumé import before importing another file.");
   }
-  if (source.kind !== "RESUME_PDF" && source.kind !== "RESUME_DOCX") {
+  if (
+    source.kind !== "RESUME_PDF" &&
+    source.kind !== "RESUME_DOCX" &&
+    source.kind !== "NARRATIVE"
+  ) {
     throw new Error("A résumé import requires a PDF or DOCX source.");
   }
 
@@ -797,6 +930,7 @@ export function importResumeDraft(
   );
   return ProfileVaultSchema.parse({
     ...saved,
+    vaultSchemaVersion: source.kind === "NARRATIVE" ? 2 : saved.vaultSchemaVersion,
     currentProfile: markedProfile,
     sources: [...saved.sources.filter((item) => item.id !== source.id), source],
     conflicts: [...saved.conflicts, ...conflicts],

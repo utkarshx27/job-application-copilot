@@ -64,6 +64,7 @@ import {
   importProfileBackup,
   resolveProfileConflict,
   saveProfileDraft,
+  saveCareerSetup,
   saveProfileResponses,
   verifyImportedFacts,
 } from "@copilot/profile-core";
@@ -101,6 +102,7 @@ import { getAutoNextStore, setAutoNextStore } from "./navigation-storage";
 import { AgentLabController, observeAgentTab, agentLabErrorMessage } from "./agent-controller";
 import { AgentRepository } from "./agent-storage";
 import { AGENT_LAB_AVAILABLE } from "./agent-config";
+import { parseNarrativeIntake } from "@copilot/resume-parser";
 
 const agentLab = new AgentLabController(
   new AgentRepository(),
@@ -1174,6 +1176,34 @@ async function handlePanelRequest(
     return { ok: true, data: await storeProfile(saved) };
   }
 
+  if (request.type === "PANEL_PROFILE_SETUP_SAVE") {
+    return {
+      ok: true,
+      data: await storeProfile(saveCareerSetup(await getProfileVault(), request.draft)),
+    };
+  }
+  if (request.type === "PANEL_PROFILE_IMPORT_NARRATIVE") {
+    const vault = await getProfileVault();
+    if (vault.currentProfile.profileVersion !== request.expectedProfileVersion)
+      throw new Error("Your profile changed. Reload before importing notes.");
+    const draft = parseNarrativeIntake(request.text);
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(request.text));
+    return {
+      ok: true,
+      data: await storeProfile(
+        importResumeDraft(vault, draft, {
+          id: `narrative-${crypto.randomUUID()}`,
+          kind: "NARRATIVE",
+          displayName: "Background notes (labelled contact details)",
+          sha256: Array.from(new Uint8Array(digest), (byte) =>
+            byte.toString(16).padStart(2, "0"),
+          ).join(""),
+          importedAt: new Date().toISOString(),
+        }),
+      ),
+    };
+  }
+
   if (request.type === "PANEL_PROFILE_EXPORT") {
     return { ok: true, data: { backupJson: exportProfileBackup(await getProfileVault()) } };
   }
@@ -1203,6 +1233,7 @@ async function handlePanelRequest(
   return scanActiveTab();
 }
 
+let profileQueue: Promise<unknown> = Promise.resolve();
 chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
 
@@ -1244,7 +1275,18 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
     return false;
   }
 
-  void handlePanelRequest(parsed.data).then(sendResponse, (error: unknown) => {
+  const request = parsed.data;
+  const serialized =
+    request.type.startsWith("PANEL_PROFILE_") || request.type.startsWith("PANEL_SYNC_");
+  const response = serialized
+    ? profileQueue.then(() => handlePanelRequest(request))
+    : handlePanelRequest(request);
+  if (serialized)
+    profileQueue = response.then(
+      () => undefined,
+      () => undefined,
+    );
+  void response.then(sendResponse, (error: unknown) => {
     const isProfileRequest = parsed.data.type.startsWith("PANEL_PROFILE_");
     const isAiRequest = parsed.data.type.startsWith("PANEL_AI_");
     const isSyncRequest = parsed.data.type.startsWith("PANEL_SYNC_");

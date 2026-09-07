@@ -1,6 +1,6 @@
 # Discovery, company research, and platform integration
 
-Status: proposed capabilities. Current runtime guarantees remain described in the [repository README](../../README.md).
+Status: local portal emulations and a fallback test driver are implemented in AG-03; live connectors remain proposed. See the [coverage and usage guide](./SETUP_AND_PORTALS.md) and [repository README](../../README.md).
 
 ## Separate sources from application destinations
 

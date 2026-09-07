@@ -1,4 +1,5 @@
 import { ResumeDraftSchema, type ResumeDraft } from "@copilot/profile-core";
+export { parseNarrativeIntake } from "./narrative";
 
 type Section = "NONE" | "WORK" | "EDUCATION" | "SKILLS";
 

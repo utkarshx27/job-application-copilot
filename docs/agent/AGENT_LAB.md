@@ -93,4 +93,4 @@ npm run build --workspace @copilot/test-ats
 npx playwright test --config evals/end-to-end/playwright.config.ts --grep "agent lab"
 ```
 
-Next implementation: **AG-02 compact onboarding/preferences** and **AG-03 synthetic portal/outcome harness**, followed by the model router and mutating executor. The new foundation tests do not satisfy the later end-to-end application or live-connector release gates.
+AG-02 compact onboarding/preferences and AG-03 synthetic portal/outcome harness are now implemented; see [usage and coverage](./SETUP_AND_PORTALS.md). The research lab includes **Explore portal demos** to open the gallery. Next are AG-04 model routing and AG-05 execution. The read-checkpoint lab still targets the exact Workday fixture and does not itself operate the new portals.

@@ -1,5 +1,7 @@
 import { CanonicalQuestionSchema, QUESTION_ONTOLOGY_VERSION } from "@copilot/question-ontology";
 import { z } from "zod";
+import { CareerSetupSchema } from "./career-setup";
+export * from "./career-setup";
 
 export const ISODateTimeSchema = z.iso.datetime({ offset: true });
 export const ISODateSchema = z.iso.date();
@@ -183,46 +185,52 @@ export const SavedResponseSchema = z.object({
   expiresAt: ISODateTimeSchema.optional(),
 });
 
-export const CandidateProfileSchema = z.object({
-  schemaVersion: z.literal(1),
-  id: z.string().min(1),
-  profileVersion: z.number().int().positive(),
-  createdAt: ISODateTimeSchema,
-  updatedAt: ISODateTimeSchema,
-  identity: z.object({
-    legalName: candidateFactSchema(PersonNameSchema),
-    preferredName: candidateFactSchema(PersonNameSchema).optional(),
-    pronunciation: candidateFactSchema(z.string()).optional(),
-    pronouns: candidateFactSchema(z.string()).optional(),
-  }),
-  contact: z.object({
-    emails: z.array(candidateFactSchema(EmailSchema)),
-    phones: z.array(candidateFactSchema(PhoneSchema)),
-    addresses: z.array(candidateFactSchema(AddressSchema)),
-  }),
-  links: z.object({
-    portfolio: candidateFactSchema(z.url()).optional(),
-    github: candidateFactSchema(z.url()).optional(),
-    linkedin: candidateFactSchema(z.url()).optional(),
-    other: z.array(candidateFactSchema(z.url())),
-  }),
-  workHistory: z.array(WorkExperienceSchema),
-  education: z.array(EducationRecordSchema),
-  projects: z.array(candidateFactSchema(z.string().min(1))).default([]),
-  publications: z.array(candidateFactSchema(z.string().min(1))).default([]),
-  skills: z.array(candidateFactSchema(z.string().min(1))),
-  certifications: z.array(candidateFactSchema(z.string().min(1))),
-  languages: z.array(candidateFactSchema(z.string().min(1))),
-  workAuthorization: z.array(WorkAuthorizationSchema),
-  compensationPreferences: z.array(candidateFactSchema(z.string().min(1))),
-  relocationPreferences: candidateFactSchema(z.string()).optional(),
-  travelPreferences: candidateFactSchema(z.string()).optional(),
-  availability: candidateFactSchema(z.string()).optional(),
-  jobPreferences: z.array(candidateFactSchema(z.string().min(1))),
-  answerLibrary: z.array(SavedResponseSchema).max(1_000),
-  sensitivePreferences: z.array(candidateFactSchema(z.string())),
-  exclusionRules: z.array(z.string().min(1)),
-});
+export const CandidateProfileSchema = z
+  .object({
+    schemaVersion: z.union([z.literal(1), z.literal(2)]),
+    id: z.string().min(1),
+    profileVersion: z.number().int().positive(),
+    createdAt: ISODateTimeSchema,
+    updatedAt: ISODateTimeSchema,
+    identity: z.object({
+      legalName: candidateFactSchema(PersonNameSchema),
+      preferredName: candidateFactSchema(PersonNameSchema).optional(),
+      pronunciation: candidateFactSchema(z.string()).optional(),
+      pronouns: candidateFactSchema(z.string()).optional(),
+    }),
+    contact: z.object({
+      emails: z.array(candidateFactSchema(EmailSchema)),
+      phones: z.array(candidateFactSchema(PhoneSchema)),
+      addresses: z.array(candidateFactSchema(AddressSchema)),
+    }),
+    links: z.object({
+      portfolio: candidateFactSchema(z.url()).optional(),
+      github: candidateFactSchema(z.url()).optional(),
+      linkedin: candidateFactSchema(z.url()).optional(),
+      other: z.array(candidateFactSchema(z.url())),
+    }),
+    workHistory: z.array(WorkExperienceSchema),
+    education: z.array(EducationRecordSchema),
+    projects: z.array(candidateFactSchema(z.string().min(1))).default([]),
+    publications: z.array(candidateFactSchema(z.string().min(1))).default([]),
+    skills: z.array(candidateFactSchema(z.string().min(1))),
+    certifications: z.array(candidateFactSchema(z.string().min(1))),
+    languages: z.array(candidateFactSchema(z.string().min(1))),
+    workAuthorization: z.array(WorkAuthorizationSchema),
+    compensationPreferences: z.array(candidateFactSchema(z.string().min(1))),
+    relocationPreferences: candidateFactSchema(z.string()).optional(),
+    travelPreferences: candidateFactSchema(z.string()).optional(),
+    availability: candidateFactSchema(z.string()).optional(),
+    jobPreferences: z.array(candidateFactSchema(z.string().min(1))),
+    answerLibrary: z.array(SavedResponseSchema).max(1_000),
+    sensitivePreferences: z.array(candidateFactSchema(z.string())),
+    exclusionRules: z.array(z.string().min(1)),
+    careerSetup: CareerSetupSchema.optional(),
+  })
+  .refine(
+    (profile) => !profile.careerSetup || profile.schemaVersion === 2,
+    "Career setup requires profile schema version 2",
+  );
 
 export type CandidateProfile = z.infer<typeof CandidateProfileSchema>;
 export type CandidateFact<T> = z.infer<ReturnType<typeof candidateFactSchema<z.ZodType<T>>>>;

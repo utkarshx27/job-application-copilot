@@ -42,6 +42,7 @@
     "lint": "eslint .",
     "test": "vitest run --pool=threads --maxWorkers=1",
     "test:e2e": "npm run build:e2e --workspace @copilot/extension && npm run build --workspace @copilot/test-ats && playwright test --config evals/end-to-end/playwright.config.ts",
+    "test:portals": "npm run build:e2e --workspace @copilot/extension && npm run build --workspace @copilot/test-ats && playwright test --config evals/end-to-end/playwright.config.ts --grep \"portal harness|simple setup\"",
     "test:watch": "vitest",
     "typecheck": "tsc --build",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",

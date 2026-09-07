@@ -12,6 +12,9 @@ A local-first, user-controlled Chrome extension that helps complete job applicat
 
 ### Profile and résumé
 
+- Start with a compact résumé/contact review and a job-preference setup screen; open **Edit full profile** for detailed records and backups.
+- Save target roles, locations, remote/hybrid/on-site preferences, notice period, experience, exclusions, and separate current/expected compensation with currency and period.
+- Keep free-text background notes as context; explicitly labelled contact suggestions require review.
 - Store a versioned candidate profile locally in `chrome.storage.local`.
 - Import PDF and DOCX résumés locally without uploading the raw file to a server.
 - Review document-derived facts, resolve conflicts, and explicitly verify them.
@@ -100,10 +103,12 @@ After pulling new code, run `npm run build`, reload the extension on `chrome://e
 ### 1. Create and verify your profile
 
 1. Open the extension side panel and select **Profile**.
-2. Import a PDF/DOCX résumé or enter your details manually.
-3. Review every imported fact and resolve any conflicts.
-4. Select **Save and verify profile**.
-5. Export a JSON backup if desired and store it securely; profile exports contain personal data and are not encrypted.
+2. Import a PDF/DOCX résumé, optionally add background notes, or enter contact details manually.
+3. Review the extracted details. Use **Edit full profile** to correct records or resolve conflicts, then confirm the imported details.
+4. Enter target roles, locations and work arrangements. Expand compensation/exclusions if needed, review your setup, and select **Save my setup**.
+5. Follow the readiness summary, then select **Review an application form**. Detailed work history, skills, work authorization, JSON import/export, and the original **Save and verify profile** action remain in **Edit full profile**.
+
+Saving career setup upgrades the profile/backup schema to version 2. Update all devices before syncing; older builds cannot read the new backup format. See [setup, compatibility, and portal testing](./docs/agent/SETUP_AND_PORTALS.md).
 
 ### 2. Scan an application
 
@@ -241,7 +246,7 @@ The original implementation blueprint is retained as a technical reference. The 
 
 Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run verify` before opening a pull request.
 
-The [application-agent implementation plan](./docs/agent/README.md) describes the next product direction: simpler onboarding, job discovery, company evidence, assisted multi-step applications, and learning from corrections. Its first implementation is a separate [read-only local agent lab](./docs/agent/AGENT_LAB.md) with durable run state, pause/resume, recovery, and duplicate-command protection. The broader agent capabilities remain planned, not part of the current release. Contributor work packages and acceptance criteria stay open in the plan.
+The [application-agent implementation plan](./docs/agent/README.md) tracks the next product direction. AG-01 supplies a [read-only local agent lab](./docs/agent/AGENT_LAB.md); AG-02 adds simpler onboarding; AG-03 adds [29 synthetic portal scenarios across 17 families](./docs/agent/SETUP_AND_PORTALS.md), a fallback test driver, and an independent application-outcome ledger. Run `npm run test:portals` for the focused browser suite. These emulations exercise application patterns; they do not establish live LinkedIn/Naukri/Wellfound compatibility. Job discovery, model routing, the agent's form executor, and learning from corrections remain open contributor work packages.
 
 Useful contribution areas include:
 

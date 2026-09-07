@@ -27,6 +27,16 @@ export function AgentLab() {
   return (
     <section className="agent-lab" aria-label="Experimental agent lab">
       <h2>Agent foundation lab</h2>
+      <button
+        type="button"
+        onClick={() => {
+          void chrome.tabs
+            .create({ url: "http://127.0.0.1:4173/portal.html" })
+            .catch(() => setError("Could not open the local portal gallery."));
+        }}
+      >
+        Explore portal demos
+      </button>
       <p>
         Test saved progress and recovery on the local Workday fixture. This first implementation
         only reads form structure; it does not fill, navigate, submit, or call AI.

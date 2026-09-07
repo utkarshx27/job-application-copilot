@@ -284,6 +284,11 @@ export function mergeProfileVaults(localInput: unknown, remoteInput: unknown): P
   const localWins = Date.parse(local.updatedAt) >= Date.parse(remote.updatedAt);
   const winner = localWins ? local : remote;
   const loser = localWins ? remote : local;
+  if (winner.vaultSchemaVersion === 1 && loser.vaultSchemaVersion === 2) {
+    throw new Error(
+      "A newer legacy profile cannot replace career setup. Update every device, review and save the version 2 profile, then sync again.",
+    );
+  }
   const history = uniqueProfileVersions([
     ...winner.history,
     ...loser.history,
@@ -295,6 +300,7 @@ export function mergeProfileVaults(localInput: unknown, remoteInput: unknown): P
   );
   return ProfileVaultSchema.parse({
     ...winner,
+    vaultSchemaVersion: Math.max(local.vaultSchemaVersion, remote.vaultSchemaVersion),
     createdAt:
       Date.parse(local.createdAt) <= Date.parse(remote.createdAt)
         ? local.createdAt

@@ -1,6 +1,6 @@
 # Implementation work packages
 
-Status: **AG-01 foundation implemented; AG-02–AG-13 unstarted.** The experimental lab is read-only, not the complete agent product. Browser-mutation acceptance and tracker delivery must be verified again when AG-05 connects an executor. See [current implementation and evidence](./AGENT_LAB.md), [architecture](./ARCHITECTURE.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
+Status: **AG-01, AG-02, and AG-03 implemented; AG-04–AG-13 unstarted.** The foundation lab remains read-only. The portal test runner can exercise synthetic applications, independently of the extension's future agent executor. Browser-mutation acceptance and tracker delivery must be verified again in AG-05. See [setup/portal implementation](./SETUP_AND_PORTALS.md), [foundation evidence](./AGENT_LAB.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
 
 ## Delivery order
 
@@ -46,6 +46,8 @@ Acceptance:
 
 ## AG-02: simple onboarding and preferences
 
+Implemented: compact setup/review/readiness UI; extracted profile/observe/tracker/sync modules; structured career preferences; labelled narrative contact intake with provenance and conflicts; version 2 profiles/backups; compatibility protection in encrypted sync. Unstructured notes remain context until AG-04 provides a separately reviewed extraction capability. [Usage and migration](./SETUP_AND_PORTALS.md).
+
 Primary locations: `packages/candidate-schema`, `packages/profile-core`, `packages/resume-parser`, and extracted components under `apps/extension/src/sidepanel`.
 
 Deliverables:
@@ -66,7 +68,9 @@ Acceptance:
 
 ## AG-03: emulations and outcome harness
 
-Primary locations: `apps/test-ats`, new fixture folders under `fixtures`, proposed `evals/agent`, existing Playwright setup.
+Implemented: 29 scenarios across 17 portal families, searchable seeded jobs, company evidence, dynamic controls, steps, uploads, faults, a separate authenticated runner/outcome service, and a local-only fallback test driver. Public page IDs are opaque; expected answers and outcome judgments are excluded from browser bundles. The existing React/Vue fixtures and AG-01 worker-restart test remain part of the full suite. [Coverage and extension points](./SETUP_AND_PORTALS.md).
+
+Primary locations: `apps/test-ats/server`, `apps/test-ats/src/portal.ts`, and `evals/end-to-end/portal*.ts` using the existing Playwright setup.
 
 Deliverables:
 

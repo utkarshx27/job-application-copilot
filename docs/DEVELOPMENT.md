@@ -6,7 +6,7 @@ GitHub issues and pull requests are the source of truth for assigned work. Befor
 
 ## Experimental application agent
 
-The [application-agent plan](./agent/README.md) defines the successor experience, with [implementation work packages](./agent/IMPLEMENTATION.md), browser architecture, source integration, model research, and correction-learning evaluations. AG-01's durable foundation is implemented in a separate, opt-in [read-only research lab](./agent/AGENT_LAB.md). AG-02–AG-13 remain planned; the current extension's release and security guarantees still apply.
+The [application-agent plan](./agent/README.md) defines the successor experience, with [implementation work packages](./agent/IMPLEMENTATION.md), browser architecture, source integration, model research, and correction-learning evaluations. AG-01's durable foundation, AG-02's compact onboarding, and AG-03's local portal harness are implemented. Read [setup/migration and portal development](./agent/SETUP_AND_PORTALS.md); continue with AG-04 model routing and AG-05 execution. AG-04–AG-13 remain planned.
 
 ## Current priorities
 

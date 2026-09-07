@@ -428,6 +428,28 @@ footer {
   color: #69736c;
   font-size: 13px;
 }
+.onboarding fieldset {
+  min-width: 0;
+}
+.onboarding dl,
+.onboarding dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.onboarding dt {
+  margin-top: 10px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.onboarding details {
+  margin: 16px 0;
+}
+.readiness {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #bdd7c7;
+  border-radius: 12px;
+}
 .summary {
   display: flex;
   align-items: baseline;
