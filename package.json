@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Local-first, user-controlled job application autofill copilot",
+  "description": "Local-first Chrome copilot with reviewed job application autofill, tracking, and experimental local-AI tooling",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -44,6 +44,8 @@
     "test:e2e": "npm run build:e2e --workspace @copilot/extension && npm run build --workspace @copilot/test-ats && playwright test --config evals/end-to-end/playwright.config.ts",
     "test:portals": "npm run build:e2e --workspace @copilot/extension && npm run build --workspace @copilot/test-ats && playwright test --config evals/end-to-end/playwright.config.ts --grep \"portal harness|simple setup\"",
     "test:watch": "vitest",
+    "inference:benchmark": "node scripts/run-inference-benchmark.mjs",
+    "inference:serve": "node scripts/serve-local-inference.mjs",
     "typecheck": "tsc --build",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
     "verify": "npm run check && npm run test:e2e"

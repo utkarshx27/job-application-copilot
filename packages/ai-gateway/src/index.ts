@@ -1,6 +1,11 @@
 import { FormControlKindSchema } from "@copilot/form-schema";
 import { CanonicalQuestionSchema } from "@copilot/question-ontology";
 import { z } from "zod";
+export * from "./agent-contracts";
+export * from "./inference-budget";
+export * from "./inference-router";
+export * from "./inference-providers";
+export * from "./inference-storage";
 
 export const AI_PROMPT_VERSION = "phase5-v1" as const;
 

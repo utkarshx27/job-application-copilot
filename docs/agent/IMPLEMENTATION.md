@@ -1,6 +1,6 @@
 # Implementation work packages
 
-Status: **AG-01, AG-02, and AG-03 implemented; AG-04–AG-13 unstarted.** The foundation lab remains read-only. The portal test runner can exercise synthetic applications, independently of the extension's future agent executor. Browser-mutation acceptance and tracker delivery must be verified again in AG-05. See [setup/portal implementation](./SETUP_AND_PORTALS.md), [foundation evidence](./AGENT_LAB.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
+Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with integration/validation gates open; AG-11 local-model experiment started. AG-05–AG-10 and AG-12–AG-13 remain unimplemented.** The foundation lab remains read-only. The portal test runner can exercise synthetic applications independently of the extension's future agent executor. See [inference implementation and measured limits](./INFERENCE.md), [setup/portals](./SETUP_AND_PORTALS.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
 
 ## Delivery order
 
@@ -89,6 +89,8 @@ Acceptance:
 
 ## AG-04: provider routing and budgets
 
+Implemented prototype: four strict task contracts, constrained identifier decoding, OpenAI/Gemini/fixture/local adapters, immutable transactional reservations, usage normalization, bounded failure handling, and a reproducible synthetic benchmark. Existing drafting remains unchanged. Local-only inference was prioritized by user choice; no cloud calls were made. The 4B local candidate reached 9/10 on development smoke cases, not an end-to-end gate. Browser integration, broader independent evaluation, and hosted live validation remain open. [Evidence and commands](./INFERENCE.md).
+
 Primary locations: `packages/ai-gateway`, `packages/grounded-generation`, extension `ai-storage.ts`, new provider adapters and tests.
 
 Deliverables:
@@ -108,6 +110,8 @@ Acceptance:
 - The inference router chooses a candidate from measured results in [RESEARCH.md](./RESEARCH.md), with exact versions recorded.
 
 ## AG-05: durable application executor
+
+Next implementation sequence: (1) isolated document target registry and receiver with freshness/user-edit tests; (2) deterministic local custom-control handlers and per-intent verification; (3) durable controller integration and idempotent tracker delivery; (4) opt-in local inference and bounded visual fallback only after independent validation. The inference prototype does not authorize any mutation. Preserve the current production site and submission restrictions throughout.
 
 Primary locations: `agent-core`, browser command schema, `scanner.ts`, `form-driver.ts`, `upload-driver.ts`, `ats-page.ts`, navigation/submission packages.
 
@@ -224,6 +228,8 @@ Acceptance:
 - Live unsupported paths retain a usable manual/import handoff. Security evasion is not a completion criterion.
 
 ## AG-11: local model option and companion decision
+
+Early experiment completed with user-approved workspace-local Ollama and Qwen 1.7B/4B quantizations on a GTX 1650 (4 GB) / 16 GB RAM machine. A checked Windows runtime launcher and model-digest-aware benchmark are available. Local browser pairing, distribution, held-out performance gates, and product integration are still pending; this package is not complete. [Run and inspect the experiment](./INFERENCE.md).
 
 Primary locations: gateway local provider, optional `apps/agent-companion`, platform installers, model benchmark configurations.
 

@@ -1,6 +1,6 @@
 # Application agent implementation plan
 
-Status: **AG-01, AG-02, and AG-03 implemented. AG-04–AG-13 remain planned.** The extension now has compact onboarding and a synthetic portal/outcome harness alongside the durable agent foundation. The full agent workflow is still in development. See [setup and portal usage](./SETUP_AND_PORTALS.md) and [foundation evidence](./AGENT_LAB.md).
+Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with open gates; AG-11 local-model experiment started.** The full agent workflow remains in development. See [local inference and measured limitations](./INFERENCE.md), [setup and portals](./SETUP_AND_PORTALS.md), and [foundation evidence](./AGENT_LAB.md).
 
 Prepared: 2026-09-06. Repository baseline: `351a034`.
 
@@ -37,7 +37,7 @@ One-click completion is conditional: all required answers must be known, the con
 
 The current extension already provides local profiles, document parsing, deterministic matching, reviewed answers, grounded drafts, ATS adapters, upload assistance, a tracker, duplicate handling, and optional encrypted sync.
 
-The experimental foundation has typed run state, transactional persistence, leases, checkpoint recovery, and a local read-only controller. Compact onboarding, structured career preferences, and a resettable synthetic portal/outcome harness are also implemented. Missing capabilities include live discovery connectors, explainable job ranking, sourced company research, a browser-mutating agent controller, production custom-control fallback, local/non-OpenAI providers, correction memory, and the larger held-out application benchmark. The local test driver demonstrates fallback strategies and is separate from the extension's runtime executor.
+The experimental foundation has typed run state, transactional persistence, leases, checkpoint recovery, and a local read-only controller. Compact onboarding, structured career preferences, a resettable synthetic portal/outcome harness, and budgeted inference with local/hosted adapters are also implemented. Missing capabilities include live discovery connectors, explainable job ranking, sourced company research, a browser-mutating agent controller, production custom-control fallback, user-facing local/non-OpenAI provider integration, correction memory, and the larger held-out application benchmark. The local test driver demonstrates fallback strategies and is separate from the extension's runtime executor.
 
 The present code explicitly blocks LinkedIn automation and limits automatic Next/Submit to an exact local Workday fixture. Its model tasks cannot control the browser. This proposal does not change those guarantees. See [current security policy](../../SECURITY.md) and [architecture records](../architecture/README.md).
 
@@ -59,7 +59,7 @@ The first delivery should demonstrate this complete path:
 
 It must also demonstrate a missing-answer pause, a changed question, an interrupted browser worker, and an uncertain submission result. A success-only demo is insufficient.
 
-The implementation delivers **AG-01 foundation**, **AG-02 onboarding**, and **AG-03 emulations** in [IMPLEMENTATION.md](./IMPLEMENTATION.md). Continue with **AG-04 model routing** and **AG-05 execution**. The first full agent product slice ends at **AG-09**; live connector assessment, local model packaging, and offline training have their own dependencies.
+The implementation delivers **AG-01 foundation**, **AG-02 onboarding**, **AG-03 emulations**, and the **AG-04 inference core** described in [IMPLEMENTATION.md](./IMPLEMENTATION.md). Continue closing inference integration/evaluation gates alongside **AG-05 execution**. The first full agent product slice ends at **AG-09**; live connector assessment, local model packaging, and offline training have their own dependencies.
 
 ## Decisions and open measurements
 
@@ -74,4 +74,4 @@ The implementation delivers **AG-01 foundation**, **AG-02 onboarding**, and **AG
 | Submission       | Local emulation first; separately gated live capability       | Connector-specific evidence and release review pass               |
 | Public pricing   | No per-application cost promise                               | Complete-run token, search, retry, and hosting costs are measured |
 
-Hardware, acceptable monthly spend, live research scope, and initial production connector remain open product inputs. They do not block the local vertical slice. Do not invent those values or purchase services while implementing the plan.
+Hardware was checked on 2026-09-07: GTX 1650 with 4 GB VRAM and 16 GB RAM. The user chose local inference first and approved the two documented local model downloads. Cloud spending, live research scope, and the initial production connector remain open product inputs. Do not infer spending or live-submission approval from the local benchmark permission.

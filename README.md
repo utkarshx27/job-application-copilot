@@ -3,10 +3,20 @@
 [![CI](https://github.com/utkarshx27/job-application-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/utkarshx27/job-application-copilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-A local-first, user-controlled Chrome extension that helps complete job application forms from a verified candidate profile. It scans the visible form, explains deterministic matches, and fills only fields the user selects.
+A local-first, open-source Chrome copilot for job applications: import your résumé, review your profile and career preferences, fill selected application fields, and track your applications. Optional grounded AI drafts help with narrative answers; your review stays in control.
 
 > [!IMPORTANT]
-> The MVP is implemented and open for continued community development. On real application sites, the extension never clicks Next or Submit. Always review the completed form and submit it yourself.
+> The reviewed-autofill MVP is implemented. A broader application agent and local-AI tooling are in development, not a finished auto-apply service. On real application sites, the extension never clicks Next or Submit. Always review the completed form and submit it yourself.
+
+## Current status
+
+| Area                  | Available today                                                                                                 | Boundary                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Chrome extension      | Résumé import, guided setup, reviewed autofill, custom answers, optional OpenAI drafts, tracker, encrypted sync | Real application navigation and submission remain manual |
+| Developer experiments | Read-only agent lab, synthetic portal harness, budgeted inference, local Qwen benchmarks                        | Not connected as an end-to-end browser agent             |
+| Open contributor work | Job discovery/ranking, company research, agent execution, correction memory, local-model product integration    | Planned work, not current user-facing features           |
+
+Ordinary autofill needs **no API key, GPU, or local model**. See [how to use it](#how-to-use-it) for the extension and [experimental agent and local AI](#experimental-agent-and-local-ai) for developer tooling.
 
 ## What it can do
 
@@ -213,6 +223,37 @@ The browser-test build receives access only to `http://127.0.0.1/*`. That permis
 
 Public ATS checks must remain read-only and stop before submission. See the [Greenhouse/Lever QA workflow](./qa/ats/README.md) and [Workday QA workflow](./qa/workday/README.md).
 
+### Experimental agent and local AI
+
+The [agent roadmap](./docs/agent/README.md) extends the existing copilot without changing the current manual-submission boundary. Implemented developer tools include:
+
+- A [read-only agent lab](./docs/agent/AGENT_LAB.md) with durable run state, checkpoints, and recovery.
+- [29 synthetic portal scenarios across 17 families](./docs/agent/SETUP_AND_PORTALS.md), fallback tests, and an independent application-outcome ledger. These are emulations, not proof of live LinkedIn, Naukri, or Wellfound support.
+- A [structured inference prototype](./docs/agent/INFERENCE.md) for intake, job/field interpretation, and constrained action proposals. It validates evidence and identifiers, reserves request budgets, and stops on uncertain usage. Proposals do not execute browser actions.
+- Local Ollama adapters and synthetic benchmarks for two Qwen candidates. Hosted OpenAI/Gemini adapter contracts are mock-tested; hosted benchmarks have not been run.
+
+Run the no-key, no-model-download checks:
+
+```bash
+npm run test:portals
+npm run inference:benchmark -- --fixture
+```
+
+For actual local inference, first follow the [runtime installation and model-download instructions](./docs/agent/INFERENCE.md#local-runtime). The supplied launcher requires Windows and the documented workspace-local Ollama runtime:
+
+```powershell
+# Terminal 1: start the already-installed runtime
+npm run inference:serve
+
+# Terminal 2: benchmark an already-downloaded candidate
+npm run inference:benchmark -- --local
+npm run inference:benchmark -- --local --4b
+```
+
+On a GTX 1650 with 4 GB VRAM and 16 GB RAM, Qwen3 1.7B passed **7/10** development smoke checks; Qwen3 4B Instruct passed **9/10** with partial CPU offload. These ten cases are not held out and do not establish application reliability. A failed case deliberately produces a nonzero benchmark exit code; inspect the Git-ignored reports in `test-results/inference/`.
+
+Local inference has no automatic cloud fallback. It is **not yet selectable in the extension's AI drafting panel**. Models/runtime files are not included in Git, and broader evaluation, browser integration, and learning from reviewed corrections remain open work.
+
 ## Repository structure
 
 ```text
@@ -228,6 +269,7 @@ packages/
   question-ontology/         Canonical questions and risk policies
   saved-response-engine/     Scoped reusable answers
   ai-gateway/                Provider-neutral structured AI tasks
+  agent-core/                Experimental durable agent run state
   grounded-generation/       Evidence selection and draft validation
   ats-*/                     ATS adapters and shared parsing
   application-state/         Tracker and duplicate handling
@@ -237,6 +279,8 @@ packages/
 fixtures/                    Synthetic and sanitized fixtures
 evals/end-to-end/            Chromium extension tests
 qa/                          Read-only public validation workflows
+scripts/                     QA tooling and local inference benchmarks
+docs/agent/                  Agent roadmap, lab, and inference guides
 docs/architecture/           Historical design and implementation records
 ```
 
@@ -246,7 +290,7 @@ The original implementation blueprint is retained as a technical reference. The 
 
 Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md), follow the [Code of Conduct](./CODE_OF_CONDUCT.md), and run `npm run verify` before opening a pull request.
 
-The [application-agent implementation plan](./docs/agent/README.md) tracks the next product direction. AG-01 supplies a [read-only local agent lab](./docs/agent/AGENT_LAB.md); AG-02 adds simpler onboarding; AG-03 adds [29 synthetic portal scenarios across 17 families](./docs/agent/SETUP_AND_PORTALS.md), a fallback test driver, and an independent application-outcome ledger. Run `npm run test:portals` for the focused browser suite. These emulations exercise application patterns; they do not establish live LinkedIn/Naukri/Wellfound compatibility. Job discovery, model routing, the agent's form executor, and learning from corrections remain open contributor work packages.
+The [living development backlog](./docs/DEVELOPMENT.md) and [application-agent work packages](./docs/agent/IMPLEMENTATION.md) track remaining work and acceptance criteria. The inference core is implemented, but runtime integration and broader evaluation remain open. Pick a scoped issue or propose a change before starting a large integration; contributions need not involve AI.
 
 Useful contribution areas include:
 
@@ -255,6 +299,7 @@ Useful contribution areas include:
 - Adding conservative profile fields and schema migrations.
 - Improving custom-widget support without arbitrary page automation.
 - Extending privacy, prompt-injection, and wrong-field regression tests.
+- Expanding held-out model evaluations and integrating local inference with explicit user controls.
 - Hardening the optional sync deployment.
 - Improving documentation and developer experience.
 
