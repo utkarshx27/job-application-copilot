@@ -5,6 +5,11 @@ const Ref = z.string().regex(/^[a-zA-Z0-9_.:-]{1,200}$/);
 const Time = z.number().int().nonnegative().safe();
 const Revision = z.number().int().nonnegative().safe();
 export const AGENT_FIXTURE_URL = "http://127.0.0.1:4173/workday.html";
+export const AGENT_EXECUTION_URL = "http://127.0.0.1:4173/agent.html";
+export function isAgentLocalUrl(url: string): boolean {
+  return url === AGENT_FIXTURE_URL || url === AGENT_EXECUTION_URL;
+}
+const LocalUrl = z.enum([AGENT_FIXTURE_URL, AGENT_EXECUTION_URL]);
 export const OBSERVATION_TTL_MS = 15_000;
 export const LEASE_TTL_MS = 20_000;
 
@@ -20,6 +25,9 @@ export const AgentActionKindSchema = z.enum([
   "UPLOAD_FILE",
   "NEXT",
   "SUBMIT",
+  "OPEN_CONTROL",
+  "ADD_ROW",
+  "REMOVE_ROW",
 ]);
 export const AgentStateSchema = z.enum([
   "QUEUED",
@@ -44,12 +52,15 @@ export const AgentPauseReasonSchema = z.enum([
   "BUDGET_EXHAUSTED",
   "ACTION_FAILED",
   "UNCERTAIN_DISPATCH",
+  "ACCESS_CHALLENGE",
+  "VALIDATION_REQUIRED",
+  "LOOP_DETECTED",
 ]);
 export const AgentBindingSchema = z
   .object({
     tabId: z.number().int().nonnegative(),
     documentId: Ref,
-    url: z.literal(AGENT_FIXTURE_URL),
+    url: LocalUrl,
     profileRevision: Revision,
   })
   .strict();
@@ -81,8 +92,8 @@ export const AgentConsentSchema = z
     id: Id,
     applicationId: Ref,
     profileRevision: Revision,
-    url: z.literal(AGENT_FIXTURE_URL),
-    capabilities: z.array(AgentActionKindSchema).min(1).max(6),
+    url: LocalUrl,
+    capabilities: z.array(AgentActionKindSchema).min(1).max(9),
     expiresAt: Time,
     submissionApproved: z.boolean(),
   })
@@ -105,6 +116,8 @@ export const AgentProposalSchema = z
       "FILE_RETAINED",
       "STEP_CHANGED",
       "CONFIRMATION_MATCHED",
+      "CONTROL_OPENED",
+      "ROW_CHANGED",
     ]),
     expiresAt: Time,
     costMicros: z.number().int().min(0).max(5_000_000),
@@ -118,6 +131,9 @@ export const AgentProposalSchema = z
       UPLOAD_FILE: "FILE_RETAINED",
       NEXT: "STEP_CHANGED",
       SUBMIT: "CONFIRMATION_MATCHED",
+      OPEN_CONTROL: "CONTROL_OPENED",
+      ADD_ROW: "ROW_CHANGED",
+      REMOVE_ROW: "ROW_CHANGED",
     } as const;
     if (p.expected !== expected[p.kind])
       ctx.addIssue({ code: "custom", message: "Wrong postcondition" });
@@ -156,6 +172,8 @@ export const AgentEventSchema = z
       "OUTCOME_UNKNOWN",
       "CONFIRMED",
       "OUTBOX_ACK",
+      "PREPARED",
+      "YIELDED",
     ]),
     intentId: Id.nullable(),
   })
@@ -201,7 +219,7 @@ const OutboxSchema = z
     intentId: Id,
     createdAt: Time,
     acknowledged: z.boolean(),
-    type: z.literal("LOCAL_CONFIRMATION"),
+    type: z.enum(["LOCAL_CONFIRMATION", "LOCAL_PREPARATION"]),
   })
   .strict();
 export const AgentStoreSchema = z
@@ -285,6 +303,15 @@ function stopRun(run: AgentRun, reason: z.infer<typeof AgentPauseReasonSchema>, 
 }
 
 export const AgentOperationSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("YIELD"),
+      runId: Id,
+      owner: Id,
+      fence: Revision,
+      prepared: z.boolean(),
+    })
+    .strict(),
   z.object({ type: z.literal("SET_ENABLED"), enabled: z.boolean() }).strict(),
   z
     .object({
@@ -424,7 +451,28 @@ export function reduceAgentStore(
   } else {
     const run = findRun(store, "ticket" in op ? op.ticket.runId : op.runId);
     requireThat(now >= run.updatedAt, "CLOCK_MOVED_BACKWARDS");
-    if (op.type === "ACQUIRE") {
+    if (op.type === "YIELD") {
+      requireLease(store, run, op.owner, op.fence, now);
+      requireThat(run.state === "OBSERVING" || run.state === "PLANNING", "WRONG_RUN_STATE");
+      run.lease = null;
+      run.observation = null;
+      run.state = op.prepared ? "READY_FOR_REVIEW" : "OBSERVING";
+      if (
+        op.prepared &&
+        !store.outbox.some((x) => x.runId === run.id && x.type === "LOCAL_PREPARATION")
+      ) {
+        store.outbox.push({
+          id: run.id,
+          runId: run.id,
+          applicationId: run.applicationId,
+          intentId: run.id,
+          createdAt: now,
+          acknowledged: false,
+          type: "LOCAL_PREPARATION",
+        });
+      }
+      event(run, op.prepared ? "PREPARED" : "YIELDED", now);
+    } else if (op.type === "ACQUIRE") {
       requireThat(store.enabled && mutableState(run), "RUN_NOT_RESUMABLE");
       requireThat(!run.lease || run.lease.expiresAt <= now, "LEASE_BUSY");
       requireThat(run.consent.expiresAt > now && run.budget.expiresAt > now, "RUN_EXPIRED");

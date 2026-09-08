@@ -46,7 +46,11 @@ not collect background tab history or request persistent content access to every
 
 ## Controlled navigation boundary
 
-Auto-next is limited to the exact local Workday Test ATS fixture, defaults off, and requires a second per-application opt-in. Real ATS pages remain manual-only. The extension persists dispatch before clicking, performs at most one click, verifies the transition, and never retries. See the [controlled navigation architecture record](./docs/architecture/phase-11-controlled-auto-next.md).
+The original auto-next feature is limited to the exact local Workday Test ATS fixture, defaults off, and requires a second per-application opt-in. It persists dispatch before clicking, verifies the transition, and never retries. See the [controlled navigation architecture record](./docs/architecture/phase-11-controlled-auto-next.md).
+
+Research/E2E builds additionally contain the AG-05 executor, restricted to the exact top-level `http://127.0.0.1:4173/agent.html` demo and a separately approved synthetic profile/file. Its isolated-world Port is bound to Chrome's tab/frame/document identity, expiring received intents and fences; worker disconnect and ordered revocation invalidate old execution. A committed action may finish during cancellation, but no new action is dispatched afterward. Full-document navigation is reconciled by reading, not re-clicking. This executor stops at review and has no submission capability. It records synthetic preparation as `APPLYING`, not `APPLIED`.
+
+Only research/E2E manifests offer optional `debugger` permission for bounded manual screenshot review. Attachment is explicit, local-only, and detached on completion/failure; screenshots are panel-memory-only and never sent to a model. The normal build neither ships the execution receiver nor requests debugger permission. Real ATS navigation/submission remain manual. See [executor scope and evidence](./docs/agent/EXECUTOR.md).
 
 Controlled submission is a separate default-off capability restricted to the exact local Test ATS Review page. It requires an on-page attestation, global and application opt-ins, explicit final authorization, and confirmation identity verification. Real ATS submission is not enabled. See the [controlled submission architecture record](./docs/architecture/phase-12-controlled-submission.md).
 

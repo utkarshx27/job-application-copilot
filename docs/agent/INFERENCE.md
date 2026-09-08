@@ -1,6 +1,6 @@
 # Inference prototype and local GPU experiment
 
-AG-04 now has a separate structured inference router, provider adapters, and transactional budget storage. AG-11's hardware/model experiment was brought forward at the user's request. This is developer-facing infrastructure, not a completed browser agent or a new option in the production OpenAI drafting panel. AG-05 must connect the executor; AG-11 still needs the browser pairing/access boundary and product setup flow.
+AG-04 has a separate structured inference router, provider adapters and transactional budget storage. AG-11's hardware experiment was brought forward at the user's request. This remains developer infrastructure, not a new production drafting-panel option. AG-05 now uses the reviewed-reference planning boundary in a deterministic local executor; model invocation/budget pairing with that runtime and AG-11 browser setup remain gated.
 
 ## Implemented boundaries
 
@@ -64,7 +64,7 @@ The initial generic-schema runs scored 5/10 on both candidates. With the same co
 | Qwen3 1.7B Q4_K_M             | 7/10                     | 2.18 GB, fully GPU-resident in this sample    | 0.8–2.9 seconds             |
 | Qwen3 4B Instruct 2507 Q4_K_M | 9/10                     | 2.29 GB of 4.13 GB total; partial CPU offload | 3.9–8.5 seconds             |
 
-Validation on 2026-09-08: `npm run verify` passed formatting, lint, type checking, builds, 183 unit tests across 40 files, and all 60 browser regression tests. The local model benchmark intentionally exits nonzero when a case fails; its model-quality result is separate from passing software regression tests.
+Validation on 2026-09-08 after local executor integration: `npm run verify` passed formatting, lint, type checking, builds, 221 unit tests across 42 files, and all 69 browser regression tests. The local model benchmark intentionally exits nonzero when a case fails; its model-quality result is separate from passing software regression tests.
 
 The 4B run reported about 2.29 GB in VRAM out of a 4.13 GB loaded allocation at 8K context, indicating partial CPU offload. The first case took 17.9 seconds; later cases took roughly 3.9–8.5 seconds. These are observed run samples, not latency guarantees or sampled peak memory. Model digest: `0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0`, Q4_K_M. The smaller candidate's digest is `8f68893c685c3ddff2aa3fffce2aa60a30bb2da65ca488b61fff134a4d1730e7`, Q4_K_M.
 
@@ -74,4 +74,6 @@ The 4B candidate is suitable for **further reviewed interpretation experiments**
 
 The OpenAI Docs skill informed the Responses schema, output cap, and usage normalization using the [Responses reference](https://developers.openai.com/api/reference/typescript/resources/responses/methods/create) and [structured output guide](https://developers.openai.com/api/docs/guides/structured-outputs). The budget-hosted adapter follows [Gemini Generate Content](https://ai.google.dev/api/generate-content); the research price source remains [Google pricing](https://ai.google.dev/gemini-api/docs/pricing), not a hard-coded live billing promise. Local transport follows [Ollama chat](https://docs.ollama.com/api/chat), [model metadata](https://docs.ollama.com/api/tags), and [configuration](https://docs.ollama.com/faq). The [1.7B](https://huggingface.co/Qwen/Qwen3-1.7B) and [4B Instruct](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) model cards identify the Apache-2.0 upstream models.
 
-Still open: broader frozen model benchmarks; hosted live validation only if requested; authenticated local browser pairing and runtime health UX; inference budget integration with durable application runs; visual capability negotiation; AG-05 execution and AG-06–AG-10/AG-12–AG-13 product, evaluation, and release work. Do not mark those packages complete based on this inference smoke test.
+The separate [vision experiment](./VISION.md) evaluates Qwen3-VL 2B using synthetic screenshots, without granting browser authority.
+
+Still open: broader frozen benchmarks; hosted live validation only if requested; authenticated local model/browser pairing and runtime health UX; inference budget integration with durable application runs; broader image-capable evaluation; and AG-06–AG-10/AG-12–AG-13 product/release work. AG-05's local deterministic executor does not by itself validate model-driven execution.

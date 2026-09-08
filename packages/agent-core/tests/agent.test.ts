@@ -59,6 +59,9 @@ function setup(kind: AgentProposal["kind"] = "READ_PAGE") {
     UPLOAD_FILE: "FILE_RETAINED",
     NEXT: "STEP_CHANGED",
     SUBMIT: "CONFIRMATION_MATCHED",
+    OPEN_CONTROL: "CONTROL_OPENED",
+    ADD_ROW: "ROW_CHANGED",
+    REMOVE_ROW: "ROW_CHANGED",
   } as const;
   const proposal: AgentProposal = {
     id: id(),

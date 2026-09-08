@@ -23,6 +23,7 @@ await mkdir(outdir, { recursive: true });
 
 const manifest = JSON.parse(await readFile(resolve(root, "manifest.json"), "utf8"));
 if (e2e || research) manifest.host_permissions = ["http://127.0.0.1/*"];
+if (e2e || research) manifest.optional_permissions = ["debugger"];
 if (research) manifest.name += " (Research)";
 
 await Promise.all([
@@ -72,6 +73,15 @@ const panel = await context({
 });
 
 const contexts = [worker, content, panel];
+if (e2e || research)
+  contexts.push(
+    await context({
+      ...shared,
+      entryPoints: [resolve(root, "src/agent-execution-content.ts")],
+      outfile: resolve(outdir, "agent-execution.js"),
+      format: "iife",
+    }),
+  );
 if (watch) {
   await Promise.all(contexts.map((item) => item.watch()));
   console.log("Watching extension sources…");

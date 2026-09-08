@@ -6,7 +6,7 @@ GitHub issues and pull requests are the source of truth for assigned work. Befor
 
 ## Experimental application agent
 
-The [application-agent plan](./agent/README.md) defines the successor experience. AG-01's durable foundation, AG-02's compact onboarding, and AG-03's local portal harness are implemented. AG-04 now has an [inference prototype and measured local-model experiment](./agent/INFERENCE.md), with browser integration and broader acceptance gates still open. AG-11's hardware experiment was brought forward for a 4 GB GPU; that package is not complete. Continue with the staged AG-05 executor work in the [implementation plan](./agent/IMPLEMENTATION.md). Read [setup/migration and portal development](./agent/SETUP_AND_PORTALS.md) for the existing test environment.
+The [application-agent plan](./agent/README.md) defines the successor experience. AG-01–AG-03 are implemented, AG-04 has an [inference prototype](./agent/INFERENCE.md), and AG-05 has a [research-only local executor](./agent/EXECUTOR.md) with Chrome messaging, recovery, supported controls and panel actions. Its manual visual fallback is not automated image inference. Continue with AG-06 and later product work; AG-04 evaluation/integration and AG-11 local-model setup remain open. See [setup/migration](./agent/SETUP_AND_PORTALS.md).
 
 ## Current priorities
 

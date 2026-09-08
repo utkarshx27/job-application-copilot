@@ -31,6 +31,8 @@ Node.js 22+ and npm 11+ are required.
 
 When contributing public ATS QA fixtures, follow [`qa/ats/README.md`](./qa/ats/README.md). Never commit the raw URL list, browser state, personal information, raw employer HTML, or application answers. Public-page capture must remain read-only and pre-submit.
 
+For the research-only local executor, follow [the AG-05 guide](./docs/agent/EXECUTOR.md) and run `npm run test:executor`. Keep new handlers on explicit synthetic fixtures, verify retained values/outcomes independently, and test stale documents, revocation and worker recovery. Do not expand live permissions or replace manual screenshot review with automatic coordinate actions without a separate capability review and evidence.
+
 Useful commands:
 
 ```bash

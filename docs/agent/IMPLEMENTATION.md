@@ -1,6 +1,6 @@
 # Implementation work packages
 
-Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with integration/validation gates open; AG-11 local-model experiment started. AG-05–AG-10 and AG-12–AG-13 remain unimplemented.** The foundation lab remains read-only. The portal test runner can exercise synthetic applications independently of the extension's future agent executor. See [inference implementation and measured limits](./INFERENCE.md), [setup/portals](./SETUP_AND_PORTALS.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
+Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with integration/validation gates open; AG-05 deterministic local execution implemented; AG-11 local-model experiment started. AG-06–AG-10 and AG-12–AG-13 remain unimplemented.** The original foundation lab remains read-only; the separate research executor operates only on its exact local demo. See [executor scope and visual limitation](./EXECUTOR.md), [inference limits](./INFERENCE.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
 
 ## Delivery order
 
@@ -26,7 +26,7 @@ AG-02 and AG-03 can run in parallel after agreeing on schemas. Discovery imports
 
 Implementation: `packages/agent-core`, `packages/browser-command-schema`, extension `agent-storage.ts`, `agent-controller.ts`, `agent-config.ts`, and `sidepanel/agent-lab.tsx`. Available only in research/E2E builds; defaults off. The lab performs structural read checkpoints on the exact local Workday fixture. [Run it and inspect the evidence](./AGENT_LAB.md).
 
-Scope adjustment: the core models future fill/next/submit transitions, but the runtime exposes none of those actions through the agent. Its confirmation outbox is tested with synthetic reducer events, not wired to real submissions or the existing tracker. AG-05 must implement and validate the document-side mutation receiver, independent postcondition verifier, and idempotent tracker consumer before claiming those capabilities.
+The AG-01 checkpoint lab remains read-only. AG-05 adds a separate isolated local mutation receiver, delayed postcondition checks, durable recovery and an idempotent preparation outbox/consumer. It stops at review; the confirmation outbox and submission recovery remain covered by the existing core tests rather than newly enabling agent submission.
 
 Deliverables:
 
@@ -111,7 +111,9 @@ Acceptance:
 
 ## AG-05: durable application executor
 
-Next implementation sequence: (1) isolated document target registry and receiver with freshness/user-edit tests; (2) deterministic local custom-control handlers and per-intent verification; (3) durable controller integration and idempotent tracker delivery; (4) opt-in local inference and bounded visual fallback only after independent validation. The inference prototype does not authorize any mutation. Preserve the current production site and submission restrictions throughout.
+Implemented local scope: isolated Chrome messaging, durable deterministic execution, reviewed reference planning, native/date/searchable combobox handlers, empty repeatable-row add/remove, synthetic-file hash verification, multi-step/full-document recovery, pause/resume/takeover/cancel, loop budgets and idempotent tracker preparation. The research panel exposes the exact synthetic demo; the normal extension is unchanged. [Run it and inspect the boundaries](./EXECUTOR.md).
+
+Scope decision: visual fallback is bounded manual screenshot review with explicit optional debugger permission and attachment cleanup. The user-approved [local vision evaluation](./VISION.md) is a separate synthetic benchmark, not action authority. Automated image-based actions remain unavailable until image-capable inference and pairing pass AG-04/AG-11 evaluation. Real-profile product orchestration belongs to AG-09 and live connectors to AG-10; none is implied by local AG-05 completion.
 
 Primary locations: `agent-core`, browser command schema, `scanner.ts`, `form-driver.ts`, `upload-driver.ts`, `ats-page.ts`, navigation/submission packages.
 
@@ -122,7 +124,7 @@ Deliverables:
 - Preserve existing user-edit tracking and resolve page/profile conflicts visibly.
 - Add freshness checks for tab, frame, document, job, profile, viewport and answer revision.
 - Generalize workflow state for local dialog and multi-page emulations while keeping existing production URL restrictions.
-- Add bounded visual fallback as a separate capability and test optional debugger permission/attachment lifecycle.
+- Add bounded manual visual-review fallback as a separate capability and test optional debugger permission/attachment lifecycle. Automated image-driven execution remains an explicit later inference-capability gate.
 - Add Pause, Resume, Take over, Cancel, loop detection, and timeout/uncertain-outcome recovery.
 
 Acceptance:

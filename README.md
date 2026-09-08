@@ -205,7 +205,7 @@ Run the controlled Test ATS in another terminal:
 npm run serve --workspace @copilot/test-ats
 ```
 
-The Test ATS includes controlled Greenhouse, Lever, Ashby, SmartRecruiters, Workday, iCIMS, Taleo, Workable, BambooHR, Jobvite, and Comeet fixtures. One-shot navigation and submission experiments are restricted to the exact local Workday fixture and are never enabled on real ATS pages.
+The Test ATS includes controlled Greenhouse, Lever, Ashby, SmartRecruiters, Workday, iCIMS, Taleo, Workable, BambooHR, Jobvite, and Comeet fixtures. The original one-shot navigation/submission experiment is restricted to the exact local Workday fixture. Research builds additionally support the [local agent execution demo](./docs/agent/EXECUTOR.md), which fills and advances only `http://127.0.0.1:4173/agent.html` and stops at review. Real ATS navigation and submission remain manual.
 
 ### Verification
 
@@ -228,6 +228,7 @@ Public ATS checks must remain read-only and stop before submission. See the [Gre
 The [agent roadmap](./docs/agent/README.md) extends the existing copilot without changing the current manual-submission boundary. Implemented developer tools include:
 
 - A [read-only agent lab](./docs/agent/AGENT_LAB.md) with durable run state, checkpoints, and recovery.
+- A [local application executor](./docs/agent/EXECUTOR.md) with research-panel controls, deterministic native/custom/date/upload actions, multi-step recovery, preparation tracking and optional manual screenshot review. It uses approved synthetic data and stops before submission; it is not a live auto-apply feature.
 - [29 synthetic portal scenarios across 17 families](./docs/agent/SETUP_AND_PORTALS.md), fallback tests, and an independent application-outcome ledger. These are emulations, not proof of live LinkedIn, Naukri, or Wellfound support.
 - A [structured inference prototype](./docs/agent/INFERENCE.md) for intake, job/field interpretation, and constrained action proposals. It validates evidence and identifiers, reserves request budgets, and stops on uncertain usage. Proposals do not execute browser actions.
 - Local Ollama adapters and synthetic benchmarks for two Qwen candidates. Hosted OpenAI/Gemini adapter contracts are mock-tested; hosted benchmarks have not been run.
@@ -251,6 +252,8 @@ npm run inference:benchmark -- --local --4b
 ```
 
 On a GTX 1650 with 4 GB VRAM and 16 GB RAM, Qwen3 1.7B passed **7/10** development smoke checks; Qwen3 4B Instruct passed **9/10** with partial CPU offload. These ten cases are not held out and do not establish application reliability. A failed case deliberately produces a nonzero benchmark exit code; inspect the Git-ignored reports in `test-results/inference/`.
+
+A separate [local vision benchmark](./docs/agent/VISION.md) evaluates Qwen3-VL 2B on synthetic screenshots (`npm run inference:benchmark:vision`). It does not control Chrome or enable visual auto-apply.
 
 Local inference has no automatic cloud fallback. It is **not yet selectable in the extension's AI drafting panel**. Models/runtime files are not included in Git, and broader evaluation, browser integration, and learning from reviewed corrections remain open work.
 

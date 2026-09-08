@@ -72,6 +72,13 @@ export const BrowserCommandSchema = z.discriminatedUnion("type", [
 ]);
 
 export const PanelRequestSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("PANEL_EXECUTOR_STATUS") }).strict(),
+  z.object({ type: z.literal("PANEL_EXECUTOR_ENABLE"), enabled: z.boolean() }).strict(),
+  z.object({ type: z.literal("PANEL_EXECUTOR_START"), approved: z.literal(true) }).strict(),
+  z.object({ type: z.literal("PANEL_EXECUTOR_RESUME"), runId: z.uuid() }).strict(),
+  z.object({ type: z.literal("PANEL_EXECUTOR_PAUSE"), runId: z.uuid() }).strict(),
+  z.object({ type: z.literal("PANEL_EXECUTOR_CANCEL"), runId: z.uuid() }).strict(),
+  z.object({ type: z.literal("PANEL_EXECUTOR_VISUAL"), runId: z.uuid() }).strict(),
   z.object({ type: z.literal("PANEL_PROFILE_SETUP_SAVE"), draft: CareerSetupDraftSchema }).strict(),
   z
     .object({
@@ -232,6 +239,12 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
   z.object({
     ok: z.literal(true),
     data: z.union([
+      z
+        .object({
+          kind: z.literal("LOCAL_VISUAL_REVIEW"),
+          image: z.string().startsWith("data:image/jpeg;base64,").max(1_400_100),
+        })
+        .strict(),
       AgentLabStatusSchema,
       z.object({ pong: z.literal(true) }),
       PageSnapshotSchema,

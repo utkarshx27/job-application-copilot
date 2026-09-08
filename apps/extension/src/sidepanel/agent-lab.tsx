@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AgentLabStatusSchema, type AgentLabStatus } from "@copilot/agent-core";
 import { PanelRequestSchema, RuntimeResponseSchema } from "@copilot/browser-command-schema";
+import { AgentExecutionPanel } from "./agent-execution";
 
 export function AgentLab() {
   const [status, setStatus] = useState<AgentLabStatus | null>(null);
@@ -130,6 +131,7 @@ export function AgentLab() {
           ))}
         </>
       )}
+      <AgentExecutionPanel />
     </section>
   );
 }

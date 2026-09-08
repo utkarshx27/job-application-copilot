@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Local agent execution demo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Local execution demo — synthetic applications only</h1>
+      <p>No real employer or submission endpoint. The agent stops at review.</p>
+      <p data-agent-challenge hidden>Access challenge: take over manually.</p>
+      <p data-agent-validation hidden role="alert">Check required answers.</p>
+      <form id="agent-form" data-agent-job="execution-demo-v1">
+        <section data-agent-step="contact">
+          <h2>Contact</h2>
+          <label>Name<input aria-label="Name" data-agent-field="name" required /></label>
+          <label
+            >Email<input aria-label="Email" data-agent-field="email" type="email" required
+          /></label>
+          <label
+            >Country<select aria-label="Country" data-agent-field="country" required>
+              <option value="">Choose</option>
+              <option value="IN">India</option>
+              <option value="GB">United Kingdom</option>
+            </select></label
+          >
+          <label
+            >Location<input
+              aria-label="Location"
+              data-agent-field="location"
+              role="combobox"
+              aria-controls="locations"
+              aria-expanded="false"
+              autocomplete="off"
+              required
+          /></label>
+          <div id="locations" role="listbox" hidden>
+            <label
+              >Search locations<input
+                aria-label="Search locations"
+                data-agent-field="locationQuery"
+                autocomplete="off"
+            /></label>
+            <div role="option" data-value="Bengaluru">Bengaluru</div>
+            <div role="option" data-value="London">London</div>
+          </div>
+          <label
+            >Available from<input
+              aria-label="Available from"
+              data-agent-field="startDate"
+              type="date"
+              required
+          /></label>
+          <button type="button" data-next>Next</button>
+        </section>
+        <section data-agent-step="experience" hidden>
+          <h2>Experience and résumé</h2>
+          <div id="rows"></div>
+          <button type="button" id="add-row">Add experience</button>
+          <label
+            >Résumé<input
+              aria-label="Résumé"
+              data-agent-field="resume"
+              type="file"
+              accept=".txt"
+              required
+          /></label>
+          <p id="file-status"></p>
+          <button type="button" data-next>Next</button>
+        </section>
+        <section data-agent-step="review" hidden>
+          <h2>Ready for review</h2>
+          <p id="review-values"></p>
+          <p>This demo does not submit an application.</p>
+        </section>
+      </form>
+    </main>
+    <script src="agent-fixture.js"></script>
+  </body>
+</html>

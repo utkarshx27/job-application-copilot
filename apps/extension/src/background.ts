@@ -103,6 +103,58 @@ import { AgentLabController, observeAgentTab, agentLabErrorMessage } from "./age
 import { AgentRepository } from "./agent-storage";
 import { AGENT_LAB_AVAILABLE } from "./agent-config";
 import { parseNarrativeIntake } from "@copilot/resume-parser";
+import { AGENT_EXECUTION_URL } from "@copilot/agent-core";
+import { AgentExecutionController } from "./agent-execution-controller";
+import { ExecutionTransport } from "./agent-execution-transport";
+import { captureLocalExecution } from "./agent-execution-visual";
+
+const executionRepository = new AgentRepository(indexedDB, "copilot-executor-v1");
+const executionController = new AgentExecutionController(
+  executionRepository,
+  new ExecutionTransport(AGENT_LAB_AVAILABLE),
+  AGENT_LAB_AVAILABLE,
+  async () => (await getProfileVault()).currentProfile.profileVersion,
+  async (run) => {
+    const at = new Date(run.createdAt).toISOString();
+    const analysis = ApplicationPageAnalysisSchema.parse({
+      analysisVersion: 1,
+      analysisId: run.id,
+      applicationId: run.applicationId,
+      mappings: [],
+      customQuestions: [],
+      duplicateWarnings: [],
+      snapshot: {
+        schemaVersion: 1,
+        url: AGENT_EXECUTION_URL,
+        title: "Synthetic execution demo",
+        capturedAt: at,
+        fields: [],
+      },
+      ats: {
+        adapter: "GENERIC",
+        adapterVersion: "agent-local-v1",
+        confidence: 1,
+        supported: true,
+        evidence: ["Exact local execution fixture"],
+      },
+      job: {
+        schemaVersion: 1,
+        id: run.applicationId,
+        ats: "GENERIC",
+        title: "Synthetic demo — prepared, not submitted",
+        company: "Local Test ATS (not a real employer)",
+        description: "Synthetic AG-05 execution test.",
+        sourceUrl: AGENT_EXECUTION_URL,
+        applicationUrl: AGENT_EXECUTION_URL,
+        snapshotAt: at,
+      },
+      confirmation: { confirmed: false, evidence: [] },
+    });
+    await setApplicationTracker(
+      recordApplying(await getApplicationTracker(), analysis, run.binding.profileRevision, at),
+    );
+  },
+);
 
 const agentLab = new AgentLabController(
   new AgentRepository(),
@@ -1267,6 +1319,47 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
       (data) => sendResponse({ ok: true, data } satisfies RuntimeResponse),
       (error: unknown) => sendResponse(failure("AGENT_FAILED", agentLabErrorMessage(error))),
     );
+    return true;
+  }
+
+  if (parsed.data.type.startsWith("PANEL_EXECUTOR_")) {
+    if (!AGENT_LAB_AVAILABLE || sender.url !== chrome.runtime.getURL("sidepanel.html")) {
+      sendResponse(failure("BAD_MESSAGE", "Local executor requires the research panel."));
+      return false;
+    }
+    const request = parsed.data;
+    void (async () => {
+      try {
+        const data =
+          request.type === "PANEL_EXECUTOR_STATUS"
+            ? await executionController.status()
+            : request.type === "PANEL_EXECUTOR_ENABLE"
+              ? await executionController.enable(request.enabled)
+              : request.type === "PANEL_EXECUTOR_START"
+                ? await executionController.start(request.approved)
+                : request.type === "PANEL_EXECUTOR_RESUME"
+                  ? await executionController.resume(request.runId)
+                  : request.type === "PANEL_EXECUTOR_PAUSE"
+                    ? await executionController.stop(request.runId, false)
+                    : request.type === "PANEL_EXECUTOR_CANCEL"
+                      ? await executionController.stop(request.runId, true)
+                      : request.type === "PANEL_EXECUTOR_VISUAL"
+                        ? await (async () => {
+                            await executionController.stop(request.runId, false);
+                            const run = (await executionRepository.read()).runs.find(
+                              (x) => x.id === request.runId,
+                            );
+                            if (!run) throw new Error("RUN_NOT_FOUND");
+                            return captureLocalExecution(run.binding.tabId);
+                          })()
+                        : null;
+        sendResponse({ ok: true, data });
+      } catch (error) {
+        sendResponse(
+          failure("AGENT_FAILED", error instanceof Error ? error.message : "Execution stopped"),
+        );
+      }
+    })();
     return true;
   }
 
