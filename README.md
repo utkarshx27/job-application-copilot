@@ -10,11 +10,11 @@ A local-first, open-source Chrome copilot for job applications: import your rés
 
 ## Current status
 
-| Area                  | Available today                                                                                                 | Boundary                                                 |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Chrome extension      | Résumé import, guided setup, reviewed autofill, custom answers, optional OpenAI drafts, tracker, encrypted sync | Real application navigation and submission remain manual |
-| Developer experiments | Read-only agent lab, synthetic portal harness, budgeted inference, local Qwen benchmarks                        | Not connected as an end-to-end browser agent             |
-| Open contributor work | Job discovery/ranking, company research, agent execution, correction memory, local-model product integration    | Planned work, not current user-facing features           |
+| Area                  | Available today                                                                                                             | Boundary                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Chrome extension      | Résumé import, guided setup, reviewed autofill, custom answers, optional OpenAI drafts, tracker, encrypted sync             | Real application navigation and submission remain manual |
+| Developer experiments | Local executor, reviewed correction/workflow memory, demo/import Jobs view, sourced company evidence, local Qwen benchmarks | Research build; not a complete live application agent    |
+| Open contributor work | Integrated per-job application flow, live sources, broader evaluations, local-model product integration                     | Not yet released capabilities                            |
 
 Ordinary autofill needs **no API key, GPU, or local model**. See [how to use it](#how-to-use-it) for the extension and [experimental agent and local AI](#experimental-agent-and-local-ai) for developer tooling.
 
@@ -229,6 +229,7 @@ The [agent roadmap](./docs/agent/README.md) extends the existing copilot without
 
 - A [read-only agent lab](./docs/agent/AGENT_LAB.md) with durable run state, checkpoints, and recovery.
 - A [local application executor](./docs/agent/EXECUTOR.md) with research-panel controls, deterministic native/custom/date/upload actions, multi-step recovery, preparation tracking and optional manual screenshot review. It uses approved synthetic data and stops before submission; it is not a live auto-apply feature.
+- [Correction/workflow memory and a Jobs view](./docs/agent/MEMORY_AND_JOBS.md): teach scoped field meanings, validate and reuse a local demo workflow, rank synthetic/imported listings, and review cited company ratings. Records are inspectable and removable; external sources are not crawled.
 - [29 synthetic portal scenarios across 17 families](./docs/agent/SETUP_AND_PORTALS.md), fallback tests, and an independent application-outcome ledger. These are emulations, not proof of live LinkedIn, Naukri, or Wellfound support.
 - A [structured inference prototype](./docs/agent/INFERENCE.md) for intake, job/field interpretation, and constrained action proposals. It validates evidence and identifiers, reserves request budgets, and stops on uncertain usage. Proposals do not execute browser actions.
 - Local Ollama adapters and synthetic benchmarks for two Qwen candidates. Hosted OpenAI/Gemini adapter contracts are mock-tested; hosted benchmarks have not been run.
@@ -253,9 +254,9 @@ npm run inference:benchmark -- --local --4b
 
 On a GTX 1650 with 4 GB VRAM and 16 GB RAM, Qwen3 1.7B passed **7/10** development smoke checks; Qwen3 4B Instruct passed **9/10** with partial CPU offload. These ten cases are not held out and do not establish application reliability. A failed case deliberately produces a nonzero benchmark exit code; inspect the Git-ignored reports in `test-results/inference/`.
 
-A separate [local vision benchmark](./docs/agent/VISION.md) evaluates Qwen3-VL 2B on synthetic screenshots (`npm run inference:benchmark:vision`). It does not control Chrome or enable visual auto-apply.
+A separate [local vision benchmark](./docs/agent/VISION.md) compares Qwen3-VL candidates on synthetic screenshots, with separate scores for raw model output and independent browser checks (`npm run inference:benchmark:vision -- --model qwen3-vl:2b-instruct`). The research executor provides a manual verification handoff. The benchmark does not enable visual auto-apply.
 
-Local inference has no automatic cloud fallback. It is **not yet selectable in the extension's AI drafting panel**. Models/runtime files are not included in Git, and broader evaluation, browser integration, and learning from reviewed corrections remain open work.
+Local inference has no automatic cloud fallback. It is **not yet selectable in the extension's AI drafting panel**. Models/runtime files are not included in Git. Reviewed correction memory is available in the research build; model training, broader evaluation and browser inference integration remain open work.
 
 ## Repository structure
 

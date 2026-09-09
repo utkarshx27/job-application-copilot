@@ -9,8 +9,9 @@ import { Onboarding } from "./onboarding";
 import { ObservePanel } from "./observe-panel";
 import { ApplicationsPanel } from "./applications-panel";
 import { SyncPanel } from "./sync-panel";
+import { JobsPanel } from "./jobs-panel";
 
-type Tab = "profile" | "observe" | "applications" | "sync";
+type Tab = "profile" | "observe" | "applications" | "sync" | "jobs";
 
 function App() {
   const [fullProfile, setFullProfile] = useState(false);
@@ -37,7 +38,19 @@ function App() {
         <p className="eyebrow">Local first · User controlled</p>
         <h1>Job Application Copilot</h1>
       </header>
-      <nav className="tabs" aria-label="Copilot views">
+      <nav
+        className={AGENT_LAB_AVAILABLE ? "tabs research-tabs" : "tabs"}
+        aria-label="Copilot views"
+      >
+        {AGENT_LAB_AVAILABLE && (
+          <button
+            type="button"
+            aria-current={tab === "jobs" ? "page" : undefined}
+            onClick={() => setTab("jobs")}
+          >
+            Jobs
+          </button>
+        )}
         <button
           type="button"
           aria-current={tab === "profile" ? "page" : undefined}
@@ -94,6 +107,7 @@ function App() {
       {tab === "observe" && <ObservePanel />}
       {tab === "applications" && <ApplicationsPanel />}
       {tab === "sync" && <SyncPanel />}
+      {AGENT_LAB_AVAILABLE && tab === "jobs" && <JobsPanel />}
       {AGENT_LAB_AVAILABLE && (
         <details className="agent-lab-toggle">
           <summary>Experimental agent lab</summary>

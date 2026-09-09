@@ -22,6 +22,8 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { readApprovedResumeFile } from "../resume-file";
 import { ensureActiveSiteAccess } from "../site-access";
 import { type Notice, sendPanelRequest } from "./panel-shared";
+import { AGENT_LAB_AVAILABLE } from "../agent-config";
+import { TeachField } from "./correction-memory";
 
 type ScanState =
   | { status: "idle" }
@@ -1156,6 +1158,15 @@ export function ObservePanel() {
                         <span className="protected">Pre-filled · review manually</span>
                       )}
                     </div>
+                    {AGENT_LAB_AVAILABLE &&
+                      new URL(state.analysis.snapshot.url).origin === "http://127.0.0.1:4173" && (
+                        <TeachField
+                          analysisId={state.analysis.analysisId}
+                          fieldId={mapping.fieldId}
+                          label={label}
+                          onSaved={scan}
+                        />
+                      )}
                   </li>
                 );
               })}

@@ -9,11 +9,13 @@ Start the workspace runtime with `npm run inference:serve`. With explicit downlo
 ```powershell
 Invoke-RestMethod -Method Post http://127.0.0.1:11434/api/pull -ContentType application/json -Body '{"model":"qwen3-vl:2b","stream":false}'
 npm run inference:benchmark:vision
+npm run inference:benchmark:vision -- --model qwen3-vl:2b-instruct
+npm run inference:benchmark:vision -- --model qwen3-vl:4b-instruct
 ```
 
-The script requires an already installed model; it never downloads one automatically. Chromium renders ten synthetic 800 × 600 screenshots. Only the screenshot and task reach the local model; the expected answers stay in the evaluator. Output must be a final JSON object containing exactly one allowed target ID or `NONE`. Invalid output fails closed. There are no coordinates, tools, retries or dispatch commands. An unsuccessful case makes the benchmark exit nonzero.
+The script requires an already installed model; it never downloads one automatically. Install each selected tag using the pull command above with that tag. Chromium renders ten synthetic 800 × 600 screenshots. Only the screenshot and task reach the local model; the expected answers stay in the evaluator. Output must be a final JSON object containing exactly one allowed target ID or `NONE`. Invalid output fails closed. There are no coordinates, tools, retries or dispatch commands. An unsuccessful raw-model case makes the benchmark exit nonzero even if browser review prevents the mistake.
 
-Screenshots and the report are stored in ignored `test-results/vision/`. The model digest is recorded and rechecked before every inference call. The model is unloaded after the run. Stop the separately launched runtime when finished; downloaded files remain available for reuse.
+Screenshots and the report are stored in ignored `test-results/vision/<model>/<timestamp>/` so comparisons retain earlier evidence. The original baseline remains at `test-results/vision/report.json` if present. The model digest is recorded and rechecked before every inference call. The model is unloaded after the run. Stop the separately launched runtime when finished; downloaded files remain available for reuse.
 
 ## Hardware and configuration
 
@@ -42,8 +44,29 @@ Observed end-to-end case latency was 14.2–24.9 seconds, including 20.9 seconds
 
 Decision: keep manual visual review as the executor fallback. This candidate may warrant further read-only interpretation research, but it is not suitable as the authority for choosing or permitting actions. The full software regression gate independently passed 221 unit tests and 69 browser tests; that does not override these model-quality failures.
 
+## Follow-up: instruction models and independent browser review
+
+Ollama's `2b` alias matches the `2b-thinking` digest. The explicit `2b-instruct` candidate removes that ambiguity. Revision `vision-smoke-v3-independent-browser-review` retains the ten goals, expected answers and model prompt, while explicitly giving synthetic buttons type `button` and adding a separate DOM review after inference. The larger `4b-instruct` candidate can be run through the same command.
+
+The new reviewer reads target labels, visibility, native/ARIA disabled state, existing values, and challenge text from the rendered synthetic page. It never reads the expected answer or case identifier. It rejects unknown/duplicate targets, unavailable controls, consent and sensitive questions, unsupported buttons and observations older than 60 seconds. It can only preserve a proposed target or return `NONE`; it cannot choose a replacement target. Model output and reviewed output have separate scores in the report. A model failure remains a model failure.
+
+Qwen3-VL 2B Instruct Q4_K_M scored **6/10 raw and 10/10 after browser review**. All four manual-only cases still produced `T1`, and the reviewer stopped each one. Observed latency was 12.6–18.1 seconds per case. The download was 1,889,519,783 bytes; digest `ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300`. Ollama reported 1.89 GB GPU allocation out of 2.29 GB total loaded allocation. The model-only benchmark still exited nonzero.
+
+Qwen3-VL 4B Instruct Q4_K_M scored **8/10 raw and 10/10 after browser review**. It correctly paused on disabled Next and submission-only pages. It still chose `T1` for the CAPTCHA warning and consent question; independent browser review paused both. Observed latency was 18.3–26.7 seconds per case. The download was 3,295,636,231 bytes; digest `ee4b975b58c17ce268cd19d40db35d5edc64603035d2ffc1fee1968eb0947f7b`. Ollama reported 1.86 GB GPU allocation out of 3.92 GB total loaded allocation, with CPU offloading. This run also exited nonzero because raw model accuracy was incomplete.
+
+| Candidate   | Raw model | After browser review | Observed case latency |
+| ----------- | --------- | -------------------- | --------------------- |
+| 2B Instruct | 6/10      | 10/10                | 12.6–18.1 s           |
+| 4B Instruct | 8/10      | 10/10                | 18.3–26.7 s           |
+
+For further read-only vision research, 4B is the more accurate candidate in this small comparison. Both models still need independent checks. These ten development cases do not validate a live visual fallback; model/browser integration remains gated. The benchmark runtime was stopped after unloading the models; downloads remain local and Git-ignored.
+
+This policy is evaluated as a read-only proposal filter and does not connect a model to the extension executor. It does not establish semantic correctness, authorize a click, or replace the existing controller's consent, document identity, freshness and postcondition checks. Challenge detection here is limited to the synthetic page text; live challenge recognition remains unvalidated.
+
+The research panel now explains the manual verification handoff. Its Chrome test confirms a second recorded pause when Resume is clicked while the synthetic challenge remains and proceeds only after the test simulates the user completing verification. All 240 unit tests, formatting, lint, type checking, production builds and nine executor Chrome tests passed. The strengthened handoff test also passed independently. No CAPTCHA solver or bypass is implemented.
+
 These are development cases, not held-out evidence. Passing them cannot establish live ATS accuracy, robust injection resistance, screenshot freshness, coordinate grounding, accessibility, production performance or safe autonomous application submission. Authenticated model/browser pairing, durable inference budgets, and broader frozen evaluation remain open AG-04/AG-11 work.
 
 ## Sources
 
-The [Ollama model listing](https://ollama.com/library/qwen3-vl:2b) describes the candidate. The [vision API guide](https://docs.ollama.com/capabilities/vision) documents base64 image messages, and the [structured-output guide](https://docs.ollama.com/capabilities/structured-outputs) documents JSON constraints. The observed thinking-channel incompatibility above is a local experimental result, not a general claim about those APIs.
+The [Ollama model listing](https://ollama.com/library/qwen3-vl:2b) describes the original candidate; the [official tag list](https://ollama.com/library/qwen3-vl/tags) distinguishes thinking and instruction variants. The [vision API guide](https://docs.ollama.com/capabilities/vision) documents base64 image messages, and the [structured-output guide](https://docs.ollama.com/capabilities/structured-outputs) documents JSON constraints. The observed thinking-channel incompatibility above is a local experimental result, not a general claim about those APIs.

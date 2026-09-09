@@ -188,7 +188,7 @@ test("executor reconciles full-document step transitions without clicking Next t
   await expect(page.locator("[data-experience-row]")).toHaveCount(1);
 });
 
-test("executor stops on an access challenge without changing any values", async ({
+test("executor pauses for challenge handoff and rechecks before resuming", async ({
   context,
   extensionId,
 }) => {
@@ -208,6 +208,22 @@ test("executor stops on an access challenge without changing any values", async 
   await expect(ui.getByRole("heading", { name: "paused", exact: true })).toBeVisible();
   await expect(ui.getByText(/access challenge/)).toBeVisible();
   await expect(page.locator("[data-agent-field=name]")).toHaveValue("");
+  await expect(ui.getByRole("status")).toContainText("Complete the verification");
+  await expect(ui.locator("li").filter({ hasText: /^PAUSED$/ })).toHaveCount(1);
+  await ui.getByRole("button", { name: "Resume execution", exact: true }).click();
+  await expect(ui.locator("li").filter({ hasText: /^PAUSED$/ })).toHaveCount(2);
+  await expect(ui.getByRole("heading", { name: "paused", exact: true })).toBeVisible();
+  await expect(ui.getByText(/0 execution actions/)).toBeVisible();
+  await expect(page.locator("[data-agent-field=name]")).toHaveValue("");
+  // Simulate the user completing this synthetic challenge; no challenge solver.
+  await page.locator("[data-agent-challenge]").evaluate((element: HTMLElement) => {
+    element.hidden = true;
+  });
+  await ui.getByRole("button", { name: "Resume execution", exact: true }).click();
+  await expect(ui.getByRole("heading", { name: "Application ready for review" })).toBeVisible({
+    timeout: 25000,
+  });
+  await expect(page.locator("[data-agent-field=name]")).toHaveValue("Nora Example");
 });
 
 test("executor rejects a retained but invalid field instead of counting it as success", async ({

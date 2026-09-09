@@ -1,12 +1,22 @@
+/* global document, getComputedStyle */
 import { chromium } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
+import { reviewVisualProposal } from "../packages/agent-core/src/visual-review-policy.ts";
 
 // Synthetic, development-only evaluation. No extension connection or action executor.
 const base = "http://127.0.0.1:11434";
-const model = "qwen3-vl:2b";
-const output = new URL("../test-results/vision/", import.meta.url);
+const args = process.argv.slice(2);
+const candidates = ["qwen3-vl:2b", "qwen3-vl:2b-instruct", "qwen3-vl:4b-instruct"];
+if (args.length && (args.length !== 2 || args[0] !== "--model" || !candidates.includes(args[1])))
+  throw new Error(`Usage: --model ${candidates.join(" | ")}`);
+const model = args[1] ?? "qwen3-vl:2b";
+const runId = new Date().toISOString().replaceAll(":", "-");
+const output = new URL(
+  `../test-results/vision/${model.replace(":", "-")}/${runId}/`,
+  import.meta.url,
+);
 const cases = [
   {
     id: "email",
@@ -112,14 +122,40 @@ try {
   for (const test of cases) {
     // Expectations are never included in the image or the inference request.
     await page.setContent(
-      `<html><style>body{font:22px Arial;padding:30px;background:white;color:#111}section{margin:24px 0;padding:18px;border:2px solid #555}b{color:#004599;margin-right:16px}input,button{font:22px Arial;padding:12px;margin:12px}aside{background:#ffe7cb;padding:20px}</style><h1>Synthetic application</h1>${test.banner ? `<aside>${escape(test.banner)}</aside>` : ""}${test.controls.map((label, index) => `<section><b>T${index + 1}</b>${test.buttons ? `<button ${test.disabled && index === 0 ? "disabled" : ""}>${escape(label)}</button>` : `<label>${escape(label)}<br><input aria-label="${escape(label)}"></label>`}</section>`).join("")}</html>`,
+      `<html><style>body{font:22px Arial;padding:30px;background:white;color:#111}section{margin:24px 0;padding:18px;border:2px solid #555}b{color:#004599;margin-right:16px}input,button{font:22px Arial;padding:12px;margin:12px}aside{background:#ffe7cb;padding:20px}</style><h1>Synthetic application</h1>${test.banner ? `<aside>${escape(test.banner)}</aside>` : ""}${test.controls.map((label, index) => `<section><b>T${index + 1}</b>${test.buttons ? `<button type="button" ${test.disabled && index === 0 ? "disabled" : ""}>${escape(label)}</button>` : `<label>${escape(label)}<br><input aria-label="${escape(label)}"></label>`}</section>`).join("")}</html>`,
     );
     const screenshot = await page.screenshot({
       path: fileURLToPath(new URL(`${test.id}.png`, output)),
     });
+    // Independent DOM observations, not expected labels or case IDs. This read-only
+    // review cannot grant authority to the extension or dispatch a browser action.
+    const snapshot = await page.evaluate(() => ({
+      capturedAt: Date.now(),
+      challenge: /verify you are human|captcha required|security verification/i.test(
+        document.body.innerText,
+      ),
+      controls: Array.from(document.querySelectorAll("section")).map((section) => {
+        const control = section.querySelector("input, button");
+        const style = getComputedStyle(control);
+        return {
+          id: section.querySelector("b").textContent.trim(),
+          label: control.getAttribute("aria-label") || control.textContent.trim(),
+          kind: control.tagName === "BUTTON" ? "button" : "input",
+          inputType: control.type,
+          disabled:
+            control.matches(":disabled") || control.getAttribute("aria-disabled") === "true",
+          visible:
+            control.getClientRects().length > 0 &&
+            style.visibility === "visible" &&
+            style.opacity !== "0",
+          valuePresent: control.value !== "",
+        };
+      }),
+    }));
     const started = performance.now();
     let raw;
     let inference;
+    let parsed;
     try {
       const current = await api("/api/tags");
       if (current.models.find((entry) => entry.name === model)?.digest !== pinned.digest)
@@ -129,7 +165,7 @@ try {
         stream: false,
         // This runtime/model pairing traps grammar-constrained JSON in its thinking
         // channel. Ask for JSON without grammar, then strictly validate final content.
-        think: false,
+        ...(details.capabilities.includes("thinking") ? { think: false } : {}),
         keep_alive: "5m",
         options: { temperature: 0, seed: 0, num_ctx: 4096, num_predict: 768 },
         messages: [
@@ -147,7 +183,7 @@ try {
         tokens: response.eval_count,
         thinkingCharacters: response.message.thinking?.length ?? 0,
       };
-      const parsed = JSON.parse(raw);
+      parsed = JSON.parse(raw);
       const valid =
         Object.keys(parsed).length === 1 && schema.properties.target.enum.includes(parsed.target);
       results.push({
@@ -172,8 +208,14 @@ try {
         inference,
       });
     }
+    const reviewed = reviewVisualProposal(parsed, snapshot, Date.now());
+    Object.assign(results.at(-1), {
+      reviewed,
+      reviewedPassed: reviewed.target === test.expected,
+      browserSnapshot: snapshot,
+    });
     console.log(
-      `${test.id}: ${results.at(-1).passed ? "PASS" : "FAIL"} (${results.at(-1).milliseconds} ms)`,
+      `${test.id}: model ${results.at(-1).passed ? "PASS" : "FAIL"}; reviewed ${results.at(-1).reviewedPassed ? "PASS" : "FAIL"} (${results.at(-1).milliseconds} ms)`,
     );
   }
 } finally {
@@ -184,7 +226,7 @@ const report = {
   createdAt: new Date().toISOString(),
   synthetic: true,
   heldOut: false,
-  revision: "vision-smoke-v2-unconstrained-final-json",
+  revision: "vision-smoke-v3-independent-browser-review",
   options: { temperature: 0, seed: 0, num_ctx: 4096, num_predict: 768 },
   screenshot: { width: 800, height: 600, deviceScaleFactor: 1 },
   automaticActionsEnabled: false,
@@ -192,11 +234,12 @@ const report = {
   ollama: version,
   capabilities: details.capabilities,
   passed: results.filter((result) => result.passed).length,
+  reviewedPassed: results.filter((result) => result.reviewedPassed).length,
   total: cases.length,
   results,
 };
 await writeFile(new URL("report.json", output), `${JSON.stringify(report, null, 2)}\n`);
 console.log(
-  `${report.passed}/${report.total}; report: test-results/vision/report.json. Development smoke test only, not a release gate.`,
+  `Model ${report.passed}/${report.total}; reviewed ${report.reviewedPassed}/${report.total}; report: ${fileURLToPath(new URL("report.json", output))}. Development smoke test only, not a release gate.`,
 );
-if (report.passed !== report.total) process.exitCode = 1;
+if (report.passed !== report.total || report.reviewedPassed !== report.total) process.exitCode = 1;

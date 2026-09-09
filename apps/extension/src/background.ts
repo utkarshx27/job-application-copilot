@@ -3,6 +3,7 @@ import {
   PanelRequestSchema,
   RuntimeResponseSchema,
   type RuntimeResponse,
+  type PanelRequest,
 } from "@copilot/browser-command-schema";
 import {
   AiGenerativeQuestionSchema,
@@ -23,7 +24,12 @@ import {
   recordWorkdayWorkflow,
   updateApplicationStatus,
 } from "@copilot/application-state";
-import { FillPlanSchema, FillResultSchema, HighlightResultSchema } from "@copilot/form-schema";
+import {
+  FillPlanSchema,
+  FillResultSchema,
+  HighlightResultSchema,
+  FieldMappingSchema,
+} from "@copilot/form-schema";
 import { draftGroundedAnswer } from "@copilot/grounded-generation";
 import {
   ApplicationPageAnalysisSchema,
@@ -107,6 +113,101 @@ import { AGENT_EXECUTION_URL } from "@copilot/agent-core";
 import { AgentExecutionController } from "./agent-execution-controller";
 import { ExecutionTransport } from "./agent-execution-transport";
 import { captureLocalExecution } from "./agent-execution-visual";
+import { DiscoveryController } from "./discovery-controller";
+const discovery = new DiscoveryController();
+import { MemoryRepository, memoryOwner, memoryScope, correctedMapping } from "./feedback-memory";
+import {
+  sameMemoryOwner,
+  memoryOwnerKey,
+  captureWorkflow,
+  changeWorkflow,
+  retrieveWorkflow,
+} from "@copilot/agent-core";
+
+const memory = new MemoryRepository();
+async function handleMemoryRequest(request: PanelRequest): Promise<RuntimeResponse> {
+  const vault = await getProfileVault();
+  const owner = memoryOwner(vault);
+  const now = Date.now();
+  if (request.type === "PANEL_WORKFLOW_CAPTURE" || request.type === "PANEL_WORKFLOW_CHANGE") {
+    const run = request.runId
+      ? (await executionRepository.read()).runs.find((entry) => entry.id === request.runId)
+      : undefined;
+    if (request.type === "PANEL_WORKFLOW_CAPTURE") {
+      if (!run) throw new Error("Select a completed local preparation.");
+      await memory.transact((store) => captureWorkflow(store, owner, run, now));
+    } else
+      await memory.transact((store) =>
+        changeWorkflow(store, owner, request.id, request.revision, request.action, now, run),
+      );
+  } else if (request.type === "PANEL_MEMORY_CORRECT") {
+    const tab = await inspectableActiveTab();
+    if ("ok" in tab) return tab;
+    const analysis = analysesByTab.get(tab.id);
+    if (
+      !analysis ||
+      analysis.analysisId !== request.analysisId ||
+      analysis.snapshot.url !== tab.url ||
+      new URL(tab.url).origin !== "http://127.0.0.1:4173" ||
+      now - Date.parse(analysis.snapshot.capturedAt) > 300_000
+    )
+      throw new Error("Scan the local test form again before teaching a correction.");
+    const field = analysis.snapshot.fields.find((entry) => entry.fieldId === request.fieldId);
+    const mapping = analysis.mappings.find((entry) => entry.fieldId === request.fieldId);
+    if (!field || !mapping) throw new Error("The field is no longer available.");
+    const scope = memoryScope(analysis, field);
+    if (
+      /consent|agree|citizenship|authorization|sponsor|disability|gender|veteran|password|social security/i.test(
+        `${scope.question} ${scope.group}`,
+      )
+    )
+      throw new Error("Sensitive questions require the existing manual answer workflow.");
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(JSON.stringify(scope)),
+    );
+    await memory.save(
+      {
+        id: crypto.randomUUID(),
+        revision: 1,
+        kind: "FIELD_MEANING",
+        owner,
+        scope,
+        rejected: mapping.canonicalQuestion,
+        accepted: request.accepted,
+        confirmed: true,
+        observationHash: Array.from(new Uint8Array(digest), (byte) =>
+          byte.toString(16).padStart(2, "0"),
+        ).join(""),
+        createdAt: now,
+        updatedAt: now,
+        expiresAt: now + 90 * 86400_000,
+      },
+      0,
+    );
+    analysesByTab.clear();
+  } else if (request.type === "PANEL_MEMORY_EDIT") {
+    const record = (await memory.transact()).corrections.find(
+      (entry) => entry.id === request.id && sameMemoryOwner(entry.owner, owner),
+    );
+    if (!record) throw new Error("Correction unavailable for this profile.");
+    await memory.save(
+      {
+        ...record,
+        owner,
+        accepted: request.accepted,
+        updatedAt: now,
+        expiresAt: now + 90 * 86400_000,
+      },
+      request.revision,
+    );
+    analysesByTab.clear();
+  } else if (request.type === "PANEL_MEMORY_FORGET") {
+    await memory.forget(owner, request.id, request.revision);
+    analysesByTab.clear();
+  } else if (request.type !== "PANEL_MEMORY_GET") throw new Error("Unknown memory command.");
+  return { ok: true, data: await memory.view(owner) };
+}
 
 const executionRepository = new AgentRepository(indexedDB, "copilot-executor-v1");
 const executionController = new AgentExecutionController(
@@ -154,6 +255,9 @@ const executionController = new AgentExecutionController(
       recordApplying(await getApplicationTracker(), analysis, run.binding.profileRevision, at),
     );
   },
+  async () => memoryOwnerKey(memoryOwner(await getProfileVault())),
+  async () =>
+    retrieveWorkflow(await memory.transact(), memoryOwner(await getProfileVault()), Date.now()),
 );
 
 const agentLab = new AgentLabController(
@@ -291,11 +395,30 @@ async function analyzeActiveTab(): Promise<RuntimeResponse> {
     return failure("SCAN_FAILED", "The page scan was not a valid application snapshot.");
   const vault = await getProfileVault();
   const adapter = adapterForId(inspected.data.atsReport.detection.adapter);
+  const correctionStore =
+    AGENT_LAB_AVAILABLE && new URL(tab.url).origin === "http://127.0.0.1:4173"
+      ? await memory.transact()
+      : null;
   const baseAnalysis = analyzeForm(
     inspected.data.snapshot,
     vault.currentProfile,
     crypto.randomUUID(),
-    (field) => adapter?.classifyField(field) ?? classifyField(field),
+    (field) => {
+      const base = adapter?.classifyField(field) ?? classifyField(field);
+      return correctionStore
+        ? correctedMapping(
+            base,
+            field,
+            correctionStore,
+            memoryOwner(vault),
+            memoryScope(
+              { snapshot: inspected.data.snapshot, ats: inspected.data.atsReport.detection },
+              field,
+            ),
+            vault.currentProfile,
+          )
+        : base;
+    },
   );
   const job = inspected.data.atsReport.job;
   const applicationId = job ? `application:${job.id}` : undefined;
@@ -521,6 +644,44 @@ async function reviewedAction(
   }
 
   const requested = new Set(uniqueFieldIds);
+  if (
+    AGENT_LAB_AVAILABLE &&
+    analysis.mappings.some(
+      (mapping) =>
+        requested.has(mapping.fieldId) &&
+        mapping.evidence.some((entry) => entry.startsWith("memory:")),
+    )
+  ) {
+    const vault = await getProfileVault();
+    const store = await memory.transact();
+    for (const mapping of analysis.mappings.filter((entry) => requested.has(entry.fieldId))) {
+      if (!mapping.evidence.some((entry) => entry.startsWith("memory:"))) continue;
+      const field = analysis.snapshot.fields.find((entry) => entry.fieldId === mapping.fieldId)!;
+      const refreshed = correctedMapping(
+        FieldMappingSchema.parse({
+          fieldId: field.fieldId,
+          canonicalQuestion: null,
+          tier: "UNMAPPED",
+          confidence: 0,
+          evidence: [],
+          fillable: false,
+        }),
+        field,
+        store,
+        memoryOwner(vault),
+        memoryScope(analysis, field),
+        vault.currentProfile,
+      );
+      if (
+        refreshed.canonicalQuestion !== mapping.canonicalQuestion ||
+        refreshed.evidence[0] !== mapping.evidence[0]
+      )
+        return failure(
+          "STALE_ANALYSIS",
+          "The correction changed or expired. Scan again before filling.",
+        );
+    }
+  }
   const items = analysis.mappings.flatMap((mapping) =>
     requested.has(mapping.fieldId) &&
     mapping.fillable &&
@@ -1293,6 +1454,61 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
   if (!parsed.success) {
     sendResponse(failure("BAD_MESSAGE", "Rejected a message outside the extension protocol."));
     return false;
+  }
+
+  if (
+    parsed.data.type.startsWith("PANEL_MEMORY_") ||
+    parsed.data.type.startsWith("PANEL_WORKFLOW_")
+  ) {
+    if (!AGENT_LAB_AVAILABLE || sender.url !== chrome.runtime.getURL("sidepanel.html")) {
+      sendResponse(failure("BAD_MESSAGE", "Correction memory requires the research panel."));
+      return false;
+    }
+    const result = profileQueue.then(() => handleMemoryRequest(parsed.data));
+    profileQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    void result.then(sendResponse, (error: unknown) =>
+      sendResponse(
+        failure("AGENT_FAILED", error instanceof Error ? error.message : "Memory unavailable."),
+      ),
+    );
+    return true;
+  }
+
+  if (parsed.data.type.startsWith("PANEL_JOBS_")) {
+    if (!AGENT_LAB_AVAILABLE || sender.url !== chrome.runtime.getURL("sidepanel.html")) {
+      sendResponse(failure("BAD_MESSAGE", "Jobs research requires the extension panel."));
+      return false;
+    }
+    const request = parsed.data;
+    const result =
+      request.type === "PANEL_JOBS_GET"
+        ? discovery.view()
+        : request.type === "PANEL_JOBS_SEARCH"
+          ? discovery.search(request.query)
+          : request.type === "PANEL_JOBS_CANCEL"
+            ? discovery.cancel()
+            : request.type === "PANEL_JOBS_IMPORT"
+              ? discovery.importListing(request)
+              : request.type === "PANEL_JOBS_DISMISS"
+                ? discovery.dismiss(request.id, request.dismissed)
+                : request.type === "PANEL_JOBS_FORGET"
+                  ? discovery.forget(request.id)
+                  : request.type === "PANEL_JOBS_EVIDENCE"
+                    ? discovery.evidence(request.id, request.rating)
+                    : request.type === "PANEL_JOBS_FORGET_EVIDENCE"
+                      ? discovery.evidence(request.id, null)
+                      : Promise.reject(new Error("Unknown jobs request."));
+    void result.then(
+      (data) => sendResponse({ ok: true, data }),
+      (error: unknown) =>
+        sendResponse(
+          failure("AGENT_FAILED", error instanceof Error ? error.message : "Jobs unavailable."),
+        ),
+    );
+    return true;
   }
 
   if (parsed.data.type.startsWith("PANEL_AGENT_")) {

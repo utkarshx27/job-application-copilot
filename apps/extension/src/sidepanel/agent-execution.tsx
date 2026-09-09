@@ -99,6 +99,12 @@ export function AgentExecutionPanel() {
               {run.actions} execution actions
               {run.pauseReason ? ` · ${run.pauseReason.toLowerCase().replaceAll("_", " ")}` : ""}
             </p>
+            {run.state === "PAUSED" && run.pauseReason === "ACCESS_CHALLENGE" && (
+              <p role="status">
+                Complete the verification on the application page yourself, then select Resume
+                execution. The form will be checked again before filling continues.
+              </p>
+            )}
             {!["CANCELLED", "CONFIRMED", "OUTCOME_UNKNOWN", "FAILED"].includes(run.state) && (
               <>
                 <button

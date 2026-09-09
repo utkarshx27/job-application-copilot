@@ -69,6 +69,22 @@ h2 {
   box-shadow: 0 1px 3px #20372a1f;
 }
 
+.research-tabs {
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+}
+
+.jobs-research {
+  overflow-wrap: anywhere;
+}
+
+.jobs-research article {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #c9d9ce;
+  border-radius: 12px;
+  background: white;
+}
+
 button,
 .file-button {
   border: 0;

@@ -22,6 +22,8 @@ The demo uses Nora Example, `nora@example.test`, India/Bengaluru, 2026-10-01, Sy
 
 Use **Pause execution**, **Resume execution**, **Take over manually**, or **Cancel execution**. Existing values and edits are preserved. Invalid/unknown fields require manual completion. Cancellation prevents further dispatch but cannot undo an action already committed to the document.
 
+When verification is required, the panel asks you to complete it on the application page. Select **Resume execution** afterward; the executor checks again and remains paused if the challenge is still present.
+
 ## Implemented boundaries
 
 - Native text/date/select, searchable combobox open/filter/select, empty experience-row add/remove, synthetic-file upload and local Next handlers.

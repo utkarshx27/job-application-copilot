@@ -1,4 +1,7 @@
 import { z } from "zod";
+export * from "./feedback-memory";
+export * from "./workflow-memory";
+export * from "./discovery";
 
 const Id = z.uuid();
 const Ref = z.string().regex(/^[a-zA-Z0-9_.:-]{1,200}$/);
@@ -62,6 +65,7 @@ export const AgentBindingSchema = z
     documentId: Ref,
     url: LocalUrl,
     profileRevision: Revision,
+    profileKey: z.string().min(1).max(1000).optional(),
   })
   .strict();
 export const AgentObservationSchema = z
@@ -110,6 +114,7 @@ export const AgentProposalSchema = z
     kind: AgentActionKindSchema,
     targetRef: Ref.nullable(),
     factRefs: z.array(Ref).max(30),
+    memoryRef: z.object({ id: Id, revision: Revision }).strict().optional(),
     expected: z.enum([
       "CHECKPOINT_RECORDED",
       "VALUE_MATCHED",
@@ -273,7 +278,8 @@ function matchesBinding(a: AgentBinding, b: AgentBinding) {
     a.tabId === b.tabId &&
     a.documentId === b.documentId &&
     a.url === b.url &&
-    a.profileRevision === b.profileRevision
+    a.profileRevision === b.profileRevision &&
+    a.profileKey === b.profileKey
   );
 }
 function requireLease(store: AgentStore, run: AgentRun, owner: string, fence: number, now: number) {
@@ -502,7 +508,8 @@ export function reduceAgentStore(
       requireThat(
         op.observation.binding.tabId === run.binding.tabId &&
           op.observation.binding.url === run.binding.url &&
-          op.observation.binding.profileRevision === run.binding.profileRevision,
+          op.observation.binding.profileRevision === run.binding.profileRevision &&
+          op.observation.binding.profileKey === run.binding.profileKey,
         "CONTEXT_CHANGED",
       );
       requireThat(

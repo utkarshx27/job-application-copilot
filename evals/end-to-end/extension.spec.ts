@@ -102,9 +102,10 @@ test("scans the active Test ATS through the complete extension message path", as
 
   await expect(panel.getByText("10", { exact: true })).toBeVisible();
   await expect(panel.getByText(/inspectable fields/)).toBeVisible();
-  await expect(panel.getByText("First name", { exact: true })).toBeVisible();
-  await expect(panel.getByText("Email address", { exact: true })).toBeVisible();
-  await expect(panel.getByText("Portfolio URL", { exact: true })).toBeVisible();
+  const scannedLabels = panel.locator(".mapping-fields .field-select strong");
+  await expect(scannedLabels.filter({ hasText: /^First name$/ })).toBeVisible();
+  await expect(scannedLabels.filter({ hasText: /^Email address$/ })).toBeVisible();
+  await expect(scannedLabels.filter({ hasText: /^Portfolio URL$/ })).toBeVisible();
   await expect(panel.getByText("ATS account password", { exact: true })).toHaveCount(0);
 
   await application.bringToFront();

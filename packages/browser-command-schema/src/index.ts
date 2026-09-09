@@ -1,5 +1,5 @@
 import { AiConfigStatusSchema, AiSessionConfigSchema } from "@copilot/ai-gateway";
-import { AgentLabStatusSchema } from "@copilot/agent-core";
+import { AgentLabStatusSchema, MemoryMeaningSchema, MemoryViewSchema } from "@copilot/agent-core";
 import {
   FillPlanSchema,
   FillResultSchema,
@@ -49,6 +49,7 @@ import {
   SyncRunResultSchema,
 } from "@copilot/sync-core";
 import { z } from "zod";
+import { DiscoveryViewSchema, DiscoveryJobSchema } from "@copilot/agent-core";
 
 const FieldCommandBaseSchema = z.object({
   applicationId: z.string().min(1),
@@ -72,6 +73,82 @@ export const BrowserCommandSchema = z.discriminatedUnion("type", [
 ]);
 
 export const PanelRequestSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("PANEL_JOBS_GET") }).strict(),
+  z.object({ type: z.literal("PANEL_JOBS_SEARCH"), query: z.string().max(200) }).strict(),
+  z.object({ type: z.literal("PANEL_JOBS_CANCEL") }).strict(),
+  z
+    .object({
+      type: z.literal("PANEL_JOBS_IMPORT"),
+      title: z.string().min(1).max(300),
+      company: z.string().min(1).max(80),
+      location: z.string().max(80),
+      url: DiscoveryJobSchema.shape.sourceUrl,
+      description: z.string().max(20000),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("PANEL_JOBS_DISMISS"),
+      id: z.string().min(1),
+      dismissed: z.boolean(),
+    })
+    .strict(),
+  z.object({ type: z.literal("PANEL_JOBS_FORGET"), id: z.string().min(1) }).strict(),
+  z
+    .object({
+      type: z.literal("PANEL_JOBS_EVIDENCE"),
+      id: z.string().min(1),
+      rating: z
+        .object({
+          source: z.string().min(1).max(300),
+          sourceUrl: DiscoveryJobSchema.shape.sourceUrl,
+          value: z.number().finite().nonnegative(),
+          scale: z.number().finite().positive().max(100),
+          count: z.number().int().nonnegative(),
+          retrievedAt: z.iso.date(),
+        })
+        .strict()
+        .refine((rating) => rating.value <= rating.scale),
+      confirmed: z.literal(true),
+    })
+    .strict(),
+  z.object({ type: z.literal("PANEL_JOBS_FORGET_EVIDENCE"), id: z.string().min(1) }).strict(),
+  z.object({ type: z.literal("PANEL_WORKFLOW_CAPTURE"), runId: z.string().uuid() }).strict(),
+  z
+    .object({
+      type: z.literal("PANEL_WORKFLOW_CHANGE"),
+      id: z.string().uuid(),
+      revision: z.number().int().positive(),
+      action: z.enum(["VALIDATE", "ACTIVATE", "RETIRE", "FORGET"]),
+      runId: z.string().uuid().optional(),
+    })
+    .strict(),
+  z.object({ type: z.literal("PANEL_MEMORY_GET") }).strict(),
+  z
+    .object({
+      type: z.literal("PANEL_MEMORY_CORRECT"),
+      analysisId: z.string().min(1),
+      fieldId: z.string().min(1),
+      accepted: MemoryMeaningSchema,
+      confirmed: z.literal(true),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("PANEL_MEMORY_EDIT"),
+      id: z.string().uuid(),
+      revision: z.number().int().positive(),
+      accepted: MemoryMeaningSchema,
+      confirmed: z.literal(true),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("PANEL_MEMORY_FORGET"),
+      id: z.string().uuid(),
+      revision: z.number().int().positive(),
+    })
+    .strict(),
   z.object({ type: z.literal("PANEL_EXECUTOR_STATUS") }).strict(),
   z.object({ type: z.literal("PANEL_EXECUTOR_ENABLE"), enabled: z.boolean() }).strict(),
   z.object({ type: z.literal("PANEL_EXECUTOR_START"), approved: z.literal(true) }).strict(),
@@ -239,6 +316,8 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
   z.object({
     ok: z.literal(true),
     data: z.union([
+      MemoryViewSchema,
+      DiscoveryViewSchema,
       z
         .object({
           kind: z.literal("LOCAL_VISUAL_REVIEW"),

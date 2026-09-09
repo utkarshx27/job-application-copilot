@@ -1,6 +1,6 @@
 # Application agent implementation plan
 
-Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with open gates; AG-05 deterministic local execution implemented; AG-11 local-model experiment started.** The full product remains in development. See [local executor](./EXECUTOR.md), [inference limitations](./INFERENCE.md), [setup/portals](./SETUP_AND_PORTALS.md), and [foundation evidence](./AGENT_LAB.md).
+Status: **AG-01–AG-03 implemented; AG-04 inference core has open integration gates; AG-05 local execution and AG-06 local memory implemented; AG-07/AG-08 local/import research slice implemented; AG-11 local-model experiment started.** The full product remains in development. See [memory and Jobs](./MEMORY_AND_JOBS.md), [local executor](./EXECUTOR.md), [inference limitations](./INFERENCE.md), and [setup/portals](./SETUP_AND_PORTALS.md).
 
 Prepared: 2026-09-06. Repository baseline: `351a034`.
 
@@ -37,7 +37,7 @@ One-click completion is conditional: all required answers must be known, the con
 
 The current extension already provides local profiles, document parsing, deterministic matching, reviewed answers, grounded drafts, ATS adapters, upload assistance, a tracker, duplicate handling, and optional encrypted sync.
 
-The experimental foundation has durable run state, recovery and a read-only lab. Compact onboarding, structured career preferences, synthetic portals, budgeted inference and a separate deterministic local executor are implemented. Missing product capabilities include live discovery/ranking, company research, the real-profile end-to-end agent UI, production custom-control fallback, local/non-OpenAI provider setup, correction memory and larger held-out evaluations. The portal test runner remains independent of the extension executor.
+The experimental foundation has durable run state, recovery and a read-only lab. Compact onboarding, career preferences, synthetic portals, budgeted inference, a deterministic local executor, correction/workflow memory and a local/import Jobs view with company evidence are implemented. Missing capabilities include live discovery and company research providers, the real-profile end-to-end agent UI, production custom-control fallback, local/non-OpenAI provider setup and larger held-out evaluations. The portal test runner remains independent of the extension executor.
 
 The present code blocks LinkedIn automation. The original Next/Submit experiment is limited to the local Workday fixture; the separate research executor can fill/advance its exact local demo and stops at review. Model output does not directly execute browser actions. Real-site navigation and submission remain manual. See [security policy](../../SECURITY.md).
 
@@ -59,7 +59,7 @@ The first delivery should demonstrate this complete path:
 
 It must also demonstrate a missing-answer pause, a changed question, an interrupted browser worker, and an uncertain submission result. A success-only demo is insufficient.
 
-The implementation delivers **AG-01 foundation**, **AG-02 onboarding**, **AG-03 emulations**, the **AG-04 inference core**, and **AG-05 deterministic local execution**. Continue with AG-06 correction memory while closing inference integration/evaluation gates. The first full product slice ends at AG-09; live connectors, local packaging and offline training have separate dependencies.
+The implementation now includes local **AG-06 correction/workflow memory** and the **AG-07/AG-08 discovery/evidence baseline**. Next connect them to the per-job AG-09 preparation/submission flow while closing inference integration/evaluation gates. Live connectors, local packaging and offline training have separate dependencies; local component tests do not close those gates.
 
 ## Decisions and open measurements
 

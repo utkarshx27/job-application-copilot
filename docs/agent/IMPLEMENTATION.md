@@ -1,6 +1,6 @@
 # Implementation work packages
 
-Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with integration/validation gates open; AG-05 deterministic local execution implemented; AG-11 local-model experiment started. AG-06–AG-10 and AG-12–AG-13 remain unimplemented.** The original foundation lab remains read-only; the separate research executor operates only on its exact local demo. See [executor scope and visual limitation](./EXECUTOR.md), [inference limits](./INFERENCE.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
+Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with integration/validation gates open; AG-05 local execution and AG-06 local correction/workflow memory implemented; AG-07/AG-08 local/import research slice implemented; AG-11 local-model experiment started. AG-09, AG-10, AG-12 and AG-13 remain open.** Broader acceptance gates are not implied by these local implementations. See [memory and Jobs scope](./MEMORY_AND_JOBS.md), [executor limitations](./EXECUTOR.md), [inference limits](./INFERENCE.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
 
 ## Delivery order
 
@@ -137,6 +137,8 @@ Acceptance:
 
 ## AG-06: correction memory and workflow skills
 
+Implemented research/local scope: exact-scoped reviewed field meanings, private transactional storage, ownership/profile revision checks, conflicts, expiry, edit/forget UI and pre-fill revalidation. Local workflows use typed reference steps with candidate → separate-run validation → activation/retirement, fresh target binding and memory-use references. Browser tests cover correction persistence/filling/deletion and workflow capture/validation/reuse. Unsupported meanings remain manual; broader counterfactual and held-out workflow evaluation remains open. [Usage and storage boundaries](./MEMORY_AND_JOBS.md).
+
 Primary locations: proposed `packages/feedback-memory`, `packages/saved-response-engine`, profile and side-panel memory components, `evals/agent`.
 
 Deliverables:
@@ -156,7 +158,9 @@ Acceptance:
 
 ## AG-07: discovery and ranking
 
-Primary locations: proposed `packages/discovery-core`, job schema, application-state, new Jobs UI.
+Implemented initial research slice: local paginated catalog search, manual listing import, provenance-preserving deduplication, persistent read budgets, cancellation, source health/freshness, transparent deterministic preferences and dismiss/restore/forget UI. External sources, editable dismissal reasons and optional reranking remain open. Availability is shown but must be rechecked by the future AG-09 application flow.
+
+Primary locations: `packages/agent-core/src/discovery.ts`, extension `discovery-controller.ts`/`private-repository.ts`, panel command schemas and `sidepanel/jobs-panel.tsx`. [Usage and test coverage](./MEMORY_AND_JOBS.md).
 
 Deliverables:
 
@@ -175,7 +179,9 @@ Acceptance:
 
 ## AG-08: company evidence
 
-Primary locations: proposed `packages/company-research`, job/company evidence schemas, Jobs UI, synthetic review fixtures.
+Implemented initial research slice: exact employer/name/location identity matching, cached synthetic and manually entered cited ratings, source scales/counts/dates, stale/small-sample/missing labels and evidence deletion. Imported source claims require explicit identity confirmation and are labelled unverified. No automated external provider, fuzzy identity resolver or generated reputation score is enabled.
+
+Primary locations: shared discovery/company schemas, extension discovery controller and Jobs UI, synthetic review fixtures. [Usage and limitations](./MEMORY_AND_JOBS.md).
 
 Deliverables:
 

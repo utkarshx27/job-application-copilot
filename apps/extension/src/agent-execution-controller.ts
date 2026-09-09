@@ -5,6 +5,7 @@ import {
   ticketForRun,
   type AgentProposal,
   type AgentRun,
+  type WorkflowMemory,
 } from "@copilot/agent-core";
 import type { AgentRepository } from "./agent-storage";
 import type { ExecutionTransport } from "./agent-execution-transport";
@@ -25,6 +26,8 @@ export class AgentExecutionController {
     private readonly available: boolean,
     private readonly profileRevision: () => Promise<number>,
     private readonly prepared: (run: AgentRun) => Promise<void>,
+    private readonly profileKey: () => Promise<string>,
+    private readonly workflowMemory: () => Promise<WorkflowMemory | null>,
   ) {}
 
   private async ready() {
@@ -106,7 +109,13 @@ export class AgentExecutionController {
       type: "CREATE",
       id,
       applicationId: `synthetic:${id}`,
-      binding: { tabId: tab.id, documentId, url: AGENT_EXECUTION_URL, profileRevision: revision },
+      binding: {
+        tabId: tab.id,
+        documentId,
+        url: AGENT_EXECUTION_URL,
+        profileRevision: revision,
+        profileKey: await this.profileKey(),
+      },
       consent: {
         id: crypto.randomUUID(),
         applicationId: `synthetic:${id}`,
@@ -202,7 +211,10 @@ export class AgentExecutionController {
     if (this.stopped.has(run.id)) throw new Error("STOPPED");
     const tab = await chrome.tabs.get(run.binding.tabId);
     if (tab.url !== AGENT_EXECUTION_URL || !tab.active) throw new Error("ACCESS_CHANGED");
-    if ((await this.profileRevision()) !== run.binding.profileRevision)
+    if (
+      (await this.profileRevision()) !== run.binding.profileRevision ||
+      (await this.profileKey()) !== run.binding.profileKey
+    )
       throw new Error("PROFILE_CHANGED");
   }
   private async loop(id: string) {
@@ -244,8 +256,23 @@ export class AgentExecutionController {
         await this.status();
         return;
       }
+      const workflow = await this.workflowMemory();
+      // Stored procedures only prioritize current supported fields. Native page
+      // validity, fresh targets, reviewed facts and dispatch authority still apply.
+      const preferred = workflow?.steps.flatMap((step) =>
+        snapshot.targets.filter(
+          (target) =>
+            target.kind === step.kind &&
+            target.semantic === step.parameter &&
+            ["FILL_TEXT", "SELECT_OPTION", "OPEN_CONTROL", "UPLOAD_FILE"].includes(target.kind) &&
+            !!DEMO_FACTS[step.parameter] &&
+            (target.kind !== "SELECT_OPTION" ||
+              target.options.some((option) => option.value === DEMO_FACTS[step.parameter])),
+        ),
+      )[0];
       const target =
         snapshot.targets.find((x) => x.kind === "REMOVE_ROW" && x.semantic === "removeExtra") ??
+        preferred ??
         snapshot.targets.find(
           (x) =>
             ["FILL_TEXT", "SELECT_OPTION", "OPEN_CONTROL", "UPLOAD_FILE"].includes(x.kind) &&
@@ -297,6 +324,12 @@ export class AgentExecutionController {
           expiresAt: Date.now() + 5000,
           costMicros: 0,
         };
+      if (preferred === target && workflow) {
+        const currentWorkflow = await this.workflowMemory();
+        if (currentWorkflow?.id !== workflow.id || currentWorkflow.revision !== workflow.revision)
+          throw new Error("MEMORY_CHANGED");
+        proposal = { ...proposal, memoryRef: { id: workflow.id, revision: workflow.revision } };
+      }
       await this.context(run);
       const claimed = await this.repository.dispatch({
         type: "CLAIM",

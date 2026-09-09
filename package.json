@@ -46,7 +46,7 @@
     "test:watch": "vitest",
     "test:executor": "npm run build:e2e --workspace @copilot/extension && npm run build --workspace @copilot/test-ats && playwright test --config evals/end-to-end/playwright.config.ts executor.spec.ts",
     "inference:benchmark": "node scripts/run-inference-benchmark.mjs",
-    "inference:benchmark:vision": "node scripts/vision-benchmark.mjs",
+    "inference:benchmark:vision": "node --experimental-strip-types scripts/vision-benchmark.mjs",
     "inference:serve": "node scripts/serve-local-inference.mjs",
     "typecheck": "tsc --build",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",

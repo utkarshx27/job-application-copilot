@@ -55,7 +55,8 @@ function sameBinding(a: AgentBinding, b: AgentBinding) {
     a.tabId === b.tabId &&
     a.documentId === b.documentId &&
     a.url === b.url &&
-    a.profileRevision === b.profileRevision
+    a.profileRevision === b.profileRevision &&
+    a.profileKey === b.profileKey
   );
 }
 
