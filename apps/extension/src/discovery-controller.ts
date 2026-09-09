@@ -15,6 +15,8 @@ import {
   type CompanyRecord,
   type DiscoveryStore,
   type MemoryOwner,
+  preparationUrl,
+  preparationJobIdentity,
 } from "@copilot/agent-core";
 import { emptyCareerPreferences } from "@copilot/candidate-schema";
 import { getProfileVault } from "./profile-storage";
@@ -89,6 +91,72 @@ export class DiscoveryController {
     this.searches.get(memoryOwnerKey(owner))?.abort();
     return this.view();
   }
+  private async readCatalog(owner: MemoryOwner, path: string, signal?: AbortSignal) {
+    signal?.throwIfAborted();
+    await this.mutate(owner, (data) => {
+      if (data.reads >= 50) throw new Error("Daily local catalog read budget exhausted.");
+      return { ...data, reads: data.reads + 1 };
+    });
+    const response = await fetch(origin + path, {
+      credentials: "omit",
+      redirect: "error",
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(10000)])
+        : AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`Local catalog returned HTTP ${response.status}.`);
+    if (!response.body) throw new Error("Empty catalog response.");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let size = 0;
+    let text = "";
+    try {
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        size += chunk.value.byteLength;
+        if (size > 1_000_000) {
+          await reader.cancel();
+          throw new Error("Catalog response too large.");
+        }
+        text += decoder.decode(chunk.value, { stream: true });
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    return JSON.parse(text + decoder.decode()) as unknown;
+  }
+  async localForPreparation(id: string, owner: MemoryOwner): Promise<DiscoveryJob> {
+    const view = await this.view();
+    if (
+      memoryOwnerKey(view.owner) !== memoryOwnerKey(owner) ||
+      view.owner.profileRevision !== owner.profileRevision
+    )
+      throw new Error("Profile changed. Review again.");
+    const entry = view.jobs.find((item) => item.job.id === id);
+    if (!entry || entry.dismissed || entry.excluded)
+      throw new Error("Job unavailable or excluded for this profile.");
+    preparationUrl(entry.job);
+    const fresh = listing.parse(
+      await this.readCatalog(owner, `/api/portal/jobs/${entry.job.sourceJobId}`),
+    );
+    const checked = DiscoveryJobSchema.parse({
+      ...entry.job,
+      sourceJobId: fresh.id,
+      title: fresh.title,
+      companyKey: `local:${fresh.companyId}`,
+      company: fresh.company,
+      location: fresh.location,
+      applicationUrl: fresh.destination ? new URL(fresh.destination, origin).href : null,
+      salary: fresh.salary,
+      availability: fresh.expired ? "EXPIRED" : fresh.destination ? "AVAILABLE" : "UNKNOWN",
+      observedAt: Date.now(),
+    });
+    preparationUrl(checked);
+    if (preparationJobIdentity(entry.job) !== preparationJobIdentity(checked))
+      throw new Error("Listing changed. Search and review the job again.");
+    return checked;
+  }
   async search(query: string) {
     const owner = memoryOwner(await getProfileVault());
     const key = memoryOwnerKey(owner);
@@ -98,22 +166,7 @@ export class DiscoveryController {
     this.searches.set(key, controller);
     const jobs: DiscoveryJob[] = [];
     const companies: CompanyRecord[] = [];
-    const read = async (path: string) => {
-      controller.signal.throwIfAborted();
-      await this.mutate(owner, (data) => {
-        if (data.reads >= 50) throw new Error("Daily local catalog read budget exhausted.");
-        return { ...data, reads: data.reads + 1 };
-      });
-      const response = await fetch(origin + path, {
-        credentials: "omit",
-        redirect: "error",
-        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
-      });
-      if (!response.ok) throw new Error(`Local catalog returned HTTP ${response.status}.`);
-      const text = await response.text();
-      if (text.length > 1_000_000) throw new Error("Catalog response too large.");
-      return JSON.parse(text) as unknown;
-    };
+    const read = (path: string) => this.readCatalog(owner, path, controller.signal);
     try {
       for (let page = 0; page < 5; page++) {
         const path = `/api/portal/jobs?q=${encodeURIComponent(query)}&page=${page}`;

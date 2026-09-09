@@ -114,7 +114,56 @@ import { AgentExecutionController } from "./agent-execution-controller";
 import { ExecutionTransport } from "./agent-execution-transport";
 import { captureLocalExecution } from "./agent-execution-visual";
 import { DiscoveryController } from "./discovery-controller";
+import { JobPreparationController } from "./job-preparation-controller";
 const discovery = new DiscoveryController();
+const jobPreparation = new JobPreparationController(discovery, async (record) => {
+  const pending = profileQueue.then(async () => {
+    if (memoryOwnerKey(memoryOwner(await getProfileVault())) !== memoryOwnerKey(record.owner))
+      throw new Error("Profile changed before tracker update.");
+    const at = new Date(record.createdAt).toISOString();
+    const analysis = ApplicationPageAnalysisSchema.parse({
+      analysisVersion: 1,
+      analysisId: record.id,
+      applicationId: `local-preparation:${record.id}`,
+      mappings: [],
+      customQuestions: [],
+      duplicateWarnings: [],
+      snapshot: {
+        schemaVersion: 1,
+        url: record.job.applicationUrl,
+        title: record.job.title,
+        capturedAt: at,
+        fields: [],
+      },
+      ats: {
+        adapter: "GENERIC",
+        adapterVersion: "local-native-preparation-v1",
+        confidence: 1,
+        supported: true,
+        evidence: ["Approved native local first-screen preparation"],
+      },
+      job: {
+        schemaVersion: 1,
+        id: record.job.sourceJobId,
+        externalRequisitionId: record.job.sourceJobId,
+        ats: "GENERIC",
+        title: record.job.title,
+        company: record.job.company,
+        location: record.job.location,
+        description: "Local first screen prepared; not submitted.",
+        sourceUrl: record.job.sourceUrl,
+        applicationUrl: record.job.applicationUrl,
+        snapshotAt: at,
+      },
+      confirmation: { confirmed: false, evidence: [] },
+    });
+    await setApplicationTracker(
+      recordApplying(await getApplicationTracker(), analysis, record.owner.profileRevision, at),
+    );
+  });
+  profileQueue = pending.catch(() => undefined);
+  await pending;
+});
 import { MemoryRepository, memoryOwner, memoryScope, correctedMapping } from "./feedback-memory";
 import {
   sameMemoryOwner,
@@ -1473,6 +1522,37 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
       sendResponse(
         failure("AGENT_FAILED", error instanceof Error ? error.message : "Memory unavailable."),
       ),
+    );
+    return true;
+  }
+
+  if (parsed.data.type.startsWith("PANEL_PREPARATION_")) {
+    if (!AGENT_LAB_AVAILABLE || sender.url !== chrome.runtime.getURL("sidepanel.html")) {
+      sendResponse(failure("BAD_MESSAGE", "Local preparation requires the research panel."));
+      return false;
+    }
+    const request = parsed.data;
+    const result =
+      request.type === "PANEL_PREPARATION_REVIEW"
+        ? jobPreparation.review(request.jobId)
+        : request.type === "PANEL_PREPARATION_GET"
+          ? jobPreparation.view(request.id)
+          : request.type === "PANEL_PREPARATION_CANCEL"
+            ? jobPreparation.cancel(request.id, request.revision)
+            : request.type === "PANEL_PREPARATION_FORGET"
+              ? jobPreparation.forget(request.id, request.revision)
+              : request.type === "PANEL_PREPARATION_APPROVE"
+                ? jobPreparation.approve(request.id, request.revision, request.answers)
+                : Promise.reject(new Error("Unknown preparation request."));
+    void result.then(
+      (data) => sendResponse({ ok: true, data }),
+      (error: unknown) =>
+        sendResponse(
+          failure(
+            "AGENT_FAILED",
+            error instanceof Error ? error.message : "Preparation unavailable.",
+          ),
+        ),
     );
     return true;
   }

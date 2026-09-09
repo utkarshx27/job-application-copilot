@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DiscoveryViewSchema } from "@copilot/agent-core";
 import type { z } from "zod";
 import { sendPanelRequest } from "./panel-shared";
+import { JobPreparationPanel } from "./job-preparation";
 export function JobsPanel() {
   const [view, setView] = useState<z.infer<typeof DiscoveryViewSchema> | null>(null);
   const [query, setQuery] = useState("");
@@ -176,6 +177,10 @@ export function JobsPanel() {
               Forget listing
             </button>
             <h4>Company evidence</h4>
+            {entry.job.source === "LOCAL_TEST_ATS" &&
+              entry.job.availability === "AVAILABLE" &&
+              !entry.excluded &&
+              !entry.dismissed && <JobPreparationPanel jobId={entry.job.id} />}
             {entry.job.source === "IMPORT" && (
               <p>
                 Manually entered source claims, not independently verified. Evidence is shared only

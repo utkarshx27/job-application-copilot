@@ -1,6 +1,6 @@
 # Application agent implementation plan
 
-Status: **AG-01–AG-03 implemented; AG-04 inference core has open integration gates; AG-05 local execution and AG-06 local memory implemented; AG-07/AG-08 local/import research slice implemented; AG-09 selected-job handoff started; AG-11 local-model experiment started.** The full product remains in development. See [memory and Jobs](./MEMORY_AND_JOBS.md), [local executor](./EXECUTOR.md), [inference limitations](./INFERENCE.md), and [setup/portals](./SETUP_AND_PORTALS.md).
+Status: **AG-01–AG-03 implemented; AG-04 inference core has open integration gates; AG-05 local execution and AG-06 local memory implemented; AG-07/AG-08 local/import research slice implemented; AG-09 native first-screen preparation implemented; AG-11 local-model experiment started.** Full AG-09 integration and the full product remain in development. See [local preparation](./JOB_PREPARATION.md), [memory and Jobs](./MEMORY_AND_JOBS.md), [local executor](./EXECUTOR.md), [inference limitations](./INFERENCE.md), and [setup/portals](./SETUP_AND_PORTALS.md).
 
 Prepared: 2026-09-06. Repository baseline: `351a034`.
 
@@ -59,7 +59,7 @@ The first delivery should demonstrate this complete path:
 
 It must also demonstrate a missing-answer pause, a changed question, an interrupted browser worker, and an uncertain submission result. A success-only demo is insufficient.
 
-The implementation now includes local **AG-06 correction/workflow memory** and the **AG-07/AG-08 discovery/evidence baseline**. Next connect them to the per-job AG-09 preparation/submission flow while closing inference integration/evaluation gates. Live connectors, local packaging and offline training have separate dependencies; local component tests do not close those gates.
+The implementation now includes local **AG-06 correction/workflow memory**, the **AG-07/AG-08 discovery/evidence baseline**, and **AG-09 reviewed native first-screen preparation**. Next extend preparation to reviewed files and multi-step execution, connect scoped memory, and add separate local submission consent while closing inference integration/evaluation gates. Live connectors, local packaging and offline training have separate dependencies; local component tests do not close those gates.
 
 ## Decisions and open measurements
 

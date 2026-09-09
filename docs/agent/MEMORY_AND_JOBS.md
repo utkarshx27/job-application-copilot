@@ -42,9 +42,9 @@ Open **Jobs** in the research panel. **Search demo jobs** reads only the synthet
 - Tracking-link duplicates retain one shortlist entry with source references. Local listings with distinct job IDs remain distinct even when they share a demo destination.
 - Fit is deterministic: preferred title +60, location +30, directly comparable expected compensation +10. Currency and period must match. This is a preference score, not hiring probability. It does not yet evaluate skills, experience or work arrangement.
 - Company and keyword exclusions hide jobs by default. Dismissal is a reversible per-listing decision, not an employer fact or a learned global preference.
-- Expired, unknown and stale availability remain visible. Unknown salary is never inferred. This view cannot start an automated application; a later integrated flow must recheck availability before applying.
+- Expired, unknown and stale availability remain visible. Unknown salary is never inferred. Reviewed native first-screen preparation rechecks local listing availability before opening and filling the selected job. Imports remain manual; this flow does not automate Next or Submit.
 
-The application-demo link carries the selected job ID. Before offering **Apply locally**, the destination rechecks that specific job and shows its actual title/company/location. The ID is retained through embedded forms and receipts; invalid, expired or ambiguous links stop without starting a session. Opening a demo is still a user-driven handoff, not extension-driven preparation or submission.
+The application-demo link carries the selected job ID. Before offering **Apply locally**, the destination rechecks that specific job and shows its actual title/company/location. The ID is retained through embedded forms and receipts; invalid, expired or ambiguous links stop without starting a session. Available native demo jobs also offer [reviewed first-screen preparation](./JOB_PREPARATION.md). This new per-job action does not authorize Next, uploads or submission.
 
 **Forget listing** removes the entry, its dismissal and company evidence no longer referenced by another listing. There is no undo. A later catalog search or import can add it again.
 
@@ -64,4 +64,4 @@ Implementation: `packages/agent-core/src/{feedback-memory,workflow-memory,discov
 
 Tests: core scope/conflict/expiry/identity/ranking regressions; IndexedDB concurrency and deletion; persistent source budgets, failed requests, cancellation and profile changes; Chrome correction persistence/fill/forget, workflow capture/validate/reuse, and catalog/import/evidence/dismissal flows. Run `npm run verify` for the full suite.
 
-Still open: broader held-out memory/fit evaluations, editable dismissal reasons, additional authorized source adapters, automatic company identity/research providers, AG-09 per-job consent and verified synthetic submission integration, five-user usability study, browser-local inference pairing, and live connector assessments. Do not infer these capabilities from the local tests.
+Still open: broader held-out memory/fit evaluations, editable dismissal reasons, additional authorized source adapters, automatic company identity/research providers, AG-09 reviewed files/multi-step preparation and separately approved verified synthetic submission integration, five-user usability study, browser-local inference pairing, and live connector assessments. Do not infer these capabilities from the local tests.

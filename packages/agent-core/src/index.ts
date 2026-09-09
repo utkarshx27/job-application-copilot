@@ -2,6 +2,7 @@ import { z } from "zod";
 export * from "./feedback-memory";
 export * from "./workflow-memory";
 export * from "./discovery";
+export * from "./job-preparation";
 
 const Id = z.uuid();
 const Ref = z.string().regex(/^[a-zA-Z0-9_.:-]{1,200}$/);

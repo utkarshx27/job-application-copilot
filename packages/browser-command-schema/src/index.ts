@@ -1,5 +1,12 @@
 import { AiConfigStatusSchema, AiSessionConfigSchema } from "@copilot/ai-gateway";
-import { AgentLabStatusSchema, MemoryMeaningSchema, MemoryViewSchema } from "@copilot/agent-core";
+import {
+  AgentLabStatusSchema,
+  MemoryMeaningSchema,
+  MemoryViewSchema,
+  PreparationViewSchema,
+  PreparationAnswersSchema,
+  PreparationForgottenSchema,
+} from "@copilot/agent-core";
 import {
   FillPlanSchema,
   FillResultSchema,
@@ -73,6 +80,33 @@ export const BrowserCommandSchema = z.discriminatedUnion("type", [
 ]);
 
 export const PanelRequestSchema = z.discriminatedUnion("type", [
+  z
+    .object({ type: z.literal("PANEL_PREPARATION_REVIEW"), jobId: z.string().min(1).max(200) })
+    .strict(),
+  z.object({ type: z.literal("PANEL_PREPARATION_GET"), id: z.uuid() }).strict(),
+  z
+    .object({
+      type: z.literal("PANEL_PREPARATION_CANCEL"),
+      id: z.uuid(),
+      revision: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("PANEL_PREPARATION_FORGET"),
+      id: z.uuid(),
+      revision: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("PANEL_PREPARATION_APPROVE"),
+      id: z.uuid(),
+      revision: z.number().int().positive(),
+      confirmed: z.literal(true),
+      answers: PreparationAnswersSchema.pick({ currentLocation: true, workArrangement: true }),
+    })
+    .strict(),
   z.object({ type: z.literal("PANEL_JOBS_GET") }).strict(),
   z.object({ type: z.literal("PANEL_JOBS_SEARCH"), query: z.string().max(200) }).strict(),
   z.object({ type: z.literal("PANEL_JOBS_CANCEL") }).strict(),
@@ -317,6 +351,8 @@ export const RuntimeResponseSchema = z.discriminatedUnion("ok", [
     ok: z.literal(true),
     data: z.union([
       MemoryViewSchema,
+      PreparationViewSchema,
+      PreparationForgottenSchema,
       DiscoveryViewSchema,
       z
         .object({

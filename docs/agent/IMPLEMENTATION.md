@@ -1,6 +1,6 @@
 # Implementation work packages
 
-Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with integration/validation gates open; AG-05 local execution and AG-06 local correction/workflow memory implemented; AG-07/AG-08 local/import research slice implemented; AG-09 selected-job handoff started; AG-11 local-model experiment started. AG-09 integration, AG-10, AG-12 and AG-13 remain open.** Broader acceptance gates are not implied by these local implementations. See [memory and Jobs scope](./MEMORY_AND_JOBS.md), [executor limitations](./EXECUTOR.md), [inference limits](./INFERENCE.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
+Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with integration/validation gates open; AG-05 local execution and AG-06 local correction/workflow memory implemented; AG-07/AG-08 local/import research slice implemented; AG-09 native first-screen preparation implemented; AG-11 local-model experiment started. Full AG-09 integration, AG-10, AG-12 and AG-13 remain open.** Broader acceptance gates are not implied by these local implementations. See [local preparation scope](./JOB_PREPARATION.md), [memory and Jobs scope](./MEMORY_AND_JOBS.md), [executor limitations](./EXECUTOR.md), [inference limits](./INFERENCE.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
 
 ## Delivery order
 
@@ -158,7 +158,7 @@ Acceptance:
 
 ## AG-07: discovery and ranking
 
-Implemented initial research slice: local paginated catalog search, manual listing import, provenance-preserving deduplication, persistent read budgets, cancellation, source health/freshness, transparent deterministic preferences and dismiss/restore/forget UI. External sources, editable dismissal reasons and optional reranking remain open. Availability is shown but must be rechecked by the future AG-09 application flow.
+Implemented initial research slice: local paginated catalog search, manual listing import, provenance-preserving deduplication, persistent read budgets, cancellation, source health/freshness, transparent deterministic preferences and dismiss/restore/forget UI. External sources, editable dismissal reasons and optional reranking remain open. AG-09 native first-screen preparation rechecks local listing availability; final-submission integration remains open.
 
 Primary locations: `packages/agent-core/src/discovery.ts`, extension `discovery-controller.ts`/`private-repository.ts`, panel command schemas and `sidepanel/jobs-panel.tsx`. [Usage and test coverage](./MEMORY_AND_JOBS.md).
 
@@ -201,7 +201,9 @@ Acceptance:
 
 Started: Jobs → local application links retain the selected catalog job ID; the page rechecks that job through the public local catalog before offering Apply, displays its actual role/location, and preserves identity through nested frames, session creation and receipts. The independent runner exposes session job identity for counterfactual verification. Expired, unavailable, old-seed and ambiguous job links stop without creating a session. This fixes the previous implicit first-job fallback for all catalog links; standalone scenario URLs intentionally still default to the seed's first job.
 
-Still open: reviewed per-job profile/resume/answer consent, extension-driven portal preparation and controlled submission, tracker/progress integration, missing-answer UX, broader outcome gates and the five-user study. The handoff tests use the independent fixture driver, not a newly enabled extension executor.
+Implemented first native-screen increment: per-job profile/answer review and ten-minute consent, fresh catalog checks, isolated Chrome preparation of five fixed fields, retained-value validation, durable dispatch claims, cancellation/forgetting and interrupted-worker manual review. Successful preparation records Applying exactly once; the independent ledger confirms no submission attempts. [Usage, privacy and remaining increments](./JOB_PREPARATION.md).
+
+Still open: résumé selection/upload consent, multi-step portal execution and grouped missing-answer recovery, correction/workflow-memory integration, separate controlled local submission/receipt reconciliation, broader outcome gates and the five-user study. The initial two-command adapter is not the completed general application controller.
 
 Primary locations: side-panel product UI, `agent-core`, tracker, local fixtures and browser evaluations.
 
