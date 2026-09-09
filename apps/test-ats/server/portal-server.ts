@@ -134,6 +134,12 @@ export function createPortalHarness(token: string, initialSeed = 7) {
         json(response, 200, companies);
         return true;
       }
+      const requestedJob = /^\/api\/portal\/jobs\/(job-\d+-\d+)$/.exec(url.pathname);
+      if (request.method === "GET" && requestedJob) {
+        const job = listings(seed).find((entry) => entry.id === requestedJob[1]);
+        json(response, job ? 200 : 404, job ?? { error: "Job unavailable" });
+        return true;
+      }
       if (request.method === "POST" && url.pathname === "/api/portal/start") {
         const input = await body(request);
         const scenario = scenarios.find((item) => item.publicId === input.scenarioId);
@@ -377,9 +383,10 @@ export function createPortalHarness(token: string, initialSeed = 7) {
       if (request.method === "GET" && request.url === "/outcomes") {
         json(response, 200, {
           outcomes: [...outcomes.values()],
-          sessions: [...sessions.values()].map(({ id, scenarioId, stage, attempts }) => ({
+          sessions: [...sessions.values()].map(({ id, scenarioId, jobId, stage, attempts }) => ({
             id,
             scenarioId,
+            jobId,
             stage,
             attempts,
           })),

@@ -1,6 +1,6 @@
 # Application agent implementation plan
 
-Status: **AG-01–AG-03 implemented; AG-04 inference core has open integration gates; AG-05 local execution and AG-06 local memory implemented; AG-07/AG-08 local/import research slice implemented; AG-11 local-model experiment started.** The full product remains in development. See [memory and Jobs](./MEMORY_AND_JOBS.md), [local executor](./EXECUTOR.md), [inference limitations](./INFERENCE.md), and [setup/portals](./SETUP_AND_PORTALS.md).
+Status: **AG-01–AG-03 implemented; AG-04 inference core has open integration gates; AG-05 local execution and AG-06 local memory implemented; AG-07/AG-08 local/import research slice implemented; AG-09 selected-job handoff started; AG-11 local-model experiment started.** The full product remains in development. See [memory and Jobs](./MEMORY_AND_JOBS.md), [local executor](./EXECUTOR.md), [inference limitations](./INFERENCE.md), and [setup/portals](./SETUP_AND_PORTALS.md).
 
 Prepared: 2026-09-06. Repository baseline: `351a034`.
 

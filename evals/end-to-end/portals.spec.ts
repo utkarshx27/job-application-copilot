@@ -6,13 +6,14 @@ import { evaluatePortalOutcome } from "./portal-outcome";
 type Ledger = {
   outcomes: {
     applicationId: string;
+    jobId: string;
     scenarioId: string;
     correct: boolean;
     acceptedCount: number;
     duplicateAttempts: number;
     uploadRetained: boolean;
   }[];
-  sessions: { id: string; stage: string; attempts: number }[];
+  sessions: { id: string; jobId: string; stage: string; attempts: number }[];
 };
 async function runner<T>(path: string, input?: unknown): Promise<T> {
   const token = process.env.PORTAL_RUNNER_TOKEN;
@@ -26,6 +27,49 @@ async function runner<T>(path: string, input?: unknown): Promise<T> {
   if (!response.ok) throw new Error(`Runner request failed: ${response.status}`);
   return (await response.json()) as T;
 }
+
+for (const scenarioId of ["portal-01", "portal-06"]) {
+  test(`portal handoff preserves a non-default job through ${scenarioId}`, async ({ page }) => {
+    await runner("/reset", { seed: 7 });
+    const fixtures = await runner<{ candidate: Record<string, string>; resume: string }>(
+      "/fixtures",
+    );
+    const response = await fetch("http://127.0.0.1:4173/api/portal/scenarios");
+    const scenarios = (await response.json()) as PublicScenario[];
+    const scenario = scenarios.find((entry) => entry.id === scenarioId)!;
+    await page.goto(`http://127.0.0.1:4173/portal.html?scenario=${scenarioId}&jobId=job-7-1`);
+    await expect(
+      page.getByRole("heading", { name: "Frontend Engineer at Example Labs", exact: true }),
+    ).toBeVisible();
+    const run = await runPortalFixture(page, scenario.fields, fixtures.candidate, fixtures.resume);
+    expect(run.state).toBe("PAGE_CONFIRMATION");
+    expect(run.jobId).toBe("job-7-1");
+    const ledger = await runner<Ledger>("/outcomes");
+    expect(ledger.sessions).toHaveLength(1);
+    expect(ledger.sessions[0]?.jobId).toBe("job-7-1");
+    expect(ledger.outcomes).toHaveLength(1);
+    expect(ledger.outcomes[0]).toMatchObject({ jobId: "job-7-1", correct: true, acceptedCount: 1 });
+  });
+}
+
+test("portal handoff rejects expired, missing and ambiguous jobs without opening a session", async ({
+  page,
+}) => {
+  await runner("/reset", { seed: 7 });
+  for (const query of [
+    "jobId=job-7-6",
+    "jobId=job-7-7",
+    "jobId=job-8-1",
+    "jobId=",
+    "jobId=job-7-1&jobId=job-7-2",
+  ]) {
+    await page.goto(`http://127.0.0.1:4173/portal.html?scenario=portal-01&${query}`);
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Apply locally", exact: true })).toHaveCount(0);
+  }
+  expect((await runner<Ledger>("/outcomes")).sessions).toHaveLength(0);
+});
+
 const cases: [string, PortalRun["state"] | "EVIDENCE"][] = [
   ["greenhouse-native", "PAGE_CONFIRMATION"],
   ["lever-upload", "PAGE_CONFIRMATION"],

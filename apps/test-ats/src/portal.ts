@@ -157,7 +157,18 @@ async function gallery(scenarios: PublicScenario[]) {
   await companyEvidence(container);
 }
 
-async function application(scenario: PublicScenario, target: HTMLElement) {
+async function selectedJob(seed: number): Promise<PortalListing> {
+  const values = new URLSearchParams(location.search).getAll("jobId");
+  if (values.length > 1) throw new Error("Ambiguous job identity");
+  const id = values[0] ?? `job-${seed}-0`;
+  if (!/^job-\d+-\d+$/.test(id)) throw new Error("Invalid job identity");
+  const job = await api<PortalListing>(`/api/portal/jobs/${id}`);
+  if (job.id !== id) throw new Error("Job identity changed");
+  if (job.expired || !job.destination) throw new Error("Application unavailable for this job");
+  return job;
+}
+
+async function application(scenario: PublicScenario, target: HTMLElement, jobId: string) {
   if (scenario.delayMs) {
     const pending = message(target, "Loading application controls…");
     await new Promise((resolve) => setTimeout(resolve, scenario.delayMs));
@@ -165,7 +176,7 @@ async function application(scenario: PublicScenario, target: HTMLElement) {
   }
   const started = await api<{ applicationId: string; jobId: string }>("/api/portal/start", {
     scenarioId: scenario.id,
-    jobId: `job-${scenario.seed}-0`,
+    jobId,
   });
   target.dataset.applicationId = started.applicationId;
   target.dataset.jobId = started.jobId;
@@ -412,19 +423,21 @@ async function main() {
   const scenario = scenarios.find((item) => item.id === id);
   if (!scenario) throw new Error("Unknown scenario");
   const params = new URLSearchParams(location.search);
+  const job = await selectedJob(scenario.seed);
   if (location.pathname === "/portal-frame.html") {
     if (params.get("nested") === "1") {
       const frame = node("iframe");
       frame.title = "Nested application";
-      frame.src = `/portal-frame.html?scenario=${scenario.id}`;
+      frame.src = `/portal-frame.html?scenario=${scenario.id}&jobId=${encodeURIComponent(job.id)}`;
       container.append(frame);
-    } else await application(scenario, container);
+    } else await application(scenario, container, job.id);
     return;
   }
   container.append(
     node("h1", scenario.title),
     node("p", "Demo only · original synthetic content · no real applications"),
-    node("h2", "Platform Engineer at Example Labs"),
+    node("h2", `${job.title} at ${job.company}`),
+    node("p", `${job.location} · Job ${job.id}`),
   );
   if (scenario.evidenceOnly) {
     await companyEvidence(container);
@@ -452,7 +465,7 @@ async function main() {
     if (scenario.mode === "FRAME" || scenario.mode === "NESTED_FRAME") {
       const frame = node("iframe");
       frame.title = "Application form";
-      frame.src = `/portal-frame.html?scenario=${scenario.id}${scenario.mode === "NESTED_FRAME" ? "&nested=1" : ""}`;
+      frame.src = `/portal-frame.html?scenario=${scenario.id}&jobId=${encodeURIComponent(job.id)}${scenario.mode === "NESTED_FRAME" ? "&nested=1" : ""}`;
       container.append(frame);
       return;
     }
@@ -466,7 +479,7 @@ async function main() {
         apply.disabled = false;
       });
     }
-    void application(scenario, target).catch((error: unknown) => {
+    void application(scenario, target, job.id).catch((error: unknown) => {
       message(target, error instanceof Error ? error.message : "Application unavailable", "alert");
     });
   });

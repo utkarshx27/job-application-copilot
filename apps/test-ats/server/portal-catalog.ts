@@ -173,7 +173,10 @@ export function listings(seed = 7): PortalListing[] {
     companyId: index % 2 ? "company-b" : "company-a",
     company: "Example Labs",
     location: index % 2 ? "London" : "Bengaluru",
-    destination: index === 7 ? null : "/portal.html?scenario=portal-01",
+    destination:
+      index === 7
+        ? null
+        : `/portal.html?scenario=portal-01&jobId=job-${seed}-${index === 5 ? 0 : index}`,
     expired: index === 6,
     salary: index % 3 ? { amount: 1_500_000, currency: "INR", period: "YEAR" } : null,
   }));

@@ -44,6 +44,8 @@ Open **Jobs** in the research panel. **Search demo jobs** reads only the synthet
 - Company and keyword exclusions hide jobs by default. Dismissal is a reversible per-listing decision, not an employer fact or a learned global preference.
 - Expired, unknown and stale availability remain visible. Unknown salary is never inferred. This view cannot start an automated application; a later integrated flow must recheck availability before applying.
 
+The application-demo link carries the selected job ID. Before offering **Apply locally**, the destination rechecks that specific job and shows its actual title/company/location. The ID is retained through embedded forms and receipts; invalid, expired or ambiguous links stop without starting a session. Opening a demo is still a user-driven handoff, not extension-driven preparation or submission.
+
 **Forget listing** removes the entry, its dismissal and company evidence no longer referenced by another listing. There is no undo. A later catalog search or import can add it again.
 
 ## Review company evidence (AG-08)

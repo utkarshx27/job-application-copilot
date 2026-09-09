@@ -1,6 +1,6 @@
 # Implementation work packages
 
-Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with integration/validation gates open; AG-05 local execution and AG-06 local correction/workflow memory implemented; AG-07/AG-08 local/import research slice implemented; AG-11 local-model experiment started. AG-09, AG-10, AG-12 and AG-13 remain open.** Broader acceptance gates are not implied by these local implementations. See [memory and Jobs scope](./MEMORY_AND_JOBS.md), [executor limitations](./EXECUTOR.md), [inference limits](./INFERENCE.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
+Status: **AG-01–AG-03 implemented; AG-04 inference core implemented with integration/validation gates open; AG-05 local execution and AG-06 local correction/workflow memory implemented; AG-07/AG-08 local/import research slice implemented; AG-09 selected-job handoff started; AG-11 local-model experiment started. AG-09 integration, AG-10, AG-12 and AG-13 remain open.** Broader acceptance gates are not implied by these local implementations. See [memory and Jobs scope](./MEMORY_AND_JOBS.md), [executor limitations](./EXECUTOR.md), [inference limits](./INFERENCE.md), and [evaluation](./LEARNING_AND_EVALUATION.md).
 
 ## Delivery order
 
@@ -198,6 +198,10 @@ Acceptance:
 - Repeated jobs at one employer reuse permitted cached research within freshness rules.
 
 ## AG-09: one-click local product slice
+
+Started: Jobs → local application links retain the selected catalog job ID; the page rechecks that job through the public local catalog before offering Apply, displays its actual role/location, and preserves identity through nested frames, session creation and receipts. The independent runner exposes session job identity for counterfactual verification. Expired, unavailable, old-seed and ambiguous job links stop without creating a session. This fixes the previous implicit first-job fallback for all catalog links; standalone scenario URLs intentionally still default to the seed's first job.
+
+Still open: reviewed per-job profile/resume/answer consent, extension-driven portal preparation and controlled submission, tracker/progress integration, missing-answer UX, broader outcome gates and the five-user study. The handoff tests use the independent fixture driver, not a newly enabled extension executor.
 
 Primary locations: side-panel product UI, `agent-core`, tracker, local fixtures and browser evaluations.
 

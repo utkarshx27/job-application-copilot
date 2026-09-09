@@ -13,6 +13,19 @@ test("Jobs catalog deduplicates demos, shows source evidence and persists import
   await expect(jobs.locator("article")).toHaveCount(7);
   await expect(jobs.getByText(/Small sample/).first()).toBeVisible();
   await expect(jobs.getByText(/Stale source/).first()).toBeVisible();
+  const selected = jobs
+    .getByRole("article", { name: "Frontend Engineer at Example Labs in London" })
+    .first();
+  const opened = context.waitForEvent("page");
+  await selected.getByRole("link", { name: "Open application demo", exact: true }).click();
+  const application = await opened;
+  await expect(application).toHaveURL(/jobId=job-7-1/);
+  await expect(
+    application.getByRole("heading", { name: "Frontend Engineer at Example Labs", exact: true }),
+  ).toBeVisible();
+  await application.getByRole("button", { name: "Apply locally", exact: true }).click();
+  await expect(application.locator('[data-job-id="job-7-1"]')).toBeVisible();
+  await application.close();
   await jobs.getByText("Paste a job listing", { exact: true }).click();
   await jobs.getByLabel("Job title", { exact: true }).fill("Imported QA engineer");
   await jobs.getByLabel("Company", { exact: true }).fill("Example Test");
