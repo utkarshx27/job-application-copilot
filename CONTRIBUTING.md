@@ -33,7 +33,7 @@ When contributing public ATS QA fixtures, follow [`qa/ats/README.md`](./qa/ats/R
 
 For the research-only local executor, follow [the AG-05 guide](./docs/agent/EXECUTOR.md) and run `npm run test:executor`. Keep new handlers on explicit synthetic fixtures, verify retained values/outcomes independently, and test stale documents, revocation and worker recovery. Do not expand live permissions or replace manual screenshot review with automatic coordinate actions without a separate capability review and evidence.
 
-For correction/workflow memory and the research Jobs view, follow [memory and discovery usage](./docs/agent/MEMORY_AND_JOBS.md). Include counterfactual scope/ownership tests for memory changes, persistent-budget/cancellation tests for source changes, and exact employer/source/date evidence for rating changes. Do not promote a local demo result into a claim of live portal support. The next integration handoff is AG-09; broader evaluations and provider pairing remain open contributor work.
+For correction/workflow memory and the research Jobs view, follow [memory and discovery usage](./docs/agent/MEMORY_AND_JOBS.md). Include counterfactual scope/ownership tests for memory changes, persistent-budget/cancellation tests for source changes, and exact employer/source/date evidence for rating changes. Do not promote a local demo result into a claim of live portal support. AG-09 now integrates native local preparation and verified submission; broader evaluation, the [five-user study](./docs/agent/AG09_USABILITY_STUDY.md), additional control families and provider pairing remain open contributor work.
 
 Useful commands:
 

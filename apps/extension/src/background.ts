@@ -150,16 +150,42 @@ const jobPreparation = new JobPreparationController(discovery, async (record) =>
         title: record.job.title,
         company: record.job.company,
         location: record.job.location,
-        description: "Local first screen prepared; not submitted.",
+        description: record.receipt
+          ? "Local application acceptance verified."
+          : "Local application prepared for review.",
         sourceUrl: record.job.sourceUrl,
         applicationUrl: record.job.applicationUrl,
         snapshotAt: at,
       },
       confirmation: { confirmed: false, evidence: [] },
     });
-    await setApplicationTracker(
-      recordApplying(await getApplicationTracker(), analysis, record.owner.profileRevision, at),
+    let tracker = recordApplying(
+      await getApplicationTracker(),
+      analysis,
+      record.owner.profileRevision,
+      at,
     );
+    if (record.file)
+      tracker = recordResumeUpload(
+        tracker,
+        analysis.applicationId!,
+        record.file.name,
+        record.file.sha256,
+        at,
+      );
+    if (record.receipt)
+      tracker = recordConfirmation(
+        tracker,
+        analysis.applicationId!,
+        {
+          confirmed: true,
+          evidence: [
+            `Verified local receipt ${record.receipt.applicationId} for ${record.receipt.jobId}`,
+          ],
+        },
+        new Date(record.completedAt!).toISOString(),
+      );
+    await setApplicationTracker(tracker);
   });
   profileQueue = pending.catch(() => undefined);
   await pending;
@@ -1533,17 +1559,34 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
     }
     const request = parsed.data;
     const result =
-      request.type === "PANEL_PREPARATION_REVIEW"
-        ? jobPreparation.review(request.jobId)
-        : request.type === "PANEL_PREPARATION_GET"
-          ? jobPreparation.view(request.id)
-          : request.type === "PANEL_PREPARATION_CANCEL"
-            ? jobPreparation.cancel(request.id, request.revision)
-            : request.type === "PANEL_PREPARATION_FORGET"
-              ? jobPreparation.forget(request.id, request.revision)
-              : request.type === "PANEL_PREPARATION_APPROVE"
-                ? jobPreparation.approve(request.id, request.revision, request.answers)
-                : Promise.reject(new Error("Unknown preparation request."));
+      request.type === "PANEL_PREPARATION_PAUSE"
+        ? jobPreparation.pause(request.id, request.revision)
+        : request.type === "PANEL_PREPARATION_CLEAR_PRIVATE"
+          ? jobPreparation.clearPrivate(request.id, request.revision)
+          : request.type === "PANEL_PREPARATION_REVIEW"
+            ? jobPreparation.review(request.jobId)
+            : request.type === "PANEL_PREPARATION_GET"
+              ? jobPreparation.view(request.id)
+              : request.type === "PANEL_PREPARATION_CANCEL"
+                ? jobPreparation.cancel(request.id, request.revision)
+                : request.type === "PANEL_PREPARATION_FORGET"
+                  ? jobPreparation.forget(request.id, request.revision)
+                  : request.type === "PANEL_PREPARATION_APPROVE"
+                    ? jobPreparation.approve(request.id, request.revision, request.answers)
+                    : request.type === "PANEL_PREPARATION_COMPLETE"
+                      ? jobPreparation.approve(request.id, request.revision, request.answers, {
+                          extraAnswers: request.extraAnswers,
+                          file: request.file,
+                        })
+                      : request.type === "PANEL_PREPARATION_RESUME"
+                        ? jobPreparation.resume(request.id, request.revision, request.answers)
+                        : request.type === "PANEL_PREPARATION_SUBMIT"
+                          ? jobPreparation.submit(request.id, request.revision)
+                          : request.type === "PANEL_PREPARATION_RECEIPT"
+                            ? jobPreparation.reconcile(request.id)
+                            : request.type === "PANEL_PREPARATION_WORKFLOW"
+                              ? jobPreparation.activateWorkflow(request.id)
+                              : Promise.reject(new Error("Unknown preparation request."));
     void result.then(
       (data) => sendResponse({ ok: true, data }),
       (error: unknown) =>

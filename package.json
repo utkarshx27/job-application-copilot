@@ -45,6 +45,8 @@
     "test:portals": "npm run build:e2e --workspace @copilot/extension && npm run build --workspace @copilot/test-ats && playwright test --config evals/end-to-end/playwright.config.ts --grep \"portal harness|simple setup\"",
     "test:watch": "vitest",
     "test:executor": "npm run build:e2e --workspace @copilot/extension && npm run build --workspace @copilot/test-ats && playwright test --config evals/end-to-end/playwright.config.ts executor.spec.ts",
+    "test:preparation": "npm run build:e2e --workspace @copilot/extension && npm run build --workspace @copilot/test-ats && playwright test --config evals/end-to-end/playwright.config.ts complete-preparation.spec.ts && node scripts/preparation-report.mjs",
+    "agent:report": "node scripts/preparation-report.mjs",
     "inference:benchmark": "node scripts/run-inference-benchmark.mjs",
     "inference:benchmark:vision": "node --experimental-strip-types scripts/vision-benchmark.mjs",
     "inference:serve": "node scripts/serve-local-inference.mjs",

@@ -3,6 +3,7 @@ import { PreparationViewSchema, PreparationForgottenSchema } from "@copilot/agen
 import type { z } from "zod";
 import type { PanelRequest } from "@copilot/browser-command-schema";
 import { sendPanelRequest } from "./panel-shared";
+import { CompletePreparationOptions, PreparationProgress } from "./complete-preparation";
 
 export function JobPreparationPanel({ jobId }: { jobId: string }) {
   const [view, setView] = useState<z.infer<typeof PreparationViewSchema> | null>(null);
@@ -65,10 +66,10 @@ export function JobPreparationPanel({ jobId }: { jobId: string }) {
   const record = view?.record;
   return (
     <section aria-label={`Preparation for ${jobId}`}>
-      <h4>Local first-screen preparation</h4>
+      <h4>Local application preparation</h4>
       <p>
-        Review your verified contact details and two job-specific answers. This opens and fills only
-        the native local demo's first screen. No résumé upload, Next or submission.
+        Review your verified contact details and job-specific answers. Choose first-screen filling
+        or complete preparation through local review. Submission requires a separate approval.
       </p>
       <button
         type="button"
@@ -131,40 +132,53 @@ export function JobPreparationPanel({ jobId }: { jobId: string }) {
                 These two answers apply only to this preparation. They are not saved as profile
                 facts.
               </p>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(event) => setConfirmed(event.target.checked)}
-                />
-                I approve these answers for this local job and first screen only
-              </label>
-              <button
-                type="button"
-                disabled={
-                  busy || !confirmed || !city.trim() || !arrangement || !!view.blockers.length
-                }
-                onClick={() => {
-                  if (
-                    arrangement !== "Remote" &&
-                    arrangement !== "Hybrid" &&
-                    arrangement !== "On-site"
-                  )
-                    return;
-                  void request({
-                    type: "PANEL_PREPARATION_APPROVE",
-                    id: record.id,
-                    revision: record.revision,
-                    confirmed: true,
-                    answers: { currentLocation: city, workArrangement: arrangement },
-                  });
-                }}
-              >
-                Prepare local first screen
-              </button>
+              {record.job.applicationUrl?.includes("scenario=portal-01&") && (
+                <>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={confirmed}
+                      onChange={(event) => setConfirmed(event.target.checked)}
+                    />
+                    I approve these answers for this local job and first screen only
+                  </label>
+                  <button
+                    type="button"
+                    disabled={
+                      busy || !confirmed || !city.trim() || !arrangement || !!view.blockers.length
+                    }
+                    onClick={() => {
+                      if (
+                        arrangement !== "Remote" &&
+                        arrangement !== "Hybrid" &&
+                        arrangement !== "On-site"
+                      )
+                        return;
+                      void request({
+                        type: "PANEL_PREPARATION_APPROVE",
+                        id: record.id,
+                        revision: record.revision,
+                        confirmed: true,
+                        answers: { currentLocation: city, workArrangement: arrangement },
+                      });
+                    }}
+                  >
+                    Prepare local first screen
+                  </button>
+                </>
+              )}
+              <CompletePreparationOptions
+                record={record}
+                city={city}
+                arrangement={arrangement}
+                blocked={!!view.blockers.length}
+                busy={busy}
+                request={request}
+              />
             </>
           )}
-          {record.state !== "CANCELLED" && (
+          <PreparationProgress record={record} busy={busy} request={request} />
+          {!["CANCELLED", "SUBMITTING", "SUBMITTED", "OUTCOME_UNKNOWN"].includes(record.state) && (
             <button
               type="button"
               onClick={() =>

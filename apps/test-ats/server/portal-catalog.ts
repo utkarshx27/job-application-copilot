@@ -144,6 +144,28 @@ export function portalScenarios(seed = 7): Scenario[] {
     make("generic-closed-tab", "Generic", { fault: "CLOSED_TAB", delayMs: 400 }),
     make("generic-duplicate", "Generic", { fault: "DUPLICATE" }),
     make("generic-expired-step", "Generic", { fault: "SESSION_EXPIRED" }),
+    make("complete-native", "Complete local", {
+      fields: [
+        ...base,
+        ...screen,
+        { key: "resume", label: "Resume document", kind: "file", required: true },
+      ],
+    }),
+    make("complete-renamed", "Complete local renamed", {
+      mode: "LABELLED",
+      fields: [
+        ...base,
+        ...screen.map((field) =>
+          field.key === "currentSalary" ? { ...field, label: "Annual earnings" } : field,
+        ),
+        { key: "resume", label: "Resume document", kind: "file", required: true },
+      ],
+    }),
+    make("complete-lost-response", "Complete local recovery", { fault: "LOST_RESPONSE" }),
+    make("complete-false-confirmation", "Complete local verification", {
+      fault: "FALSE_CONFIRMATION",
+    }),
+    make("complete-wrong-confirmation", "Complete local receipt", { fault: "WRONG_CONFIRMATION" }),
   ].map((scenario, index) => ({
     ...scenario,
     publicId: `portal-${String(index + 1).padStart(2, "0")}`,
@@ -167,7 +189,7 @@ export function publicScenario(scenario: Scenario): PublicScenario {
   };
 }
 export function listings(seed = 7): PortalListing[] {
-  const jobs = Array.from({ length: 8 }, (_, index) => ({
+  const jobs = Array.from({ length: 14 }, (_, index) => ({
     id: `job-${seed}-${index === 5 ? 0 : index}`,
     title: index % 2 ? "Frontend Engineer" : "Platform Engineer",
     companyId: index % 2 ? "company-b" : "company-a",
@@ -176,7 +198,7 @@ export function listings(seed = 7): PortalListing[] {
     destination:
       index === 7
         ? null
-        : `/portal.html?scenario=portal-01&jobId=job-${seed}-${index === 5 ? 0 : index}`,
+        : `/portal.html?scenario=portal-${index < 8 ? "01" : index === 13 ? "31" : String(index + 22)}&jobId=job-${seed}-${index === 5 ? 0 : index}`,
     expired: index === 6,
     salary: index % 3 ? { amount: 1_500_000, currency: "INR", period: "YEAR" } : null,
   }));

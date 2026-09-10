@@ -9,8 +9,8 @@ test("Jobs catalog deduplicates demos, shows source evidence and persists import
   await panel.getByRole("button", { name: "Jobs", exact: true }).click();
   const jobs = panel.getByRole("region", { name: "Jobs research" });
   await jobs.getByRole("button", { name: "Search demo jobs" }).click();
-  await expect(jobs.getByText("46 local catalog reads remaining today · READY")).toBeVisible();
-  await expect(jobs.locator("article")).toHaveCount(7);
+  await expect(jobs.getByText("44 local catalog reads remaining today · READY")).toBeVisible();
+  await expect(jobs.locator("article")).toHaveCount(13);
   await expect(jobs.getByText(/Small sample/).first()).toBeVisible();
   await expect(jobs.getByText(/Stale source/).first()).toBeVisible();
   const selected = jobs
@@ -32,13 +32,13 @@ test("Jobs catalog deduplicates demos, shows source evidence and persists import
   await jobs.getByLabel("Job location", { exact: true }).fill("Remote");
   await jobs.getByLabel("Listing URL", { exact: true }).fill("https://example.test/jobs/qa");
   await jobs.getByRole("button", { name: "Import listing", exact: true }).click();
-  await expect(jobs.locator("article")).toHaveCount(8);
+  await expect(jobs.locator("article")).toHaveCount(14);
   await jobs
     .getByLabel("Listing URL", { exact: true })
     .fill("https://example.test/jobs/qa?utm_source=duplicate");
   await jobs.getByRole("button", { name: "Import listing", exact: true }).click();
   await expect(jobs.getByRole("button", { name: "Import listing", exact: true })).toBeEnabled();
-  await expect(jobs.locator("article")).toHaveCount(8);
+  await expect(jobs.locator("article")).toHaveCount(14);
   const imported = jobs.getByRole("article", {
     name: "Imported QA engineer at Example Test in Remote",
   });
@@ -57,7 +57,7 @@ test("Jobs catalog deduplicates demos, shows source evidence and persists import
   await expect(imported).toHaveCount(0);
   await panel.reload();
   await panel.getByRole("button", { name: "Jobs", exact: true }).click();
-  await expect(jobs.locator("article")).toHaveCount(7);
+  await expect(jobs.locator("article")).toHaveCount(13);
   await jobs.getByLabel("Show dismissed and excluded jobs").check();
   await expect(imported).toBeVisible();
   await expect(imported.getByText(/4.2\/5 · 3 reviews · 2024-01-01/)).toBeVisible();

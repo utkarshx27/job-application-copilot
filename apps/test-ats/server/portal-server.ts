@@ -276,6 +276,10 @@ export function createPortalHarness(token: string, initialSeed = 7) {
           jobId: session.jobId,
           values: session.values,
           uploadRetained: !!session.uploadId,
+          uploadSha256:
+            session.uploadId && uploads.get(session.uploadId)
+              ? sha(uploads.get(session.uploadId)!.bytes)
+              : null,
         });
         return true;
       }

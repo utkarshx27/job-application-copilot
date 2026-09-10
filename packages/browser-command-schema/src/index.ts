@@ -6,6 +6,8 @@ import {
   PreparationViewSchema,
   PreparationAnswersSchema,
   PreparationForgottenSchema,
+  PreparationExtraAnswersSchema,
+  PreparationFileSchema,
 } from "@copilot/agent-core";
 import {
   FillPlanSchema,
@@ -81,9 +83,70 @@ export const BrowserCommandSchema = z.discriminatedUnion("type", [
 
 export const PanelRequestSchema = z.discriminatedUnion("type", [
   z
+    .object({
+      type: z.literal("PANEL_PREPARATION_PAUSE"),
+      id: z.uuid(),
+      revision: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("PANEL_PREPARATION_CLEAR_PRIVATE"),
+      id: z.uuid(),
+      revision: z.number().int().positive(),
+    })
+    .strict(),
+  z
     .object({ type: z.literal("PANEL_PREPARATION_REVIEW"), jobId: z.string().min(1).max(200) })
     .strict(),
   z.object({ type: z.literal("PANEL_PREPARATION_GET"), id: z.uuid() }).strict(),
+  z
+    .object({
+      type: z.literal("PANEL_PREPARATION_COMPLETE"),
+      id: z.uuid(),
+      revision: z.number().int().positive(),
+      confirmed: z.literal(true),
+      answers: PreparationAnswersSchema.pick({ currentLocation: true, workArrangement: true }),
+      extraAnswers: PreparationExtraAnswersSchema.nullable(),
+      file: PreparationFileSchema.nullable(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("PANEL_PREPARATION_RESUME"),
+      id: z.uuid(),
+      revision: z.number().int().positive(),
+      confirmed: z.literal(true),
+      answers: z
+        .array(
+          z
+            .object({
+              key: z.string().min(1).max(100),
+              value: z.string().max(5000),
+              meaning: MemoryMeaningSchema.nullable(),
+              remember: z.boolean(),
+            })
+            .strict(),
+        )
+        .max(30),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("PANEL_PREPARATION_SUBMIT"),
+      id: z.uuid(),
+      revision: z.number().int().positive(),
+      confirmed: z.literal(true),
+    })
+    .strict(),
+  z.object({ type: z.literal("PANEL_PREPARATION_RECEIPT"), id: z.uuid() }).strict(),
+  z
+    .object({
+      type: z.literal("PANEL_PREPARATION_WORKFLOW"),
+      id: z.uuid(),
+      confirmed: z.literal(true),
+    })
+    .strict(),
   z
     .object({
       type: z.literal("PANEL_PREPARATION_CANCEL"),

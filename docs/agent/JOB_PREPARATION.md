@@ -1,45 +1,55 @@
-# AG-09: reviewed local first-screen preparation
+# AG-09: reviewed local application flow
 
-Status: **first native-screen increment implemented; AG-09 is not complete**. Available only in research/E2E builds. No models or API keys are required. This does not enable live application automation, uploads, Next or submission.
+Status: **native local product flow implemented; broader release evaluation and the five-user study remain open**. Available in research/E2E builds, without a model, API key or GPU. This development result does not establish live portal automation or frozen-corpus performance gates.
 
-## Try it
+## Try the complete flow
 
-Build/load the research extension and start the local Test ATS using [these commands](./MEMORY_AND_JOBS.md#start-the-research-build). Use a separate Chrome test profile and synthetic contact details.
+Build/load the research extension and start the local Test ATS using [these commands](./MEMORY_AND_JOBS.md#start-the-research-build). Use a separate Chrome test profile and synthetic details.
 
-1. Verify a full name, email and E.164 phone number in **Profile**. For the seeded candidate, use Priya Sharma, `priya@example.test` and `+919876543210`.
-2. Open **Jobs**, search the demo catalog and find an available job.
-3. Select **Review local preparation**. Review the selected role, employer, location and profile revision.
-4. Enter the current city and choose the work-arrangement answer for this application. These are job-specific answers, not automatically inferred from desired location or saved globally as facts.
-5. Check **I approve these answers for this local job and first screen only**, then **Prepare local first screen**.
-6. Keep the newly opened application tab active. The extension opens the native application and fills its five reviewed fields. It checks retained values and stops on the first screen.
-7. Inspect the page. The tracker records **Applying**, never Applied. Continue through later steps manually for now.
+1. Import a synthetic PDF/DOCX résumé or enter details in **Profile**, then verify full name, email and E.164 phone. The application file is selected separately from profile import.
+2. In **Jobs**, search demo jobs and select **Review local preparation** for `job-7-8` (seed 7). Review the actual role, employer, location, fit and company evidence.
+3. Enter city and work arrangement. Open **Prepare all local application steps** and review experience, notice period, current/expected compensation, currency and period.
+4. Choose the synthetic résumé, approve the answers/file/preparation, and select **Prepare complete local application**. Keep the new application tab active.
+5. The controller fills contact details, advances through screening, uploads the reviewed file, and checks the final summary and retained file hash. Missing/conflicting questions appear together. Pause/take over, resume and cancel are available before submission.
+6. At final review, inspect the answers and filename. Check **I reviewed this application and approve one local submission**, then **Submit this local application once**.
+7. The tracker shows **Applied** only after an independent read of the local server receipt confirms the application/job identities. **Check application receipt** reconciles uncertain outcomes without repeating Submit.
 
-No résumé is selected or uploaded by this increment: the supported native fixture has no résumé control. Even if a profile contains résumé-derived facts, this authorization does not grant file access or upload permission.
+The original **Prepare local first screen** remains available for `portal-01` and authorizes only opening/filling that screen.
 
-## Approval, recovery and deletion
+For the independently scored seed-7 demo, use Priya Sharma, `priya@example.test`, `+919876543210`, Bengaluru, Remote, 36 experience months, 30 notice days, current compensation 900000, expected compensation 1500000, INR, Year. The synthetic text résumé contains exactly `Synthetic resume: Priya Sharma; Example Labs; 36 months of experience.` without a trailing newline. These are documentation/test inputs, not answers bundled into the executor.
 
-- Only exact URLs shaped as `http://127.0.0.1:4173/portal.html?scenario=portal-01&jobId=job-SEED-ID` from the stored local catalog are allowed. Imports, extra URL parameters, other hosts/routes and unavailable jobs cannot acquire preparation authority.
-- Review and approval each recheck the job through the local catalog, using the persistent 50-read daily budget. A changed listing requires a new search/review. Exclusions and dismissal remain binding.
-- Approval expires after ten minutes and is bound to vault/profile identity, revision, a digest of the complete profile, job identity and the reviewed answers. Contact facts must be verified and current. Desired locations are not treated as current residence.
-- The private state records each command before dispatch. Competing approval clicks can claim it only once. A prepared job returns its existing record rather than opening another tab.
-- The receiver is an isolated-world function with a fixed native-control contract. The second command targets the document identified by the first command. It does not accept page-supplied selectors, script, action types or destinations.
-- Unknown/extra/hidden controls, changed labels, iframe/shadow controls, overlays, validation alerts and conflicting prefilled values stop preparation. Existing values are not overwritten. Each dispatched command is bounded; there is no automatic retry.
-- **Cancel this preparation** prevents later commands. A command already dispatched may finish, including its bounded five-field fill. Cancellation does not erase page values or close tabs.
-- A worker restart converts unfinished preparation to **Needs review**, without replaying the click or fill. Inspect the existing page; automatic resume is intentionally unavailable in this increment.
-- Prepared records reconcile an idempotent tracker update, including after a worker restart. No submission receipt is claimed.
-- After cancellation, **Forget preparation record** removes the approval and private answer snapshot. This cannot be undone and does not remove the separate tracker history or clear the application page. Forgetting/reviewing again is not a declaration that the employer application was withdrawn.
+## Correction and workflow reuse
 
-Records live in `copilot-job-preparation-v1` IndexedDB, scoped by vault/profile identity, with a maximum of 100 retained records. This private store contains the approved answer snapshot; it is excluded from profile backups, sync, diagnostic exports and model input. Cancel/forget records you no longer need. Uninstalling the research extension removes its local storage.
+`job-7-9` and `job-7-13` use a renamed native layout. **Annual earnings** deliberately lacks a deterministic interpretation. Review it as current compensation, enter the approved value, and optionally save its meaning. Equivalent questions for the same profile revision can reuse it. Other labels, profiles, expired/conflicting/forgotten corrections do not supply an answer.
 
-## Implementation and validation
+Verified runs capture typed workflow candidates in the existing memory store. A separate matching run validates a candidate; **Enable validated workflow reuse** activates it. Active workflows prioritize freshly observed supported fields and do not authorize submission. Inspect, retire or forget memory through **Observe**. Runs with unverified interrupted actions do not become workflow evidence.
 
-Contracts live in `packages/agent-core/src/job-preparation.ts`; the controller, isolated document function and UI are `apps/extension/src/job-preparation-*` and `sidepanel/job-preparation.tsx`. The separate AG-05 executor and its URL restrictions remain unchanged.
+## Scope and recovery
 
-Tests cover exact URL authority, stale profile/job/approval rejection, competing claims, worker interruption, uncertain dispatch, deletion, native-control guardrails, page-origin message rejection and the real Chrome Jobs → review → first-screen → tracker flow. The independent runner verifies zero accepted applications and zero submission attempts. These tests do not establish multi-step preparation or submission reliability.
+- Exact top-level local routes only: `http://127.0.0.1:4173/portal.html?scenario=portal-NN&jobId=job-SEED-ID`, with NN 01, 02 or 30–34, matching the freshly checked stored catalog listing. Imports cannot acquire execution authority.
+- The new catalog jobs exercise complete native/renamed forms and lost/false/wrong-response cases. Other emulated control families retain their separate harness and AG-05 capabilities.
+- Approval binds profile identity/revision/digest, verified contacts, reviewed answers and exact file bytes. Files are PDF/DOCX/TXT, limited to 500 KB.
+- Complete preparation uses the existing agent reducer, leases, intent claims, action budgets and postconditions in a separate private executor repository. The isolated document receiver rechecks document identity, control structure and the observation hash.
+- Final approval narrows the same prepared run to Submit. Before dispatch, listing availability and the complete answer/file summary are checked again. Tracker writes are idempotent.
+- Worker interruption requires explicit review/resume. An already dispatched command may finish; its short-lived ticket must expire before recovery. Reloading the application document requires manual inspection; a lost application session is not reconstructed.
+- Unknown submission blocks resubmission across restarts. Receipt reconciliation can work after the application tab closes. Missing receipts never imply success.
+- Approval expires after ten minutes. Explicit preparation resume renews that window without resetting the action budget. Cancel does not erase page values or withdraw an accepted application.
 
-## Remaining AG-09 increments
+Private answers/file bytes live in `copilot-job-preparation-v1` and are excluded from profile backups, sync, model input and diagnostics. Cancel then **Forget preparation record** removes an unsubmitted preparation. **Clear private application data** removes answers/files from submitted or uncertain records while keeping job/receipt identity to prevent duplicates. Tracker and correction/workflow memory are managed separately. Old records load with additive defaults; do not downgrade against newer research stores without using a fresh test profile.
 
-1. Extend the existing durable executor contracts to local portal steps, reviewed files and grouped missing-answer recovery. Avoid adding a second general-purpose action engine; this initial adapter deliberately supports only two fixed commands.
-2. Connect scoped correction/workflow memory to that executor and validate corrected second-run behavior on held-out layouts.
-3. Add separate per-application local submission consent, receipt reconciliation, duplicate/uncertain-outcome tests and tracker confirmation.
-4. Evaluate the complete résumé-to-outcome flow, recovery/latency/action costs and five-user onboarding study before declaring AG-09 complete.
+## Verification and reporting
+
+```powershell
+npm run test:preparation
+npm run agent:report
+```
+
+The first command builds/runs integrated Chrome tests and generates `test-results/ag09-report.md` and `.json`. The second regenerates the report from the latest Playwright results. Reports identify checks, source hashes and environment. **Download metrics without personal data** exports action count, interventions, memory uses, duration, state and zero inference cost.
+
+Tests cover retained résumé bytes, corrected second-run behavior, activated workflow reuse, changed final summaries, actual worker restart, duplicate-submit rejection, private-data clearing and uncertain/false/mismatched responses. The independent runner verifies accepted values, file content and submission counts; its credentials and expected-answer endpoint never enter the application browser or executor.
+
+## Remaining acceptance evidence
+
+The [evaluation plan](./LEARNING_AND_EVALUATION.md) proposes 300 scenarios with 60 frozen test templates and three seeds per test template. This development suite is not that corpus and does not establish its aggregate completion, correction-benefit or latency gates. AI integration and broader/live connectors are separate work packages.
+
+The [five-user study kit](./AG09_USABILITY_STUDY.md) is ready. Participant observations and frozen held-out results have not been fabricated. Full AG-09 release acceptance remains open until these results are collected and reviewed.

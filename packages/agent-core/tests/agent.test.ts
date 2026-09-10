@@ -99,6 +99,41 @@ function first(store: AgentStore) {
 }
 
 describe("durable agent contracts and reducer", () => {
+  it("adds submission authority only to the same prepared job and profile, once", () => {
+    const fixture = setup("FILL_TEXT");
+    const ready = reduceAgentStore(
+      fixture.store,
+      { type: "YIELD", runId: fixture.runId, owner, fence: 1, prepared: true },
+      1001,
+    );
+    const consent = {
+      ...first(ready).consent,
+      id: id(),
+      capabilities: ["SUBMIT"] as const,
+      submissionApproved: true,
+    };
+    const authorize = (change: Partial<typeof consent> = {}) => ({
+      type: "AUTHORIZE_SUBMIT" as const,
+      runId: fixture.runId,
+      consent: { ...consent, ...change, capabilities: ["SUBMIT"] as ["SUBMIT"] },
+    });
+    expect(() => reduceAgentStore(fixture.store, authorize(), 1002)).toThrow();
+    expect(() => reduceAgentStore(ready, authorize({ profileRevision: 2 }), 1002)).toThrow();
+    expect(() =>
+      reduceAgentStore(ready, authorize({ applicationId: "different-job" }), 1002),
+    ).toThrow();
+    expect(() => reduceAgentStore(ready, authorize({ submissionApproved: false }), 1002)).toThrow();
+    const approved = reduceAgentStore(ready, authorize(), 1002);
+    expect(first(approved).consent.capabilities).toEqual(["SUBMIT"]);
+    expect(() => reduceAgentStore(approved, authorize(), 1003)).toThrow();
+    expect(() =>
+      reduceAgentStore(
+        approved,
+        { type: "RENEW_PREPARATION", runId: fixture.runId, expiresAt: 200000 },
+        1004,
+      ),
+    ).toThrow();
+  });
   it("defaults off and permits only the exact local fixture", () => {
     const fixture = setup();
     expect(() => reduceAgentStore(emptyAgentStore(), fixture.create, 1_000)).toThrow(

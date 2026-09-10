@@ -98,7 +98,7 @@ it("does not grant local preparation to imports, lookalikes or arbitrary local r
     { ...job, applicationUrl: job.applicationUrl + "&extra=1" },
     { ...job, applicationUrl: job.applicationUrl.replace("127.0.0.1", "localhost") },
     { ...job, availability: "EXPIRED" as const },
-    { ...job, applicationUrl: job.applicationUrl.replace("portal-01", "portal-02") },
+    { ...job, applicationUrl: job.applicationUrl.replace("portal-01", "portal-03") },
   ])
     expect(() => preparationUrl(candidate)).toThrow();
 });

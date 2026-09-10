@@ -77,6 +77,16 @@ export const WorkflowStepSchema = z
       "employer",
       "resume",
       "control",
+      "phone",
+      "currentLocation",
+      "workArrangement",
+      "experienceMonths",
+      "noticeDays",
+      "currentSalary",
+      "expectedSalary",
+      "currency",
+      "salaryPeriod",
+      "manual",
     ]),
   })
   .strict();
@@ -86,7 +96,15 @@ export const WorkflowMemorySchema = z
     revision: z.number().int().positive(),
     owner: MemoryOwnerSchema,
     state: z.enum(["CANDIDATE", "OFFLINE_VALIDATED", "ACTIVE", "RETIRED", "REJECTED"]),
-    url: z.literal("http://127.0.0.1:4173/agent.html"),
+    url: z
+      .string()
+      .refine(
+        (url) =>
+          url === "http://127.0.0.1:4173/agent.html" ||
+          /^http:\/\/127\.0\.0\.1:4173\/portal\.html\?scenario=portal-(?:01|02|30|31|32|33|34)$/.test(
+            url,
+          ),
+      ),
     steps: z.array(WorkflowStepSchema).min(1).max(30),
     evidenceRunIds: z.array(z.string().uuid()).min(1).max(2),
     createdAt: z.number().int().nonnegative(),

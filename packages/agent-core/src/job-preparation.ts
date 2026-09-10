@@ -1,12 +1,18 @@
 import { z } from "zod";
 import { DiscoveryJobSchema, type DiscoveryJob } from "./discovery";
 import { MemoryOwnerSchema, sameMemoryOwner, type MemoryOwner } from "./feedback-memory";
+import { isPreparationExecutionUrl } from "./local-portal-url";
 
 export function preparationUrl(job: DiscoveryJob): string {
   if (job.source !== "LOCAL_TEST_ATS" || !/^job-\d+-\d+$/.test(job.sourceJobId))
     throw new Error("Only the native local catalog demo supports preparation.");
-  const url = `http://127.0.0.1:4173/portal.html?scenario=portal-01&jobId=${job.sourceJobId}`;
-  if (job.applicationUrl !== url || job.availability !== "AVAILABLE")
+  const url = job.applicationUrl;
+  if (
+    !url ||
+    !isPreparationExecutionUrl(url) ||
+    !url.endsWith(`&jobId=${job.sourceJobId}`) ||
+    job.availability !== "AVAILABLE"
+  )
     throw new Error("This job does not have an available native local preparation route.");
   return url;
 }
@@ -31,6 +37,41 @@ export const PreparationAnswersSchema = z
     workArrangement: z.enum(["Remote", "Hybrid", "On-site"]),
   })
   .strict();
+export const PreparationFileSchema = z
+  .object({
+    name: z
+      .string()
+      .min(1)
+      .max(150)
+      .regex(/^[^/\\]+\.(?:txt|pdf|docx)$/i),
+    base64: z
+      .string()
+      .min(4)
+      .max(666668)
+      .regex(/^[A-Za-z0-9+/]+={0,2}$/),
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict();
+export const PreparationExtraAnswersSchema = z
+  .object({
+    experienceMonths: z.string().regex(/^\d{1,4}$/),
+    noticeDays: z.string().regex(/^\d{1,4}$/),
+    currentSalary: z.string().regex(/^\d{1,12}(?:\.\d{1,2})?$/),
+    expectedSalary: z.string().regex(/^\d{1,12}(?:\.\d{1,2})?$/),
+    currency: z.enum(["INR", "USD", "EUR"]),
+    salaryPeriod: z.enum(["Year", "Month", "Hour"]),
+  })
+  .strict();
+export const PreparationQuestionSchema = z
+  .object({
+    key: z.string().min(1).max(100),
+    label: z.string().min(1).max(300),
+    kind: z.enum(["text", "email", "number", "select", "file"]),
+    options: z.array(z.string().max(300)).max(30),
+    value: z.string().max(5000),
+    required: z.boolean(),
+  })
+  .strict();
 export const PreparationRecordSchema = z
   .object({
     id: z.uuid(),
@@ -38,7 +79,18 @@ export const PreparationRecordSchema = z
     owner: MemoryOwnerSchema,
     job: DiscoveryJobSchema,
     profileDigest: z.string().regex(/^[a-f0-9]{64}$/),
-    state: z.enum(["REVIEW_REQUIRED", "PREPARING", "PREPARED", "NEEDS_REVIEW", "CANCELLED"]),
+    state: z.enum([
+      "REVIEW_REQUIRED",
+      "PREPARING",
+      "PREPARED",
+      "NEEDS_REVIEW",
+      "CANCELLED",
+      "QUESTIONS",
+      "READY_TO_SUBMIT",
+      "SUBMITTING",
+      "OUTCOME_UNKNOWN",
+      "SUBMITTED",
+    ]),
     answers: PreparationAnswersSchema.nullable(),
     submissionApproved: z.literal(false),
     createdAt: z.number().int().nonnegative(),
@@ -48,6 +100,43 @@ export const PreparationRecordSchema = z
     actions: z.array(z.enum(["OPEN_FORM", "FILL_FIELDS"])).max(2),
     reason: z.string().max(500),
     trackerRecorded: z.boolean(),
+    completeFlow: z.boolean().default(false),
+    extraAnswers: PreparationExtraAnswersSchema.nullable().default(null),
+    file: PreparationFileSchema.nullable().default(null),
+    applicationId: z.uuid().nullable().default(null),
+    runId: z.uuid().nullable().default(null),
+    submitRunId: z.uuid().nullable().default(null),
+    questions: z.array(PreparationQuestionSchema).max(30).default([]),
+    reviewedQuestions: z
+      .array(
+        z
+          .object({
+            key: z.string(),
+            label: z.string(),
+            value: z.string().max(5000),
+            meaning: z.string().nullable(),
+            memoryRef: z
+              .object({ id: z.uuid(), revision: z.number().int().positive() })
+              .strict()
+              .optional(),
+          })
+          .strict(),
+      )
+      .max(30)
+      .default([]),
+    reviewHash: z.string().nullable().default(null),
+    receipt: z
+      .object({ applicationId: z.uuid(), jobId: z.string(), status: z.literal("ACCEPTED") })
+      .strict()
+      .nullable()
+      .default(null),
+    confirmationRecorded: z.boolean().default(false),
+    completedAt: z.number().nullable().default(null),
+    manualInterventions: z.number().int().nonnegative().default(0),
+    memoryUses: z.number().int().nonnegative().default(0),
+    workflowId: z.uuid().nullable().default(null),
+    startedAt: z.number().nullable().default(null),
+    actionCount: z.number().int().nonnegative().default(0),
   })
   .strict()
   .superRefine((record, context) => {
@@ -76,6 +165,7 @@ export const PreparationRecordSchema = z
       });
     if (
       record.state === "PREPARED" &&
+      !record.completeFlow &&
       (record.actions.length !== 2 || record.tabId === null || !record.documentId)
     )
       context.addIssue({

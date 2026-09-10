@@ -10,11 +10,11 @@ A local-first, open-source Chrome copilot for job applications: import your rés
 
 ## Current status
 
-| Area                  | Available today                                                                                                             | Boundary                                                 |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Chrome extension      | Résumé import, guided setup, reviewed autofill, custom answers, optional OpenAI drafts, tracker, encrypted sync             | Real application navigation and submission remain manual |
-| Developer experiments | Local executor, reviewed correction/workflow memory, demo/import Jobs view, sourced company evidence, local Qwen benchmarks | Research build; not a complete live application agent    |
-| Open contributor work | Integrated per-job application flow, live sources, broader evaluations, local-model product integration                     | Not yet released capabilities                            |
+| Area                  | Available today                                                                                                                 | Boundary                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Chrome extension      | Résumé import, guided setup, reviewed autofill, custom answers, optional OpenAI drafts, tracker, encrypted sync                 | Real application navigation and submission remain manual |
+| Developer experiments | Local application preparation/submission, correction/workflow memory, demo/import jobs, company evidence, local Qwen benchmarks | Research build; not a complete live application agent    |
+| Open contributor work | Live sources, broader evaluations, usability study, local-model product integration                                             | Not yet released capabilities                            |
 
 Ordinary autofill needs **no API key, GPU, or local model**. See [how to use it](#how-to-use-it) for the extension and [experimental agent and local AI](#experimental-agent-and-local-ai) for developer tooling.
 
@@ -230,7 +230,7 @@ The [agent roadmap](./docs/agent/README.md) extends the existing copilot without
 - A [read-only agent lab](./docs/agent/AGENT_LAB.md) with durable run state, checkpoints, and recovery.
 - A [local application executor](./docs/agent/EXECUTOR.md) with research-panel controls, deterministic native/custom/date/upload actions, multi-step recovery, preparation tracking and optional manual screenshot review. It uses approved synthetic data and stops before submission; it is not a live auto-apply feature.
 - [Correction/workflow memory and a Jobs view](./docs/agent/MEMORY_AND_JOBS.md): teach scoped field meanings, validate and reuse a local demo workflow, rank synthetic/imported listings, and review cited company ratings. Records are inspectable and removable; external sources are not crawled.
-- [Per-job local preparation](./docs/agent/JOB_PREPARATION.md): review verified contact details and application-specific answers, approve the native demo's first screen, and record checked preparation in the tracker. Multi-step execution, résumé uploads and submission are not enabled by this increment.
+- [Per-job local applications](./docs/agent/JOB_PREPARATION.md): review profile answers and a résumé, prepare native multi-step demo applications, resolve grouped questions, reuse corrections/workflows, and approve one local submission with a verified tracker receipt. Includes recovery, private-data clearing and sanitized run metrics. Broader release evaluation and the five-user study remain open.
 - [29 synthetic portal scenarios across 17 families](./docs/agent/SETUP_AND_PORTALS.md), fallback tests, and an independent application-outcome ledger. These are emulations, not proof of live LinkedIn, Naukri, or Wellfound support.
 - A [structured inference prototype](./docs/agent/INFERENCE.md) for intake, job/field interpretation, and constrained action proposals. It validates evidence and identifiers, reserves request budgets, and stops on uncertain usage. Proposals do not execute browser actions.
 - Local Ollama adapters and synthetic benchmarks for two Qwen candidates. Hosted OpenAI/Gemini adapter contracts are mock-tested; hosted benchmarks have not been run.

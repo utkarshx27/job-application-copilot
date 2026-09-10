@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { isPreparationExecutionUrl } from "./local-portal-url";
+export * from "./local-portal-url";
 export * from "./feedback-memory";
 export * from "./workflow-memory";
 export * from "./discovery";
@@ -13,7 +15,7 @@ export const AGENT_EXECUTION_URL = "http://127.0.0.1:4173/agent.html";
 export function isAgentLocalUrl(url: string): boolean {
   return url === AGENT_FIXTURE_URL || url === AGENT_EXECUTION_URL;
 }
-const LocalUrl = z.enum([AGENT_FIXTURE_URL, AGENT_EXECUTION_URL]);
+const LocalUrl = z.string().refine((url) => isAgentLocalUrl(url) || isPreparationExecutionUrl(url));
 export const OBSERVATION_TTL_MS = 15_000;
 export const LEASE_TTL_MS = 20_000;
 
@@ -311,6 +313,10 @@ function stopRun(run: AgentRun, reason: z.infer<typeof AgentPauseReasonSchema>, 
 
 export const AgentOperationSchema = z.discriminatedUnion("type", [
   z
+    .object({ type: z.literal("AUTHORIZE_SUBMIT"), runId: Id, consent: AgentConsentSchema })
+    .strict(),
+  z.object({ type: z.literal("RENEW_PREPARATION"), runId: Id, expiresAt: Time }).strict(),
+  z
     .object({
       type: z.literal("YIELD"),
       runId: Id,
@@ -458,7 +464,43 @@ export function reduceAgentStore(
   } else {
     const run = findRun(store, "ticket" in op ? op.ticket.runId : op.runId);
     requireThat(now >= run.updatedAt, "CLOCK_MOVED_BACKWARDS");
-    if (op.type === "YIELD") {
+    if (op.type === "RENEW_PREPARATION") {
+      requireThat(
+        store.enabled &&
+          ["PAUSED", "OBSERVING", "READY_FOR_REVIEW"].includes(run.state) &&
+          !run.lease &&
+          !run.consent.submissionApproved &&
+          !run.intents.some((i) => ["CLAIMED", "RECEIVED"].includes(i.status)),
+        "RUN_NOT_RESUMABLE",
+      );
+      requireThat(op.expiresAt > now && op.expiresAt <= now + 600000, "RUN_EXPIRED");
+      run.consent.expiresAt = op.expiresAt;
+      run.budget.expiresAt = op.expiresAt;
+      event(run, "RECOVERED", now);
+    } else if (op.type === "AUTHORIZE_SUBMIT") {
+      requireThat(
+        store.enabled && run.state === "READY_FOR_REVIEW" && !run.lease,
+        "FINAL_REVIEW_REQUIRED",
+      );
+      requireThat(
+        op.consent.applicationId === run.applicationId &&
+          op.consent.profileRevision === run.binding.profileRevision &&
+          op.consent.url === run.binding.url,
+        "CONTEXT_CHANGED",
+      );
+      requireThat(
+        !run.consent.submissionApproved &&
+          op.consent.submissionApproved &&
+          op.consent.capabilities.length === 1 &&
+          op.consent.capabilities[0] === "SUBMIT" &&
+          op.consent.expiresAt > now &&
+          !run.intents.some((i) => i.proposal.kind === "SUBMIT"),
+        "INVALID_SUBMISSION_CONSENT",
+      );
+      run.consent = op.consent;
+      run.budget.expiresAt = op.consent.expiresAt;
+      event(run, "PREPARED", now);
+    } else if (op.type === "YIELD") {
       requireLease(store, run, op.owner, op.fence, now);
       requireThat(run.state === "OBSERVING" || run.state === "PLANNING", "WRONG_RUN_STATE");
       run.lease = null;

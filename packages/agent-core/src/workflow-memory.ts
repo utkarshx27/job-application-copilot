@@ -9,10 +9,12 @@ import {
   type WorkflowMemory,
 } from "./feedback-memory";
 import type { AgentRun } from "./index";
+import { isPreparationExecutionUrl, preparationWorkflowUrl } from "./local-portal-url";
 
 function observedSteps(run: AgentRun, owner: MemoryOwner) {
   if (
-    run.binding.url !== "http://127.0.0.1:4173/agent.html" ||
+    (run.binding.url !== "http://127.0.0.1:4173/agent.html" &&
+      !isPreparationExecutionUrl(run.binding.url)) ||
     run.binding.profileRevision !== owner.profileRevision ||
     run.binding.profileKey !== memoryOwnerKey(owner) ||
     run.state !== "READY_FOR_REVIEW" ||
@@ -21,12 +23,16 @@ function observedSteps(run: AgentRun, owner: MemoryOwner) {
     run.intents.some((intent) => intent.status !== "VERIFIED")
   )
     throw new Error("A fully verified local preparation for the current profile is required.");
-  return run.intents.map((intent) =>
-    WorkflowStepSchema.parse({
-      kind: intent.proposal.kind,
-      parameter: intent.proposal.factRefs[0]?.replace(/^demo\./, "") ?? "control",
-    }),
-  );
+  return run.intents
+    .filter(
+      (intent) => intent.proposal.kind !== "OPEN_CONTROL" || intent.proposal.targetRef !== "start",
+    )
+    .map((intent) =>
+      WorkflowStepSchema.parse({
+        kind: intent.proposal.kind,
+        parameter: intent.proposal.factRefs[0]?.replace(/^(?:demo|approved)\./, "") ?? "control",
+      }),
+    );
 }
 export function captureWorkflow(
   store: MemoryStore,
@@ -40,7 +46,9 @@ export function captureWorkflow(
     revision: 1,
     owner,
     state: "CANDIDATE",
-    url: run.binding.url,
+    url: isPreparationExecutionUrl(run.binding.url)
+      ? preparationWorkflowUrl(run.binding.url)
+      : run.binding.url,
     steps,
     evidenceRunIds: [run.id],
     createdAt: now,
@@ -87,7 +95,10 @@ export function changeWorkflow(
         record.state !== "CANDIDATE" ||
         !run ||
         record.evidenceRunIds.includes(run.id) ||
-        run.createdAt < record.createdAt
+        run.createdAt < record.createdAt ||
+        (isPreparationExecutionUrl(run.binding.url)
+          ? preparationWorkflowUrl(run.binding.url)
+          : run.binding.url) !== record.url
       )
         throw new Error("Validate against a separate local preparation completed after capture.");
       state =
@@ -105,10 +116,16 @@ export function changeWorkflow(
     ),
   });
 }
-export function retrieveWorkflow(store: MemoryStore, owner: MemoryOwner, now: number) {
+export function retrieveWorkflow(
+  store: MemoryStore,
+  owner: MemoryOwner,
+  now: number,
+  url = "http://127.0.0.1:4173/agent.html",
+) {
   const active = store.workflows.filter(
     (entry) =>
       sameMemoryOwner(entry.owner, owner) &&
+      entry.url === url &&
       entry.owner.profileRevision === owner.profileRevision &&
       entry.state === "ACTIVE" &&
       entry.createdAt <= now &&

@@ -338,10 +338,11 @@ async function application(scenario: PublicScenario, target: HTMLElement, jobId:
       const values = Object.fromEntries(
         [...getters].filter(([key]) => key !== "resume").map(([key, get]) => [key, get()]),
       );
-      const result = await api<{ values: Record<string, string>; uploadRetained: boolean }>(
-        `${endpoint}/review`,
-        { values },
-      );
+      const result = await api<{
+        values: Record<string, string>;
+        uploadRetained: boolean;
+        uploadSha256: string | null;
+      }>(`${endpoint}/review`, { values });
       progress.textContent = "Step 3 of 3: Review";
       editor.hidden = true;
       next.hidden = true;
@@ -354,7 +355,11 @@ async function application(scenario: PublicScenario, target: HTMLElement, jobId:
           node("dd", value),
         );
       review.append(details);
-      if (result.uploadRetained) review.append(node("p", "Resume retained for this application"));
+      if (result.uploadRetained) {
+        const retained = node("p", "Resume retained for this application");
+        retained.dataset.uploadSha256 = result.uploadSha256 ?? "";
+        review.append(retained);
+      }
       const consentLabel = node("label", "I approve this synthetic application");
       const consent = node("input");
       consent.type = "checkbox";

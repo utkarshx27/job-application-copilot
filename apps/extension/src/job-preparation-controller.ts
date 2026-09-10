@@ -2,6 +2,9 @@ import {
   PreparationStoreSchema,
   PreparationViewSchema,
   PreparationForgottenSchema,
+  PreparationRecordSchema,
+  type PreparationExtraAnswersSchema,
+  type PreparationFileSchema,
   emptyPreparations,
   claimPreparation,
   preparationUrl,
@@ -16,6 +19,8 @@ import { memoryOwner } from "./feedback-memory";
 import { PrivateRepository } from "./private-repository";
 import type { DiscoveryController } from "./discovery-controller";
 import { prepareNativeDocument } from "./job-preparation-document";
+import { PortalPreparationExecutor, validatePreparationFile } from "./portal-preparation-executor";
+import type { z } from "zod";
 
 function verified<T>(fact: CandidateFact<T> | undefined): T | null {
   return fact &&
@@ -56,6 +61,31 @@ export class JobPreparationController {
   );
   private recovery: Promise<unknown> | undefined;
   private flush: Promise<unknown> = Promise.resolve();
+  private readonly executor = new PortalPreparationExecutor(
+    async (id) => (await this.owned(id)).record,
+    async (id, change) => {
+      await this.repository.transact((store) => ({
+        ...store,
+        records: store.records.map((record) => {
+          if (record.id !== id) return record;
+          const next = change(record);
+          if (record.state === "CANCELLED" && next.state !== "CANCELLED")
+            throw new Error("Preparation cancelled.");
+          return { ...next, revision: record.revision + 1 };
+        }),
+      }));
+    },
+    async (id) => {
+      const { profile, record } = await this.owned(id);
+      if (
+        profile.digest !== record.profileDigest ||
+        profile.owner.profileRevision !== record.owner.profileRevision ||
+        profile.blockers.length ||
+        record.expiresAt <= Date.now()
+      )
+        throw new Error("Profile or approval changed. Review this application again.");
+    },
+  );
   constructor(
     private readonly discovery: Pick<DiscoveryController, "localForPreparation">,
     private readonly prepared: (record: PreparationRecord) => Promise<void>,
@@ -64,11 +94,11 @@ export class JobPreparationController {
     this.recovery ??= this.repository.transact((store) => ({
       ...store,
       records: store.records.map((record) =>
-        record.state === "PREPARING"
+        ["PREPARING", "SUBMITTING"].includes(record.state)
           ? {
               ...record,
               revision: record.revision + 1,
-              state: "NEEDS_REVIEW",
+              state: record.state === "SUBMITTING" ? "OUTCOME_UNKNOWN" : "NEEDS_REVIEW",
               reason:
                 "Browser worker interrupted preparation. Inspect the existing tab; no action was retried.",
             }
@@ -97,12 +127,22 @@ export class JobPreparationController {
       .catch(() => undefined)
       .then(async () => {
         const current = await this.owned(id);
-        if (current.record.state === "PREPARED" && !current.record.trackerRecorded) {
+        if (
+          (["PREPARED", "READY_TO_SUBMIT", "SUBMITTED"].includes(current.record.state) &&
+            !current.record.trackerRecorded) ||
+          (current.record.state === "SUBMITTED" && !current.record.confirmationRecorded)
+        ) {
           await this.prepared(current.record);
           await this.repository.transact((store) => ({
             ...store,
             records: store.records.map((entry) =>
-              entry.id === id ? { ...entry, trackerRecorded: true } : entry,
+              entry.id === id
+                ? {
+                    ...entry,
+                    trackerRecorded: true,
+                    confirmationRecorded: current.record.state === "SUBMITTED",
+                  }
+                : entry,
             ),
           }));
         }
@@ -149,7 +189,7 @@ export class JobPreparationController {
       }
       if (prior) id = prior.id;
       const reviewedAt = Date.now();
-      const record: PreparationRecord = {
+      const record = PreparationRecordSchema.parse({
         id,
         revision: (prior?.revision ?? 0) + 1,
         owner: profile.owner,
@@ -166,13 +206,15 @@ export class JobPreparationController {
         reason:
           "Review these answers before preparing the local first screen. No résumé upload, Next or submission is authorized.",
         trackerRecorded: false,
-      };
+      });
       return { ...store, records: [...store.records.filter((entry) => entry.id !== id), record] };
     });
     return this.view(id);
   }
   async cancel(id: string, revision: number) {
-    const { profile } = await this.owned(id);
+    const { profile, record: previous } = await this.owned(id);
+    if (["SUBMITTING", "SUBMITTED", "OUTCOME_UNKNOWN"].includes(previous.state))
+      throw new Error("Submission cannot be cancelled or retried. Check its receipt.");
     await this.repository.transact((store) => {
       const record = store.records.find(
         (entry) => entry.id === id && sameMemoryOwner(entry.owner, profile.owner),
@@ -194,6 +236,7 @@ export class JobPreparationController {
         ),
       };
     });
+    if (previous.completeFlow) await this.executor.stop(previous, true);
     return this.view(id);
   }
   private async live(id: string) {
@@ -234,9 +277,14 @@ export class JobPreparationController {
     id: string,
     revision: number,
     answers: Pick<PreparationAnswers, "currentLocation" | "workArrangement">,
+    complete?: {
+      extraAnswers: z.infer<typeof PreparationExtraAnswersSchema> | null;
+      file: z.infer<typeof PreparationFileSchema> | null;
+    },
   ) {
     const { profile, record } = await this.owned(id);
     if (profile.blockers.length) throw new Error(profile.blockers.join(" "));
+    if (complete?.file) await validatePreparationFile(complete.file);
     const job = await this.discovery.localForPreparation(record.job.id, profile.owner);
     const current = await preparationProfile();
     if (
@@ -244,8 +292,8 @@ export class JobPreparationController {
       memoryOwnerKey(current.owner) !== memoryOwnerKey(profile.owner)
     )
       throw new Error("Profile changed. Review again.");
-    await this.repository.transact((store) =>
-      claimPreparation(
+    await this.repository.transact((store) => {
+      const claimed = claimPreparation(
         store,
         id,
         revision,
@@ -254,8 +302,27 @@ export class JobPreparationController {
         job,
         { ...profile.contact, ...answers },
         Date.now(),
-      ),
-    );
+      );
+      return {
+        ...claimed,
+        records: claimed.records.map((entry) =>
+          entry.id === id && complete
+            ? {
+                ...entry,
+                completeFlow: true,
+                startedAt: Date.now(),
+                extraAnswers: complete.extraAnswers,
+                file: complete.file,
+                reason: "Preparing the reviewed local application.",
+              }
+            : entry,
+        ),
+      };
+    });
+    if (complete) {
+      await this.executor.launch(id);
+      return this.view(id);
+    }
     try {
       await this.live(id);
       const tab = await chrome.tabs.create({ url: preparationUrl(job), active: true });
@@ -329,6 +396,189 @@ export class JobPreparationController {
         ),
       }));
     }
+    return this.view(id);
+  }
+  private async claimState(
+    id: string,
+    revision: number,
+    allowed: PreparationRecord["state"][],
+    state: PreparationRecord["state"],
+  ) {
+    const { profile, record } = await this.owned(id);
+    if (
+      !record.completeFlow ||
+      profile.digest !== record.profileDigest ||
+      profile.owner.profileRevision !== record.owner.profileRevision ||
+      profile.blockers.length
+    )
+      throw new Error("Profile changed. Cancel and review a new preparation.");
+    await this.discovery.localForPreparation(record.job.id, profile.owner);
+    const now = Date.now();
+    await this.repository.transact((store) => ({
+      ...store,
+      records: store.records.map((entry) => {
+        if (entry.id !== id) return entry;
+        if (entry.revision !== revision || !allowed.includes(entry.state))
+          throw new Error("Preparation changed. Refresh it.");
+        if (state === "SUBMITTING" && entry.expiresAt <= now)
+          throw new Error("Final review expired. Resume preparation to review again.");
+        return {
+          ...entry,
+          state,
+          revision: entry.revision + 1,
+          createdAt: now,
+          expiresAt: now + 600000,
+        };
+      }),
+    }));
+    return (await this.owned(id)).record;
+  }
+  async resume(
+    id: string,
+    revision: number,
+    answers: { key: string; value: string; meaning: string | null; remember: boolean }[],
+  ) {
+    const prior = (await this.owned(id)).record;
+    if (prior.questions.some((q) => q.kind === "file"))
+      throw new Error("Cancel and restart with a reviewed résumé file.");
+    // An interrupted command may still finish. Its short dispatch ticket must expire first.
+    if (prior.runId) {
+      const run = (await this.executor.repository.read()).runs.find((r) => r.id === prior.runId);
+      if (
+        run?.intents.some(
+          (i) =>
+            ["CLAIMED", "RECEIVED"].includes(i.status) && i.proposal.expiresAt + 6000 > Date.now(),
+        )
+      )
+        throw new Error("Wait for the dispatched action to finish, then refresh and resume.");
+    }
+    const record = await this.claimState(
+      id,
+      revision,
+      ["QUESTIONS", "NEEDS_REVIEW", "READY_TO_SUBMIT"],
+      "PREPARING",
+    );
+    try {
+      await this.executor.recover();
+      if (record.runId)
+        await this.executor.repository.dispatch({
+          type: "RENEW_PREPARATION",
+          runId: record.runId,
+          expiresAt: record.expiresAt,
+        });
+      if (record.questions.length) await this.executor.saveAnswers(record, answers);
+      else if (answers.length) throw new Error("No outstanding questions to answer.");
+      else
+        await this.repository.transact((store) => ({
+          ...store,
+          records: store.records.map((r) =>
+            r.id === id ? { ...r, manualInterventions: r.manualInterventions + 1 } : r,
+          ),
+        }));
+      await this.executor.launch(id);
+    } catch (error) {
+      await this.repository.transact((store) => ({
+        ...store,
+        records: store.records.map((r) =>
+          r.id === id && r.state === "PREPARING"
+            ? {
+                ...r,
+                state: "NEEDS_REVIEW",
+                revision: r.revision + 1,
+                reason: error instanceof Error ? error.message.slice(0, 500) : "Review required.",
+              }
+            : r,
+        ),
+      }));
+    }
+    return this.view(id);
+  }
+  async submit(id: string, revision: number) {
+    const record = await this.claimState(id, revision, ["READY_TO_SUBMIT"], "SUBMITTING");
+    try {
+      await this.executor.submit(record);
+      for (let n = 0; n < 5; n++) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        try {
+          await this.executor.reconcile((await this.owned(id)).record);
+          return this.view(id);
+        } catch {
+          /* Read-only reconciliation; never repeat Submit. */
+        }
+      }
+      throw new Error("Receipt not available yet. Check receipt; submission will not be retried.");
+    } catch (error) {
+      await this.repository.transact((store) => ({
+        ...store,
+        records: store.records.map((r) =>
+          r.id === id && r.state === "SUBMITTING"
+            ? {
+                ...r,
+                state: r.submitRunId ? "OUTCOME_UNKNOWN" : "NEEDS_REVIEW",
+                revision: r.revision + 1,
+                reason:
+                  error instanceof Error
+                    ? error.message.slice(0, 500)
+                    : "Check the application receipt.",
+              }
+            : r,
+        ),
+      }));
+    }
+    return this.view(id);
+  }
+  async reconcile(id: string) {
+    const { record } = await this.owned(id);
+    if (!["SUBMITTED", "OUTCOME_UNKNOWN"].includes(record.state))
+      throw new Error("No unresolved submission to check.");
+    await this.executor.reconcile(record);
+    return this.view(id);
+  }
+  async activateWorkflow(id: string) {
+    const { record } = await this.owned(id);
+    await this.executor.activateWorkflow(record);
+    return this.view(id);
+  }
+  async clearPrivate(id: string, revision: number) {
+    await this.owned(id);
+    await this.repository.transact((store) => ({
+      ...store,
+      records: store.records.map((r) => {
+        if (r.id !== id) return r;
+        if (r.revision !== revision || !["SUBMITTED", "OUTCOME_UNKNOWN"].includes(r.state))
+          throw new Error("Refresh the finished application before clearing its private data.");
+        return {
+          ...r,
+          revision: r.revision + 1,
+          answers: null,
+          extraAnswers: null,
+          file: null,
+          questions: [],
+          reviewedQuestions: [],
+          reviewHash: null,
+        };
+      }),
+    }));
+    return this.view(id);
+  }
+  async pause(id: string, revision: number) {
+    const { record } = await this.owned(id);
+    await this.repository.transact((store) => ({
+      ...store,
+      records: store.records.map((r) => {
+        if (r.id !== id) return r;
+        if (!r.completeFlow || r.revision < revision || r.state !== "PREPARING")
+          throw new Error("Preparation is no longer running. Refresh its status.");
+        return {
+          ...r,
+          state: "NEEDS_REVIEW",
+          revision: r.revision + 1,
+          reason:
+            "Paused for you to take over. An already dispatched action may finish. Review the page before resuming.",
+        };
+      }),
+    }));
+    await this.executor.stop(record, false);
     return this.view(id);
   }
 }
