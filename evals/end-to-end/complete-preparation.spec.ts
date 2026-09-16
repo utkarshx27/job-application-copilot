@@ -316,6 +316,61 @@ test("competing final approvals dispatch only one local submission", async ({
   });
 });
 
+for (const mutation of ["resume identity", "job identity", "unexpected frame"] as const) {
+  test(`final approval rejects changed ${mutation} without submitting`, async ({
+    context,
+    extensionId,
+  }) => {
+    const panel = await setup(context, extensionId);
+    const { region, application } = await prepare(panel, context, 8);
+    await expect(region.getByText(/Application prepared through review/)).toBeVisible({
+      timeout: 20000,
+    });
+    await application.evaluate((kind) => {
+      if (kind === "resume identity") {
+        document
+          .querySelector("[data-upload-sha256]")!
+          .setAttribute("data-upload-sha256", "0".repeat(64));
+      } else if (kind === "job identity") {
+        document.querySelector("[data-application-id]")!.setAttribute("data-job-id", "job-7-1");
+      } else {
+        document.body.append(document.createElement("iframe"));
+      }
+    }, mutation);
+    const response = await panel.evaluate(async () => {
+      const view = await chrome.runtime.sendMessage<
+        unknown,
+        { data: { record: PreparationRecord } }
+      >({
+        type: "PANEL_PREPARATION_REVIEW",
+        jobId: "local:job-7-8",
+      });
+      return await chrome.runtime.sendMessage<
+        unknown,
+        { ok: boolean; data: { record: PreparationRecord } }
+      >({
+        type: "PANEL_PREPARATION_SUBMIT",
+        id: view.data.record.id,
+        revision: view.data.record.revision,
+        confirmed: true,
+      });
+    });
+    expect(response.ok).toBe(true);
+    expect(response.data.record.state).toBe("NEEDS_REVIEW");
+    expect(response.data.record.receipt).toBeNull();
+    expect(response.data.record.reason).toMatch(
+      mutation === "resume identity"
+        ? /final review differs/
+        : /Application observation unavailable/,
+    );
+    const ledger = await runner("/outcomes");
+    expect(ledger.sessions).toHaveLength(1);
+    expect(ledger.sessions[0]?.attempts).toBe(0);
+    expect(ledger.outcomes).toHaveLength(0);
+    await expect(region.getByText(/Verified receipt:/)).toHaveCount(0);
+  });
+}
+
 for (const [index, label, accepted] of [
   [10, "lost response", true],
   [11, "false confirmation", false],

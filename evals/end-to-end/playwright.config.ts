@@ -1,11 +1,45 @@
 import { defineConfig } from "@playwright/test";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { readFileSync, readdirSync } from "node:fs";
+import { platform, release } from "node:os";
 import { resolve } from "node:path";
 
 // Inherited by the server and test workers, never passed to a browser context.
 process.env.PORTAL_RUNNER_TOKEN ??= randomBytes(32).toString("hex");
 
+// Snapshot before execution. Never attach runner tokens, environment variables,
+// private profiles or fixture answers to the public test report.
+const root = resolve(import.meta.dirname, "../..");
+function hashes(directory: string): Record<string, string> {
+  return Object.fromEntries(
+    readdirSync(resolve(root, directory), { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry): [string, string] => {
+        const path = resolve(entry.parentPath, entry.name);
+        return [
+          path.slice(root.length + 1).replaceAll("\\", "/"),
+          createHash("sha256").update(readFileSync(path)).digest("hex"),
+        ];
+      })
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+}
+
 export default defineConfig({
+  metadata: {
+    ag09: {
+      capturedAt: new Date().toISOString(),
+      environment: { platform: platform(), release: release(), node: process.version },
+      buildHashes: hashes("apps/extension/dist-e2e"),
+      sourceHashes: {
+        ...hashes("apps/extension/src"),
+        ...hashes("packages/agent-core/src"),
+        ...hashes("apps/test-ats/src"),
+        ...hashes("apps/test-ats/server"),
+        ...hashes("evals/end-to-end"),
+      },
+    },
+  },
   testDir: ".",
   testMatch: "**/*.spec.ts",
   fullyParallel: false,

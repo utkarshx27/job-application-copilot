@@ -1,7 +1,5 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { createHash } from "node:crypto";
-import { platform, release } from "node:os";
 
 const root = resolve(import.meta.dirname, "..");
 const results = JSON.parse(await readFile(resolve(root, "test-results/e2e-results.json"), "utf8"));
@@ -22,35 +20,23 @@ function walk(suite) {
   for (const child of suite.suites ?? []) walk(child);
 }
 for (const suite of results.suites ?? []) walk(suite);
-const files = [
-  "apps/extension/src/job-preparation-controller.ts",
-  "apps/extension/src/portal-preparation-executor.ts",
-  "apps/extension/src/portal-preparation-document.ts",
-  "packages/agent-core/src/index.ts",
-  "packages/agent-core/src/job-preparation.ts",
-  "apps/test-ats/server/portal-catalog.ts",
-  "apps/test-ats/server/portal-server.ts",
-  "evals/end-to-end/complete-preparation.spec.ts",
-];
-const sourceHashes = Object.fromEntries(
-  await Promise.all(
-    files.map(async (path) => [
-      path,
-      createHash("sha256")
-        .update(await readFile(resolve(root, path)))
-        .digest("hex"),
-    ]),
-  ),
+const snapshot = results.config?.metadata?.ag09;
+const provenanceAvailable = Boolean(
+  snapshot?.capturedAt &&
+  Object.keys(snapshot.sourceHashes ?? {}).length &&
+  Object.keys(snapshot.buildHashes ?? {}).length,
 );
 const report = {
-  version: 1,
+  version: 2,
   generatedAt: new Date().toISOString(),
+  testStartedAt: results.stats?.startTime ?? null,
   scope:
     "Local native integrated application regression checks; not a frozen held-out release evaluation",
-  environment: { platform: platform(), release: release(), node: process.version },
+  provenanceAvailable,
+  snapshot: snapshot ?? null,
   model: "none",
   inferenceCostMicros: 0,
-  sourceHashes,
+  runnerErrors: results.errors ?? [],
   checks,
   passed: checks.filter((c) => c.status === "passed").length,
   total: checks.length,
@@ -67,9 +53,19 @@ await writeFile(
 );
 await writeFile(
   resolve(root, "test-results/ag09-report.md"),
-  `# AG-09 local regression report\n\n${report.passed}/${report.total} checks passed. These are test cases, not independent application templates or a live-site success rate.\n\n| Check | Result | Test duration |\n| --- | --- | --- |\n${checks.map((c) => `| ${c.name.replaceAll("|", "/")} | ${c.status} | ${c.durationMs === null ? "Unknown" : (c.durationMs / 1000).toFixed(1) + " s"} |`).join("\n")}\n\nInference: deterministic, zero model calls. Full source hashes and environment are in ag09-report.json.\n\nRelease gate: OPEN. ${report.releaseGate.reason}\n`,
+  `# AG-09 local regression report\n\n${report.passed}/${report.total} checks passed. These are test cases, not independent application templates or a live-site success rate.\n\nPre-run provenance: ${provenanceAvailable ? "available" : "MISSING"}. Runner errors: ${report.runnerErrors.length}.\n\n| Check | Result | Retries | Test duration |\n| --- | --- | --- | --- |\n${checks.map((c) => `| ${c.name.replaceAll("|", "/")} | ${c.status} | ${c.retries} | ${c.durationMs === null ? "Unknown" : (c.durationMs / 1000).toFixed(1) + " s"} |`).join("\n")}\n\nInference: deterministic, zero model calls. The pre-run source/build snapshot and environment, when available, are in ag09-report.json. Retries or missing provenance prevent a clean regression result.\n\nRelease gate: OPEN. ${report.releaseGate.reason}\n`,
 );
 console.log(
   `AG-09: ${report.passed}/${report.total} regression checks passed. Report: test-results/ag09-report.md`,
 );
-if (!checks.length || checks.some((c) => c.status !== "passed")) process.exitCode = 1;
+if (
+  !provenanceAvailable ||
+  !checks.length ||
+  checks.some((c) => c.status !== "passed" || c.retries > 0) ||
+  (results.errors?.length ?? 0) > 0
+) {
+  console.error(
+    "AG-09 regression evidence is incomplete, failed, retried, or missing pre-run provenance.",
+  );
+  process.exitCode = 1;
+}

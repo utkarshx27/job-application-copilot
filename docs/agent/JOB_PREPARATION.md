@@ -44,7 +44,7 @@ npm run test:preparation
 npm run agent:report
 ```
 
-The first command builds/runs integrated Chrome tests and generates `test-results/ag09-report.md` and `.json`. The second regenerates the report from the latest Playwright results. Reports identify checks, source hashes and environment. **Download metrics without personal data** exports action count, interventions, memory uses, duration, state and zero inference cost.
+The first command builds/runs integrated Chrome tests and generates `test-results/ag09-report.md` and `.json`. The second regenerates the report from the latest Playwright results. Reports identify checks and preserve source/build hashes and environment captured before test execution; regenerating a report does not hash newer source files and attribute them to an older run. Missing provenance, runner errors, retries or unsuccessful checks make the report command fail. A successful regression report does **not** close the release gate. **Download metrics without personal data** exports action count, interventions, memory uses, duration, state and zero inference cost.
 
 Tests cover retained résumé bytes, corrected second-run behavior, activated workflow reuse, changed final summaries, actual worker restart, duplicate-submit rejection, private-data clearing and uncertain/false/mismatched responses. The independent runner verifies accepted values, file content and submission counts; its credentials and expected-answer endpoint never enter the application browser or executor.
 
@@ -52,4 +52,4 @@ Tests cover retained résumé bytes, corrected second-run behavior, activated wo
 
 The [evaluation plan](./LEARNING_AND_EVALUATION.md) proposes 300 scenarios with 60 frozen test templates and three seeds per test template. This development suite is not that corpus and does not establish its aggregate completion, correction-benefit or latency gates. AI integration and broader/live connectors are separate work packages.
 
-The [five-user study kit](./AG09_USABILITY_STUDY.md) is ready. Participant observations and frozen held-out results have not been fabricated. Full AG-09 release acceptance remains open until these results are collected and reviewed.
+The [five-user study kit](./AG09_USABILITY_STUDY.md) is ready. Participant observations and frozen held-out results have not been fabricated. Full AG-09 release acceptance remains open until these results are collected and reviewed. Do not start an AG-10 live connector pilot while this gate remains open. See the [validation checklist](./AG09_VALIDATION.md) for evidence and remaining work.
