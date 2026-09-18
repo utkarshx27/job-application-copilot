@@ -117,6 +117,7 @@ export class PortalPreparationExecutor {
           url: preparationUrl(current.job),
           jobId: current.job.sourceJobId,
           applicationId: current.applicationId,
+          ...(current.surfaceId ? { surfaceId: current.surfaceId } : {}),
           action: "OBSERVE",
           ...command,
         },
@@ -126,6 +127,12 @@ export class PortalPreparationExecutor {
       throw new Error("Application observation unavailable.");
     if (!current.documentId)
       await this.update(record.id, (r) => ({ ...r, documentId: result.documentId }));
+    if (result.result.applicationId) {
+      const surfaceId = result.result.surfaceId;
+      if (!surfaceId || (current.surfaceId && current.surfaceId !== surfaceId))
+        throw new Error("Application document changed. Review the page manually.");
+      if (!current.surfaceId) await this.update(record.id, (r) => ({ ...r, surfaceId }));
+    }
     return result.result;
   }
   private async create(record: PreparationRecord, submit = false) {

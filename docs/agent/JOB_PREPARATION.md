@@ -1,6 +1,6 @@
 # AG-09: reviewed local application flow
 
-Status: **native local product flow implemented; broader release evaluation and the five-user study remain open**. Available in research/E2E builds, without a model, API key or GPU. This development result does not establish live portal automation or frozen-corpus performance gates.
+Status: **local product flow with bounded dialog, frame, open-shadow and combobox support implemented; broader release evaluation and the five-user study remain open**. Available in research/E2E builds, without a model, API key or GPU. This development result does not establish live portal automation or frozen-corpus performance gates.
 
 ## Try the complete flow
 
@@ -27,7 +27,9 @@ Verified runs capture typed workflow candidates in the existing memory store. A 
 ## Scope and recovery
 
 - Exact top-level local routes only: `http://127.0.0.1:4173/portal.html?scenario=portal-NN&jobId=job-SEED-ID`, with NN 01, 02 or 30–34, matching the freshly checked stored catalog listing. Imports cannot acquire execution authority.
-- The new catalog jobs exercise complete native/renamed forms and lost/false/wrong-response cases. Other emulated control families retain their separate harness and AG-05 capabilities.
+- Catalog jobs exercise complete native/renamed forms and lost/false/wrong-response cases. Development corpus regressions also exercise application dialogs, exact same-origin local application frames, open shadow roots and button/listbox comboboxes through the same controller.
+- Only the recognized application dialog is allowed. Frames must match the local frame route and job identity; cross-origin, sandboxed, ambiguous or unexpected frames remain blocked. Frame document and application-node identities are bound to the run; replacing or reloading either requires review.
+- Open-shadow traversal is bounded. Closed roots and unsupported controls remain manual. Custom comboboxes require a uniquely owned local listbox with distinct button options; labels, values, option nodes and reachability are rechecked before selection. Search-driven, virtualized and arbitrary third-party widgets are not covered.
 - Approval binds profile identity/revision/digest, verified contacts, reviewed answers and exact file bytes. Files are PDF/DOCX/TXT, limited to 500 KB.
 - Complete preparation uses the existing agent reducer, leases, intent claims, action budgets and postconditions in a separate private executor repository. The isolated document receiver rechecks document identity, control structure and the observation hash.
 - Final approval narrows the same prepared run to Submit. Before dispatch, listing availability and the complete answer/file summary are checked again. Tracker writes are idempotent.
@@ -48,8 +50,10 @@ The first command builds/runs integrated Chrome tests and generates `test-result
 
 Tests cover retained résumé bytes, corrected second-run behavior, activated workflow reuse, changed final summaries, actual worker restart, duplicate-submit rejection, private-data clearing and uncertain/false/mismatched responses. The independent runner verifies accepted values, file content and submission counts; its credentials and expected-answer endpoint never enter the application browser or executor.
 
+Run `npm run test:e2e -- portal-controls.spec.ts complete-preparation.spec.ts` for the combined preparation/control regressions. Control tests cover the four additional local surfaces, changed combobox options, unexpected dialogs, covered frames, frame reload rejection and worker recovery inside a frame.
+
 ## Remaining acceptance evidence
 
-The [evaluation plan](./LEARNING_AND_EVALUATION.md) proposes 300 scenarios with 60 frozen test templates and three seeds per test template. This development suite is not that corpus and does not establish its aggregate completion, correction-benefit or latency gates. AI integration and broader/live connectors are separate work packages.
+The [v1 baseline](./AG09_BASELINE_V1.md) remains unchanged at 50% completion. Its control failures informed these fixes, so v1 is now regression evidence, not an unseen evaluation of the improvements. Freeze and evaluate a fresh held-out partition before claiming aggregate completion, correction-benefit, latency or release-readiness gates. AI integration and broader/live connectors are separate work packages.
 
 The [five-user study kit](./AG09_USABILITY_STUDY.md) is ready. Participant observations and frozen held-out results have not been fabricated. Full AG-09 release acceptance remains open until these results are collected and reviewed. Do not start an AG-10 live connector pilot while this gate remains open. See the [validation checklist](./AG09_VALIDATION.md) for evidence and remaining work.

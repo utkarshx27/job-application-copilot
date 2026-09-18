@@ -97,6 +97,7 @@ export const PreparationRecordSchema = z
     expiresAt: z.number().int().positive(),
     tabId: z.number().int().nonnegative().nullable(),
     documentId: z.string().nullable(),
+    surfaceId: z.string().min(1).max(200).optional(),
     actions: z.array(z.enum(["OPEN_FORM", "FILL_FIELDS"])).max(2),
     reason: z.string().max(500),
     trackerRecorded: z.boolean(),
