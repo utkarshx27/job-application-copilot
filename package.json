@@ -51,6 +51,7 @@
     "agent:corpus:verify": "node --experimental-strip-types scripts/evaluation-corpus.mjs",
     "agent:evaluate": "node scripts/run-evaluation.mjs",
     "agent:study:report": "node scripts/ag09-study.mjs",
+    "agent:connectors": "node --experimental-strip-types scripts/connector-assessment.mjs",
     "inference:benchmark": "node scripts/run-inference-benchmark.mjs",
     "inference:benchmark:vision": "node --experimental-strip-types scripts/vision-benchmark.mjs",
     "inference:serve": "node scripts/serve-local-inference.mjs",

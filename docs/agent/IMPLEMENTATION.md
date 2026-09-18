@@ -226,6 +226,8 @@ Acceptance:
 
 ## AG-10: live connector assessment and research pilot
 
+Implemented preparation slice: [offline assessment records and sanitized reports](./AG10_ASSESSMENT.md), with independent capability results, exact target-scope checks and missing-evidence reporting. Records cannot authorize runtime actions. Live assessment, read-only transport and preparation pilot remain unimplemented and blocked pending AG-09 gates and connector-specific scope. No live support is claimed.
+
 Primary locations: discovery connectors, ATS drivers, site-policy registry, private research artifacts, public sanitized reports.
 
 Deliverables:
