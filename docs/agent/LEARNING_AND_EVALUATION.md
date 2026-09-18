@@ -1,6 +1,6 @@
 # Learning from corrections and evaluating the agent
 
-Status: proposed design and targets. None of the metrics below are measured results for this project.
+Status: proposed design and targets. The thresholds below are not measured results. A bounded [frozen synthetic corpus and native-controller benchmark](./EVALUATION_CORPUS.md) now implement part of this protocol; its measured results must be reported separately from these targets and do not close the broader release gates.
 
 ## What learning means
 

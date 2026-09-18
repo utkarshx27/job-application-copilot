@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./src/portal-contract.ts",
+  "exports": {
+    ".": "./src/portal-contract.ts",
+    "./evaluation": "./server/evaluation-corpus.ts"
+  },
   "scripts": {
     "build": "node build.mjs",
     "clean": "node build.mjs --clean",

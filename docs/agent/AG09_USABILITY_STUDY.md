@@ -37,4 +37,24 @@ Copy for P01 through P05:
 
 ## Review outcome
 
-Report participant count, completion denominators including abandonment, setup failures, median/p90 task times, assistance counts and themes. Link focused issues with observed evidence and severity. Keep acceptance open until at least five new users participate and findings are reviewed. This small study is exploratory, not broad usability validation.
+### Structured observations
+
+Copy `qa/usability/ag09-observations.example.json` to an ignored local file such as `test-results/usability/observations.local.json`. Only set `realParticipantObservations` to true after collecting real observations with consent. For each P01–P05 participant, add:
+
+```json
+{
+  "id": "P01",
+  "consent": true,
+  "newUser": true,
+  "build": "actual tested commit or build hash",
+  "chromeVersion": "actual version",
+  "distinguishedPreparedSubmittedUnknown": false,
+  "tasks": [{ "id": 1, "outcome": "not-attempted", "seconds": 0, "assistance": 0 }]
+}
+```
+
+This is a schema illustration, not a completed observation. Record all seven tasks (IDs 1–7) with outcomes `completed`, `abandoned` or `not-attempted`; retain failures and abandonment in the denominator. Keep sanitized qualitative notes separately using the observation sheet above. Do not put names, contact details, account data, recordings or private files into Git.
+
+Run `npm run agent:study:report -- --input test-results/usability/observations.local.json`. The report validates completeness and summarizes task success, assistance, timing and state understanding. It rejects fewer than five observations and never automatically approves a release. Participant authenticity and findings review remain human responsibilities. Do not recruit or contact people without their consent.
+
+Report participant count, completion denominators including abandonment, setup failures, median/p90 task times, assistance counts and themes. Use the [findings and retest template](../../qa/usability/ag09-findings.example.md) to link focused issues with observed evidence and severity. Keep acceptance open until at least five new users participate and findings are reviewed. This small study is exploratory, not broad usability validation.

@@ -12,19 +12,20 @@ The native flow regression covers correct retained file/answers and one accepted
 
 ## Latest local validation
 
-- Formatting, lint, type checking and builds passed; 273 unit tests passed across 52 files.
-- All 85 pre-existing Chrome checks passed in the full-suite runs. New boundary assertions initially expected API rejection and specific injected error text; the controller instead returns a persisted review state and Chrome can return a generic observation error. Those test expectations were corrected without changing application code.
-- The final targeted AG-09 run passed all 11 checks with zero retries, including durable `NEEDS_REVIEW`, no receipt and zero server submission attempts for all three added mutations. `npm run test:preparation` and report generation exited successfully.
-- A full-suite all-green rerun after the final assertion-only adjustment was not performed. This evidence is not a frozen release evaluation.
+- Formatting, lint, type checking and builds passed; 278 unit tests passed across 54 files.
+- The complete Chrome regression suite finished with 88 passed, zero skipped, zero failed and zero flaky tests (run beginning 2026-09-17 at 05:02:54 UTC). This includes the 11 AG-09 preparation checks after the shared-fixture refactor.
+- The frozen benchmark completed all 180 baseline episodes and 18 additional correction-arm episodes. Harness completion is not product success: correct completion was 72/144 (50%), below the proposed 90% gate. Recovery was 18/18, boundary handling 36/36, with no observed critical signals or duplicate attempts.
+- In 18 paired renamed-field cases, development-trained correction memory reduced clarifications from 18 to zero. This is evidence for one learned meaning, not arbitrary-question generalization.
+- See the [measured baseline](./AG09_BASELINE_V1.md), [sanitized evidence](../../evals/reports/ag09-v1-baseline.json) and [corpus protocol](./EVALUATION_CORPUS.md). The live pilot remains blocked by missed outcome gates and missing human/broader evidence.
 
 ## Gates still requiring evidence
 
-| Gate             | Required evidence                                                                                                                   | Current limitation                                                                                     |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Frozen corpus    | 300 distinct scenarios split 180/60/60 by template/workflow family, with three recorded seeds per frozen test template              | Existing development cases are not this corpus; repeated runs cannot substitute for distinct templates |
-| Outcome gates    | Completion, correct pauses, protected facts, duplicate prevention, recovery and budget results under the frozen evaluation protocol | Native regression results do not establish the aggregate thresholds in the evaluation plan             |
-| Learning benefit | Paired no-memory/reviewed-memory results and deliberately different-meaning counterfactuals                                         | One demonstrated reuse sequence does not establish the proposed 50% reduction on held-out tasks        |
-| Usability        | At least five new participants, anonymous task observations, assistance/abandonment and reviewed findings                           | Study kit exists; real observations still required                                                     |
+| Gate             | Required evidence                                                                                                                   | Current limitation                                                                                                 |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Frozen corpus    | 300 distinct scenarios split 180/60/60 by template/workflow family, with three recorded seeds per frozen test template              | v1 exists and was evaluated; its 30 grouped schemas share one renderer, not independent employer implementations   |
+| Outcome gates    | Completion, correct pauses, protected facts, duplicate prevention, recovery and budget results under the frozen evaluation protocol | Completion 50% and additional-input-free completion 25% miss the 90%/70% gates; broader controls remain incomplete |
+| Learning benefit | Paired no-memory/reviewed-memory results and deliberately different-meaning counterfactuals                                         | 18 complete pairs show clarification reduction; broader harmful-transfer and unseen-meaning evidence remains open  |
+| Usability        | At least five new participants, anonymous task observations, assistance/abandonment and reviewed findings                           | Study kit exists; real observations still required                                                                 |
 
 Use [the evaluation protocol](./LEARNING_AND_EVALUATION.md) and [participant study kit](./AG09_USABILITY_STUDY.md). Freeze scenarios and ground truth before execution, keep labels outside browser/agent access, and record all failures. If test outcomes guide implementation changes, retire those cases into regression and create a new held-out partition before claiming generalization.
 

@@ -1,5 +1,6 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { evaluationCorpus, evaluationScenario } from "./evaluation-corpus";
 import {
   companies,
   listings,
@@ -376,8 +377,23 @@ export function createPortalHarness(token: string, initialSeed = 7) {
           json(response, 400, { error: "Invalid seed" });
           return;
         }
+        if (
+          input.evaluationCase !== undefined &&
+          (typeof input.evaluationCase !== "string" ||
+            !evaluationCorpus().some((entry) => entry.id === input.evaluationCase))
+        ) {
+          json(response, 400, { error: "Unknown evaluation case" });
+          return;
+        }
         seed = input.seed;
         scenarios = portalScenarios(seed);
+        if (typeof input.evaluationCase === "string") {
+          scenarios = scenarios.map((scenario) =>
+            scenario.publicId === "portal-30"
+              ? evaluationScenario(input.evaluationCase as string, seed)
+              : scenario,
+          );
+        }
         sessions.clear();
         uploads.clear();
         outcomes.clear();
