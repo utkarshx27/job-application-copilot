@@ -3,15 +3,14 @@ import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import type { Page, Locator } from "@playwright/test";
 import type { PreparationRecord } from "@copilot/agent-core";
-import {
-  evaluationCorpus,
-  evaluationScenario,
-  EVALUATION_SEEDS,
-} from "@copilot/test-ats/evaluation";
+import * as v1 from "@copilot/test-ats/evaluation";
+import * as v2 from "@copilot/test-ats/evaluation-v2";
 import { test, expect } from "./fixtures";
 import { setup, prepare, runner } from "./preparation-fixtures";
 
 const partition = process.env.AG09_EVALUATION;
+const corpusVersion = process.env.AG09_CORPUS === "v2" ? "v2" : "v1";
+const { evaluationCorpus, evaluationScenario, EVALUATION_SEEDS } = corpusVersion === "v2" ? v2 : v1;
 const enabled = ["development", "validation", "test"].includes(partition ?? "");
 const candidates = enabled ? evaluationCorpus().filter((item) => item.partition === partition) : [];
 const limit =
@@ -22,7 +21,7 @@ const cases = candidates.slice(0, limit);
 const seeds = partition === "development" ? [EVALUATION_SEEDS[0]] : EVALUATION_SEEDS;
 if (enabled && partition !== "development") {
   const frozen = JSON.parse(
-    readFileSync(resolve(import.meta.dirname, "../corpus/ag09-v1.json"), "utf8"),
+    readFileSync(resolve(import.meta.dirname, `../corpus/ag09-${corpusVersion}.json`), "utf8"),
   ) as { digest: string };
   const digest = createHash("sha256")
     .update(

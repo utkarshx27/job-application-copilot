@@ -1,15 +1,17 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import {
-  evaluationCorpus,
-  evaluationScenario,
-  CORPUS_VERSION,
-  EVALUATION_SEEDS,
-} from "../apps/test-ats/server/evaluation-corpus.ts";
+const { evaluationCorpus, evaluationScenario, CORPUS_VERSION, EVALUATION_SEEDS } = await import(
+  process.env.AG09_CORPUS === "v2"
+    ? "../apps/test-ats/server/evaluation-corpus-v2.ts"
+    : "../apps/test-ats/server/evaluation-corpus.ts"
+);
 
 const root = resolve(import.meta.dirname, "..");
-const path = resolve(root, "evals/corpus/ag09-v1.json");
+const path = resolve(
+  root,
+  `evals/corpus/ag09-${process.env.AG09_CORPUS === "v2" ? "v2" : "v1"}.json`,
+);
 const scenarios = evaluationCorpus().map((item) => ({
   ...item,
   scenario: evaluationScenario(item.id, 0),

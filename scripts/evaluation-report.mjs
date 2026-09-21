@@ -1,6 +1,11 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { evaluationCorpus, EVALUATION_SEEDS } from "../apps/test-ats/server/evaluation-corpus.ts";
+const corpusVersion = process.env.AG09_CORPUS === "v2" ? "v2" : "v1";
+const { evaluationCorpus, EVALUATION_SEEDS } = await import(
+  corpusVersion === "v2"
+    ? "../apps/test-ats/server/evaluation-corpus-v2.ts"
+    : "../apps/test-ats/server/evaluation-corpus.ts"
+);
 import { scoreEvaluation } from "../apps/test-ats/server/evaluation-score.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -38,10 +43,12 @@ const metrics = scoreEvaluation(
 );
 const report = {
   version: 1,
+  corpusVersion,
   corpus:
     partition === "development"
       ? null
-      : JSON.parse(await readFile(resolve(root, "evals/corpus/ag09-v1.json"), "utf8")).digest,
+      : JSON.parse(await readFile(resolve(root, `evals/corpus/ag09-${corpusVersion}.json`), "utf8"))
+          .digest,
   model: "none; deterministic controller with fixed development-reviewed correction arm",
   inferenceCostMicros: 0,
   partition,
@@ -54,7 +61,7 @@ const report = {
   observations,
 };
 await mkdir(resolve(root, "test-results/evaluation"), { recursive: true });
-const name = `${partition}-${new Date().toISOString().replaceAll(/[:.]/g, "-")}`;
+const name = `${corpusVersion}-${partition}-${new Date().toISOString().replaceAll(/[:.]/g, "-")}`;
 await writeFile(
   resolve(root, `test-results/evaluation/${name}.json`),
   JSON.stringify(report, null, 2) + "\n",

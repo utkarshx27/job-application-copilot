@@ -2,6 +2,33 @@ import type { PreparationRecord } from "@copilot/agent-core";
 import { test, expect } from "./fixtures";
 import { prepare, runner, setup } from "./preparation-fixtures";
 
+test("a local dialog that never initializes pauses without reopening or submitting", async ({
+  context,
+  extensionId,
+}) => {
+  await context.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (new URL(url, location.href).pathname === "/api/portal/start")
+        return new Promise<Response>(() => undefined);
+      return originalFetch(input, init);
+    };
+  });
+  const panel = await setup(context, extensionId, 7, "composition-v2-screening-27-dialog");
+  const { region, application } = await prepare(panel, context, 8);
+  await expect(
+    region.getByRole("button", { name: "Resume reviewed preparation", exact: true }),
+  ).toBeVisible({ timeout: 20000 });
+  await expect(application.locator("dialog[open]")).toHaveCount(1);
+  await expect(
+    application.getByRole("button", { name: "Apply locally", exact: true }),
+  ).toBeDisabled();
+  const ledger = await runner("/outcomes");
+  expect(ledger.sessions).toHaveLength(0);
+  expect(ledger.outcomes).toHaveLength(0);
+});
+
 test("combobox options changed while opening are never selected", async ({
   context,
   extensionId,
@@ -112,33 +139,37 @@ test("frame preparation resumes after worker loss without changing the bound app
 });
 
 for (const workflow of ["dialog", "frame", "shadow", "combobox"] as const) {
-  test(`local preparation completes ${workflow} controls with one verified submission`, async ({
-    context,
-    extensionId,
-  }) => {
-    const panel = await setup(context, extensionId, 7, `screening-27-${workflow}`);
-    const { region } = await prepare(panel, context, 8);
-    await expect(region.getByText(/Application prepared through review/)).toBeVisible({
-      timeout: 20000,
+  for (const prefix of ["", "composition-v2-"]) {
+    test(`local preparation completes ${prefix}${workflow} controls with one verified submission`, async ({
+      context,
+      extensionId,
+    }) => {
+      const panel = await setup(context, extensionId, 7, `${prefix}screening-27-${workflow}`);
+      const { region } = await prepare(panel, context, 8);
+      await expect(region.getByText(/Application prepared through review/)).toBeVisible({
+        timeout: 20000,
+      });
+      expect((await runner("/outcomes")).outcomes).toHaveLength(0);
+      await region
+        .getByLabel("I reviewed this application and approve one local submission")
+        .check();
+      await region
+        .getByRole("button", { name: "Submit this local application once", exact: true })
+        .click();
+      await expect(region.getByText(/Verified receipt:/)).toBeVisible();
+      const ledger = await runner("/outcomes");
+      expect(ledger.sessions).toHaveLength(1);
+      expect(ledger.sessions[0]?.attempts).toBe(1);
+      expect(ledger.outcomes).toHaveLength(1);
+      expect(ledger.outcomes[0]).toMatchObject({
+        jobId: "job-7-8",
+        correct: true,
+        acceptedCount: 1,
+        duplicateAttempts: 0,
+        uploadRetained: true,
+      });
     });
-    expect((await runner("/outcomes")).outcomes).toHaveLength(0);
-    await region.getByLabel("I reviewed this application and approve one local submission").check();
-    await region
-      .getByRole("button", { name: "Submit this local application once", exact: true })
-      .click();
-    await expect(region.getByText(/Verified receipt:/)).toBeVisible();
-    const ledger = await runner("/outcomes");
-    expect(ledger.sessions).toHaveLength(1);
-    expect(ledger.sessions[0]?.attempts).toBe(1);
-    expect(ledger.outcomes).toHaveLength(1);
-    expect(ledger.outcomes[0]).toMatchObject({
-      jobId: "job-7-8",
-      correct: true,
-      acceptedCount: 1,
-      duplicateAttempts: 0,
-      uploadRetained: true,
-    });
-  });
+  }
 }
 
 test("reloading a prepared application frame invalidates its surface binding before submission", async ({

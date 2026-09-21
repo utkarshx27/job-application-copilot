@@ -2,6 +2,8 @@
 
 Status: **OPEN — no live connector pilot**.
 
+Follow-up: the [frozen v2 composition evaluation](./EVALUATION_V2.md) ran all 198 planned episodes and failed the gates: 18/144 correct completions, 0/18 recovery and 18/36 correct boundary outcomes. Its initialization failures prompted a bounded dialog-wait fix; v2 is now regression evidence, not an unseen test for that fix. Five real new-user observations are still missing.
+
 ## Automated local evidence
 
 Run `npm run verify` for formatting, lint, types, unit tests, production builds and the complete Chrome regression suite. Then run `npm run agent:report` to extract the integrated preparation results. `npm run test:preparation` rebuilds and runs just that integrated suite.

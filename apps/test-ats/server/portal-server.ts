@@ -2,6 +2,10 @@ import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { evaluationCorpus, evaluationScenario } from "./evaluation-corpus";
 import {
+  evaluationCorpus as corpusV2,
+  evaluationScenario as scenarioV2,
+} from "./evaluation-corpus-v2";
+import {
   companies,
   listings,
   portalScenarios,
@@ -380,7 +384,9 @@ export function createPortalHarness(token: string, initialSeed = 7) {
         if (
           input.evaluationCase !== undefined &&
           (typeof input.evaluationCase !== "string" ||
-            !evaluationCorpus().some((entry) => entry.id === input.evaluationCase))
+            ![...evaluationCorpus(), ...corpusV2()].some(
+              (entry) => entry.id === input.evaluationCase,
+            ))
         ) {
           json(response, 400, { error: "Unknown evaluation case" });
           return;
@@ -390,7 +396,9 @@ export function createPortalHarness(token: string, initialSeed = 7) {
         if (typeof input.evaluationCase === "string") {
           scenarios = scenarios.map((scenario) =>
             scenario.publicId === "portal-30"
-              ? evaluationScenario(input.evaluationCase as string, seed)
+              ? ((input.evaluationCase as string).startsWith("composition-v2-")
+                  ? scenarioV2
+                  : evaluationScenario)(input.evaluationCase as string, seed)
               : scenario,
           );
         }

@@ -162,6 +162,19 @@ export async function portalPreparationDocument(
     const dialogs = query(page, 'dialog[open],[role="dialog"],[role="alertdialog"]').filter(
       visible,
     );
+    // After one approved Open click, initialization may precede the server-bound
+    // application identity. Wait without clicking/filling; all other commands
+    // still reject this unbound surface. The post-dispatch loop is bounded.
+    if (
+      input.action === "OPEN_CONTROL" &&
+      !input.applicationId &&
+      !input.surfaceId &&
+      !form &&
+      dialogs.length === 1 &&
+      dialogs[0]!.tagName === "DIALOG" &&
+      dialogs[0]!.getAttribute("aria-label") === "Local application"
+    )
+      throw new Error("Application dialog is not ready.");
     if (
       dialogs.some(
         (dialog) =>
@@ -486,7 +499,9 @@ export async function portalPreparationDocument(
       if (
         input.action === "OPEN_CONTROL" &&
         error instanceof Error &&
-        error.message === "Application frame is not ready."
+        ["Application frame is not ready.", "Application dialog is not ready."].includes(
+          error.message,
+        )
       )
         continue;
       throw error;

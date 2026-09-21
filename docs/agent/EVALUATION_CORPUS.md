@@ -1,5 +1,7 @@
 # Frozen synthetic evaluation v1
 
+V1 is preserved historical/regression evidence. See [the separately frozen v2 composition protocol](./EVALUATION_V2.md) for the follow-up evaluation of control fixes and its shared-renderer limitations.
+
 This benchmark evaluates the actual research extension preparation controller against the local simulator. It does not enable a live connector or use the separate fixture-filling driver. Models and cloud calls are off.
 
 ## What the 300 scenarios mean

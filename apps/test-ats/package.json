@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/portal-contract.ts",
-    "./evaluation": "./server/evaluation-corpus.ts"
+    "./evaluation": "./server/evaluation-corpus.ts",
+    "./evaluation-v2": "./server/evaluation-corpus-v2.ts"
   },
   "scripts": {
     "build": "node build.mjs",
