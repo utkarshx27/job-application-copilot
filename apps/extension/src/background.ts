@@ -1609,21 +1609,23 @@ chrome.runtime.onMessage.addListener((untrustedMessage: unknown, sender, sendRes
     const result =
       request.type === "PANEL_JOBS_GET"
         ? discovery.view()
-        : request.type === "PANEL_JOBS_SEARCH"
-          ? discovery.search(request.query)
-          : request.type === "PANEL_JOBS_CANCEL"
-            ? discovery.cancel()
-            : request.type === "PANEL_JOBS_IMPORT"
-              ? discovery.importListing(request)
-              : request.type === "PANEL_JOBS_DISMISS"
-                ? discovery.dismiss(request.id, request.dismissed)
-                : request.type === "PANEL_JOBS_FORGET"
-                  ? discovery.forget(request.id)
-                  : request.type === "PANEL_JOBS_EVIDENCE"
-                    ? discovery.evidence(request.id, request.rating)
-                    : request.type === "PANEL_JOBS_FORGET_EVIDENCE"
-                      ? discovery.evidence(request.id, null)
-                      : Promise.reject(new Error("Unknown jobs request."));
+        : request.type === "PANEL_JOBS_RESET_DEMO_BUDGET"
+          ? discovery.resetDemoBudget()
+          : request.type === "PANEL_JOBS_SEARCH"
+            ? discovery.search(request.query)
+            : request.type === "PANEL_JOBS_CANCEL"
+              ? discovery.cancel()
+              : request.type === "PANEL_JOBS_IMPORT"
+                ? discovery.importListing(request)
+                : request.type === "PANEL_JOBS_DISMISS"
+                  ? discovery.dismiss(request.id, request.dismissed)
+                  : request.type === "PANEL_JOBS_FORGET"
+                    ? discovery.forget(request.id)
+                    : request.type === "PANEL_JOBS_EVIDENCE"
+                      ? discovery.evidence(request.id, request.rating)
+                      : request.type === "PANEL_JOBS_FORGET_EVIDENCE"
+                        ? discovery.evidence(request.id, null)
+                        : Promise.reject(new Error("Unknown jobs request."));
     void result.then(
       (data) => sendResponse({ ok: true, data }),
       (error: unknown) =>

@@ -9,6 +9,8 @@ export function JobsPanel() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [showDismissed, setShowDismissed] = useState(false);
+  const [resetConfirmed, setResetConfirmed] = useState(false);
+  const [demoOnly, setDemoOnly] = useState(false);
   const [draft, setDraft] = useState({
     title: "",
     company: "",
@@ -76,6 +78,45 @@ export function JobsPanel() {
         </p>
       )}
       <details>
+        <summary>Local demo help and read limit</summary>
+        <p>
+          Searches and preparation checks share 50 local reads per UTC day. This is a local test
+          limit, not a paid quota. Resetting it does not delete your profile, saved jobs,
+          applications or corrections, and does not change live-site limits.
+        </p>
+        <label>
+          <input
+            type="checkbox"
+            checked={resetConfirmed}
+            onChange={(event) => setResetConfirmed(event.target.checked)}
+          />
+          I want to reset only the local demo read budget
+        </label>
+        <button
+          type="button"
+          disabled={busy || !resetConfirmed}
+          onClick={() => {
+            setResetConfirmed(false);
+            void request({ type: "PANEL_JOBS_RESET_DEMO_BUDGET", confirmed: true });
+          }}
+        >
+          Reset demo read budget
+        </button>
+      </details>
+      <label>
+        <input
+          type="checkbox"
+          checked={demoOnly}
+          onChange={(event) => setDemoOnly(event.target.checked)}
+        />
+        Show only guided study jobs (8, 9 and 13)
+      </label>
+      <p>
+        For the local walkthrough, use a separate test profile with Priya Sharma's synthetic
+        details. Start with job 8, then try correction learning on job 9 and reuse on job 13.
+        Prepared means ready for review, not submitted.
+      </p>
+      <details>
         <summary>Paste a job listing</summary>
         {(
           [
@@ -122,12 +163,19 @@ export function JobsPanel() {
       </p>
       {view?.jobs
         .filter((entry) => showDismissed || (!entry.dismissed && !entry.excluded))
+        .filter(
+          (entry) =>
+            !demoOnly ||
+            (entry.job.source === "LOCAL_TEST_ATS" &&
+              /^job-\d+-(8|9|13)$/.test(entry.job.sourceJobId)),
+        )
         .map((entry) => (
           <article
             key={entry.job.id}
             aria-label={`${entry.job.title} at ${entry.job.company} in ${entry.job.location}`}
           >
             <h3>{entry.job.title}</h3>
+            {entry.job.source === "LOCAL_TEST_ATS" && <p>Demo ID: {entry.job.sourceJobId}</p>}
             <p>
               {entry.job.company} · {entry.job.location} ·{" "}
               {entry.job.source === "LOCAL_TEST_ATS" ? "Synthetic demo" : "Imported listing"}

@@ -174,6 +174,9 @@ export const PanelRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PANEL_JOBS_SEARCH"), query: z.string().max(200) }).strict(),
   z.object({ type: z.literal("PANEL_JOBS_CANCEL") }).strict(),
   z
+    .object({ type: z.literal("PANEL_JOBS_RESET_DEMO_BUDGET"), confirmed: z.literal(true) })
+    .strict(),
+  z
     .object({
       type: z.literal("PANEL_JOBS_IMPORT"),
       title: z.string().min(1).max(300),

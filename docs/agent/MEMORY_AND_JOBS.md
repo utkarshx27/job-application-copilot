@@ -36,6 +36,8 @@ The workflow library exposes candidate, offline-validated, active, retired and r
 
 ## Find and review jobs (AG-07)
 
+For the study, enable **Show only guided study jobs (8, 9 and 13)**. Each local card displays its **Demo ID**, so there is no need to inspect link URLs. If the local read allowance runs out, expand **Local demo help and read limit**, confirm the local-only reset, and click **Reset demo read budget**. This explicit research-panel action resets only the current profile's loopback catalog counter, preserves saved data, and is unavailable during an active search. It neither enables live connectors nor changes their limits.
+
 Open **Jobs** in the research panel. **Search demo jobs** reads only the synthetic catalog; it never searches LinkedIn, Naukri, Wellfound or another external board. **Paste a job listing** accepts a title, employer, location, URL and description without fetching the URL. Imported links open for manual review.
 
 - Searches are limited to five pages and 50 catalog reads per UTC day per local profile identity. Failed reads count, and the budget survives worker restarts. Cancel stops a running search. The displayed source status distinguishes errors, cancellation and exhausted budget.

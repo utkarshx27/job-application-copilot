@@ -91,6 +91,14 @@ export class DiscoveryController {
     this.searches.get(memoryOwnerKey(owner))?.abort();
     return this.view();
   }
+  async resetDemoBudget() {
+    const owner = memoryOwner(await getProfileVault());
+    if (this.searches.has(memoryOwnerKey(owner)))
+      throw new Error("Cancel the running search before resetting the demo budget.");
+    // Only the fixed loopback catalog uses this counter. Preserve all records.
+    await this.mutate(owner, (data) => ({ ...data, reads: 0, sourceStatus: "READY" }));
+    return this.view();
+  }
   private async readCatalog(owner: MemoryOwner, path: string, signal?: AbortSignal) {
     signal?.throwIfAborted();
     await this.mutate(owner, (data) => {

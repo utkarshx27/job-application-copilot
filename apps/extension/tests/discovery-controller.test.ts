@@ -48,6 +48,25 @@ it("counts HTTP failures, retains existing imports and never fetches their URLs"
   expect(view.jobs).toHaveLength(1);
   expect(view.sourceStatus).toBe("ERROR");
 });
+it("resets only the current owner's demo budget without fetching or deleting saved jobs", async () => {
+  const controller = new DiscoveryController();
+  await controller.importListing({
+    title: "Saved",
+    company: "Example",
+    location: "Remote",
+    url: "https://example.test/saved",
+    description: "Synthetic",
+  });
+  for (let i = 0; i < 25; i++) await controller.search("");
+  const before = await controller.view();
+  expect(before.remainingReads).toBe(0);
+  const fetches = vi.mocked(fetch).mock.calls.length;
+  const after = await controller.resetDemoBudget();
+  expect(after.remainingReads).toBe(50);
+  expect(after.jobs).toEqual(before.jobs);
+  expect(fetch).toHaveBeenCalledTimes(fetches);
+  expect((await new DiscoveryController().view()).remainingReads).toBe(50);
+});
 it("cancels an in-flight request without publishing a partial catalog", async () => {
   let started!: () => void;
   const ready = new Promise<void>((resolve) => {
@@ -66,6 +85,7 @@ it("cancels an in-flight request without publishing a partial catalog", async ()
   const search = controller.search("");
   const rejected = expect(search).rejects.toThrow(/cancelled/);
   await ready;
+  await expect(controller.resetDemoBudget()).rejects.toThrow(/Cancel the running search/);
   await expect(controller.search("overlap")).rejects.toThrow(/already running/);
   await controller.cancel();
   await rejected;
